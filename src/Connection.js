@@ -1,0 +1,96 @@
+const ConnectionState = {
+    Disconnected: 'Disconnected',
+    Connecting: 'Connecting',
+    Connected: 'Connected'
+};
+
+const SPI_PROTOCOL = 'spi.2.0.0';
+
+class Connection {
+    constructor() {
+        this.Address    = null;
+        this.Connected  = false;
+        this.State      = ConnectionState.Disconnected;
+        this.SpiProtocol = SPI_PROTOCOL;
+        this._ws        = null;
+
+        if(typeof WebSocket === 'undefined') {
+            throw new Error('Environment does not support WebSockets');
+        }
+    }
+
+    Connect() {
+        if(this.State === ConnectionState.Connected || this.State === ConnectionState.Connecting) {
+            // already connected or connecting. disconnect first.
+            return;
+        }
+
+        this.State = ConnectionState.Connecting;
+
+        //Create a new socket instance specifying the url, SPI protocol and Websocket to use.
+        //The will create a TCP/IP socket connection to the provided URL and perform HTTP websocket negotiation
+        this._ws           = new WebSocket(this.Address, this.SpiProtocol);
+        this._ws.onopen    = () => this.pollWebSocketConnection();
+        this._ws.onmessage = (payload) => this.onMessageReceived(payload);
+        this._ws.onclose   = () => this.onClosed();
+        this._ws.onerror   = (err) => this.onError(err);
+
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+    }
+
+    Disconnect() {
+        if (this.State == ConnectionState.Disconnected) return;
+
+        if(this._ws && this._ws.readyState != this._ws.CLOSED) {
+            this._ws.close();
+        }
+
+        if (this._ws) {
+            this._ws.onopen    = null;
+            this._ws.onmessage = null;
+            this._ws.onclose   = null;
+            this._ws.onerror   = null;
+        }
+
+        this.onClosed();
+    }
+
+    Send(message) {
+        this._ws.send(message);
+    }
+
+    onOpened() {
+        this.State = ConnectionState.Connected;
+        this.Connected = true;
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+    }
+
+    onClosed() {
+        this.Connected = false;
+        this.State = ConnectionState.Disconnected;
+        this._ws = null;
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+    }
+
+    pollWebSocketConnection(count = 0) {
+        
+        if(this._ws.readyState === this._ws.OPEN) {
+            this.onOpened();
+            return true;
+        } else if(count < 25) {
+            count++;
+            setTimeout(() => this.pollWebSocketConnection(count), 200);
+        } else {
+            this.Disconnect();
+            return false;
+        }
+    }
+
+    onMessageReceived(message) {
+        document.dispatchEvent(new CustomEvent('MessageReceived', {detail: message}));
+    }
+
+    onError(err) {
+        document.dispatchEvent(new CustomEvent('ErrorReceived', {detail: err}));
+    }
+}

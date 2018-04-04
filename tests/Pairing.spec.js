@@ -1,0 +1,57 @@
+describe('PairingTests', function() {
+    'use strict';
+
+    const mockKeyRequest = JSON.stringify({
+        message: {
+            event: "key_request",
+            id: "62",
+            data: {
+                enc: {
+                    A: "17E7BE43D53102647040FC090000C215810E28E5E0CBD4F47923E194AE72AB0CDADF922642B73C568AA94A84B61874A475549E1F95847BE2725462E3D635F019BE39B2064F1EFFBE6B80CE97FBB7C0913ADC06A2445980B57647778B127FFCCE8B28A44BADEDE0110A5AFB05FEF7AA3F54988AFB04310A113F713601683D8E30CA2BAFC2EC34879127019E3352D8CAB9603184283AE3C9359D40C12474500018B8640AF371DC8712A06A3A443DF41DA9C1C60FAD2ACB02564A6694382B18811AA30CE38A1FC251DE0669504CAB620C2BA4A84CCC8FBDCBB30BBB3EACA76008599F74C2FDF6231773DC0439969CB5F2904A71DDF57F7DF9394AA29CBE4856FC82"
+                },
+                hmac: {
+                    A: "89708531EADF129B4F67F00ECBF883C825A0EF3D766E32BC2BA13508B53FC3F5928316DE05CBE82FA1BBF4116E58A68C6F9C3C8FEF492051498188F4E80F82D5764FF50331B34E418E41480FAE0C794F20D9F7AE9819CB317AD2351B165783D57D12C39F95D9A5A292B89D3A26F9BBDE5C218EEC3FE63D910DCB0E1A0E6B570AF94BBD3025EB5E23FFBD9E8D58FE68403B3E50566DA8E2E54EED1A4D754689ECB7266B3D4804E39FB868F1741896757E7844C3389DA49F87D23FB2E9F6ADDBE9C14CC92F322CF3B471CE217E48D0762D5C963827AA6F4316B905F19E0262A35DC4B62E2FB95B7AAD5616C61F31C9A74008EE51BAB2CD6F646320FA30A6DDC4D7"
+                }
+            }                        
+        }
+    });
+  
+    it('TestPairingKeyResponse', function() {
+
+        var secrets = null;
+        var incomingMessage = Message.FromJson(mockKeyRequest, secrets);
+        
+        expect(incomingMessage.EventName).toEqual('key_request');
+
+        var keyRequest = new KeyRequest(incomingMessage);
+
+        // Let's generate the Secrets and the KeyResponse
+        var pr = new PairingHelper();
+        var result = pr.GenerateSecretsAndKeyResponse(keyRequest);
+                    
+        secrets = result.Secrets; // Save These. They are precious!
+                    
+        var keyResponse = result.KeyResponse;
+
+        expect(keyResponse.Benc).not.toBeNull();
+        expect(keyResponse.Bhmac).not.toBeNull();
+        expect(keyResponse.RequestId).toBe("62");
+
+        // Let's now prepare to send the key_response back to the server.
+        var msgToSend = keyResponse.ToMessage();
+        expect(msgToSend.Id).toBe("62");
+        expect(msgToSend.Data.enc.B).not.toBeNull();
+        expect(msgToSend.Data.hmac.B).not.toBeNull();
+    });
+  
+    it('TestSecretConversion', function() {
+        var secret = "8ABD4BE643031C8DC97B1CF5DD0807C69F7BE5BC0538A9A4A08FC903D21BFCCA079F2283095013EAE3599AD04C12F7396D668DFF1709AAE987C8FAB45F0B6E09303B4859CC068336E8990701BB548FE88162F518DDBDF0180B578D0AE12F5C2C1424FAC4F4FCC5EF20D23EC57543329B7DE6BF6E68367BE2A1BAFAA37CEF10CF00FC607F038D289ED6F4BDFAAF166908971959587A6214A1CC131970446097C7C5753E349DC1584B448229E04960DB84785BF55159596B61FABB0610ACA32102DC132ABFF537FE4CA9609FAE9AB3CC6489AF745A503D63A0FC1E2F7E70A40B72FAB38D76AAABBABD7487945BBB6305C3C091813F3D01753C5BCAEA4B3D8179B5";
+
+        var pr = new PairingHelper();
+        var calculatedSecret = pr.DHSecretToSPISecret(secret);
+        var expectedSecret = "4564e59afa27b2e24c9f568e92d27488b9dd81ccf9d2fcae0b319d70add7feb4";
+
+        expect(calculatedSecret).toEqual(expectedSecret);
+    });
+
+});
