@@ -18,7 +18,7 @@ module.exports = function (config) {
             'node_modules/jssha/src/sha256.js',
 
             // Our code
-            'SPIClient/**/*.js',
+            'src/**/*.js',
             'Pos.js',
 
             // Include the unit tests 

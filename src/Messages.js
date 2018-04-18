@@ -125,7 +125,6 @@ class Message {
     {
         let now = Date.now();
         let msgTime = Date.parse(this.DateTimeStamp);
-        // let tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
         return msgTime - now;
     }
 
@@ -165,8 +164,7 @@ class Message {
 
     ToJson(stamp) {
         let now = Date.now();
-        let tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
-        let adjustedTime = new Date(Date.now() - tzoffset + stamp.ServerTimeDelta);
+        let adjustedTime = new Date(now + stamp.ServerTimeDelta);
 
         // Format date: "yyyy-MM-ddTHH:mm:ss.fff"
         this.DateTimeStamp = adjustedTime.toISOString().slice(0,-1);

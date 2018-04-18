@@ -642,15 +642,13 @@ var Message = function () {
         value: function GetServerTimeDelta() {
             var now = Date.now();
             var msgTime = Date.parse(this.DateTimeStamp);
-            // let tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
             return msgTime - now;
         }
     }, {
         key: "ToJson",
         value: function ToJson(stamp) {
             var now = Date.now();
-            var tzoffset = new Date().getTimezoneOffset() * 60000; //offset in milliseconds
-            var adjustedTime = new Date(Date.now() - tzoffset + stamp.ServerTimeDelta);
+            var adjustedTime = new Date(now + stamp.ServerTimeDelta);
 
             // Format date: "yyyy-MM-ddTHH:mm:ss.fff"
             this.DateTimeStamp = adjustedTime.toISOString().slice(0, -1);
