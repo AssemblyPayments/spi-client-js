@@ -124,7 +124,16 @@ class Message {
     GetServerTimeDelta()
     {
         let now = Date.now();
-        let msgTime = Date.parse(this.DateTimeStamp);
+        
+        // Stamp format: 2018-04-19T01:42:38.279
+        let dts = this.DateTimeStamp.split(/[\-\+\. :T]/);
+        let msgTime = new Date(
+            // year, month, date
+            dts[0], dts[1] - 1, dts[2],
+            // hour, minute, second, millis
+            dts[3], dts[4], dts[5], dts[6]
+        ).getTime(); // Local time zone
+
         return msgTime - now;
     }
 
@@ -139,7 +148,7 @@ class Message {
 
         // Its encrypted, verify sig
         let sig = Crypto.HmacSignature(secrets.HmacKey, env.enc);
-        if(sig.toUpperCase() != env.hmac) {
+        if (sig.toUpperCase() != env.hmac) {
             return new Message("_", Events.InvalidHmacSignature, null, false);
         }
 
@@ -164,7 +173,8 @@ class Message {
 
     ToJson(stamp) {
         let now = Date.now();
-        let adjustedTime = new Date(now + stamp.ServerTimeDelta);
+        let tzoffset = new Date().getTimezoneOffset() * 60 * 1000;
+        let adjustedTime = new Date(now - tzoffset + stamp.ServerTimeDelta);
 
         // Format date: "yyyy-MM-ddTHH:mm:ss.fff"
         this.DateTimeStamp = adjustedTime.toISOString().slice(0,-1);

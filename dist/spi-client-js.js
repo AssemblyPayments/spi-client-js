@@ -641,14 +641,23 @@ var Message = function () {
         key: "GetServerTimeDelta",
         value: function GetServerTimeDelta() {
             var now = Date.now();
-            var msgTime = Date.parse(this.DateTimeStamp);
+
+            // Stamp format: 2018-04-19T01:42:38.279
+            var dts = this.DateTimeStamp.split(/[\-\+\. :T]/);
+            var msgTime = new Date(
+            // year, month, date
+            dts[0], dts[1] - 1, dts[2],
+            // hour, minute, second, millis
+            dts[3], dts[4], dts[5], dts[6]).getTime(); // Local time zone
+
             return msgTime - now;
         }
     }, {
         key: "ToJson",
         value: function ToJson(stamp) {
             var now = Date.now();
-            var adjustedTime = new Date(now + stamp.ServerTimeDelta);
+            var tzoffset = new Date().getTimezoneOffset() * 60 * 1000;
+            var adjustedTime = new Date(now - tzoffset + stamp.ServerTimeDelta);
 
             // Format date: "yyyy-MM-ddTHH:mm:ss.fff"
             this.DateTimeStamp = adjustedTime.toISOString().slice(0, -1);
