@@ -91,8 +91,14 @@ const TransactionType =
 {
     Purchase: 'Purchase',
     Refund: 'Refund',
+    CashoutOnly: 'CashoutOnly',
+    MOTO: 'MOTO',
     Settle: 'Settle',
-    GetLastTx: 'GetLastTx'
+    SettlementEnquiry: 'SettlementEnquiry',
+    GetLastTransaction: 'GetLastTransaction',
+    
+    Preauth: 'Preauth',
+    AccountVerify: 'AccountVerify'
 };
 
 /// <summary>

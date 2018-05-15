@@ -331,7 +331,7 @@ class Spi {
     /// Initiates a settlement transaction.
     /// Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>
-    InitiateSettleTx(id)
+    InitiateSettleTx(posRefId)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -341,15 +341,36 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var settleRequest = new SettleRequest(RequestIdHelper.Id("settle"));
+        var settleRequestMsg = new SettleRequest(RequestIdHelper.Id("settle")).ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            id, TransactionType.Settle, 0, settleRequest.ToMessage(), 
+            posRefId, TransactionType.Settle, 0, settleRequestMsg, 
             `Waiting for EFTPOS connection to make a settle request`);
 
-        if (this._send(settleRequest.ToMessage()))
+        if (this._send(settleRequestMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to settle.`);
+        }
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new InitiateTxResult(true,"Settle Initiated");   
+    }
+
+    /// <summary>
+    /// </summary>
+    InitiateSettlementEnquiry(posRefId)
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        var stlEnqMsg = new SettlementEnquiryRequest(RequestIdHelper.Id("stlenq")).ToMessage();
+        this.CurrentFlow = SpiFlow.Transaction;
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.SettlementEnquiry, 0, stlEnqMsg,
+            "Waiting for EFTPOS connection to make a settlement enquiry");
+        if (this._send(stlEnqMsg))
+        {
+            this.CurrentTxFlowState.Sent("Asked EFTPOS to make a settlement enquiry.");
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
@@ -361,7 +382,7 @@ class Spi {
     /// that was processed by the Eftpos.
     /// Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>
-    InitiateGetLastTx(id)
+    InitiateGetLastTx()
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -371,14 +392,14 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var gltRequestMsg = new GetLastTransactionRequest(id);
+        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
-
+        var posRefId = gltRequestMsg.Id; // GetLastTx is not trying to get anything specific back. So we just use the message id.
         this.CurrentTxFlowState = new TransactionFlowState(
-            gltRequestMsg.Id, TransactionType.GetLastTx, 0, gltRequestMsg, 
+            posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg, 
             "Waiting for EFTPOS connection to make a Get-Last-Transaction request.");
         
-        if (this._send(gltRequestMsg.ToMessage()))
+        if (this._send(gltRequestMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS for last transaction.`);
         }
@@ -387,6 +408,37 @@ class Spi {
         return new InitiateTxResult(true, "GLT Initiated");   
     }
 
+    /// <summary>
+    /// This is useful to recover from your POS crashing in the middle of a transaction.
+    /// When you restart your POS, if you had saved enough state, you can call this method to recover the client library state.
+    /// You need to have the posRefId that you passed in with the original transaction, and the transaction type.
+    /// This method will return immediately whether recovery has started or not.
+    /// If recovery has started, you need to bring up the transaction modal to your user a be listening to TxFlowStateChanged.
+    /// </summary>
+    /// <param name="posRefId">The is that you had assigned to the transaction that you are trying to recover.</param>
+    /// <param name="txType">The transaction type.</param>
+    /// <returns></returns>
+    InitiateRecovery(posRefId, txType)
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+    
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        
+        this.CurrentFlow = SpiFlow.Transaction;
+        
+        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, txType, 0, gltRequestMsg, 
+            "Waiting for EFTPOS connection to attempt recovery.");
+        
+        if (this._send(gltRequestMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to recover state.`);
+        }
+    
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new InitiateTxResult(true, "Recovery Initiated");
+    }
 
     /// <summary>
     /// Handling the 2nd interaction of the pairing process, i.e. an incoming KeyRequest.
@@ -683,7 +735,7 @@ class Spi {
         }
         else
         {
-            if (txState.Type === TransactionType.GetLastTx)
+            if (txState.Type === TransactionType.GetLastTransaction)
             {
                 // THIS WAS A PLAIN GET LAST TRANSACTION REQUEST, NOT FOR RECOVERY PURPOSES.
                 this._log.info("Retrieved Last Transaction as asked directly by the user.");

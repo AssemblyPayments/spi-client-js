@@ -60,9 +60,6 @@ class CancelTransactionRequest
 
 class GetLastTransactionRequest
 {
-    constructor(id) {
-        this.Id = id;
-    }
     ToMessage()
     {
         return new Message(RequestIdHelper.Id("glt"), Events.GetLastTransactionRequest, null, true);
