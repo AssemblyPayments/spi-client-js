@@ -328,6 +328,60 @@ class Spi {
     }
 
     /// <summary>
+    /// Initiates a cashout only transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+    /// </summary>
+    /// <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
+    /// <param name="amountCents">Amount in Cents to cash out</param>
+    /// <returns>InitiateTxResult</returns>
+    InitiateCashoutOnlyTx(posRefId, amountCents)
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId);
+        cashoutOnlyRequest.Config = Config;
+        var cashoutMsg = cashoutOnlyRequest.ToMessage();
+        this.CurrentFlow = SpiFlow.Transaction;
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg,
+            `Waiting for EFTPOS connection to send cashout request for ${amountCents / 100}`);
+        if (this._send(cashoutMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to do cashout for ${amountCents / 100}`);
+        }
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new InitiateTxResult(true, "Cashout Initiated");
+    }    
+
+    /// <summary>
+    /// Initiates a Mail Order / Telephone Order Purchase Transaction
+    /// </summary>
+    /// <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
+    /// <param name="amountCents">Amount in Cents</param>
+    /// <returns>InitiateTxResult</returns>
+    InitiateMotoPurchaseTx(posRefId, amountCents)
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId);
+        motoPurchaseRequest.Config = Config;
+        var cashoutMsg = motoPurchaseRequest.ToMessage();
+        this.CurrentFlow = SpiFlow.Transaction;
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.MOTO, amountCents, cashoutMsg,
+            `Waiting for EFTPOS connection to send MOTO request for ${amountCents / 100}`);
+        if (this._send(cashoutMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${amountCents / 100}`);
+        }
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new InitiateTxResult(true, "MOTO Initiated");
+    }
+
+    /// <summary>
     /// Initiates a settlement transaction.
     /// Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>

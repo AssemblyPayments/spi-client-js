@@ -7,6 +7,7 @@ const Events = {
      KeyResponse : "key_response",
      KeyCheck : "key_check",
      PairResponse : "pair_response",
+     DropKeysAdvice : "drop_keys",
 
      LoginRequest : "login_request",
      LoginResponse : "login_response",
@@ -24,16 +25,33 @@ const Events = {
      SignatureRequired : "signature_required",
      SignatureDeclined : "signature_decline",
      SignatureAccepted : "signature_accept",
-    
+     AuthCodeRequired : "authorisation_code_required",
+     AuthCodeAdvice : "authorisation_code_advice",
+
+     CashoutOnlyRequest : "cash",
+     CashoutOnlyResponse : "cash_response",
+
+     MotoPurchaseRequest : "moto_purchase",
+     MotoPurchaseResponse : "moto_purchase_response",
+
      SettleRequest : "settle",
      SettleResponse : "settle_response",
-    
+     SettlementEnquiryRequest : "settlement_enquiry",
+     SettlementEnquiryResponse : "settlement_enquiry_response",
+
      KeyRollRequest : "request_use_next_keys",
      KeyRollResponse : "response_use_next_keys",
 
      Error : "error",
     
-     InvalidHmacSignature : "_INVALID_SIGNATURE_"
+     InvalidHmacSignature : "_INVALID_SIGNATURE_",
+
+    // Pay At Table Related Messages
+    PayAtTableGetTableConfig : "get_table_config", // incoming. When eftpos wants to ask us for P@T configuration.
+    PayAtTableSetTableConfig : "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
+    PayAtTableGetBillDetails : "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
+    PayAtTableBillDetails : "bill_details",        // outgoing. We reply with this when eftpos requests to us get_bill_details.
+    PayAtTableBillPayment : "bill_payment"         // incoming. When the eftpos advices 
 };
 
 const SuccessState = {
@@ -118,7 +136,11 @@ class Message {
     }
 
     GetError() {
-        return this.Data.error_reason ? this.Data.error_reason : "NONE";
+        return this.Data.error_reason ? this.Data.error_reason : null;
+    }
+
+    GetErrorDetail() {
+        return this.Data.error_detail;
     }
 
     GetServerTimeDelta()
@@ -146,6 +168,13 @@ class Message {
             return message;
         }
 
+        if (secrets == null)
+        {
+            // This may happen if we somehow received an encrypted message from eftpos but we're not configered with secrets.
+            // For example, if we cancel the pairing process a little late in the game and we get an encrypted key_check message after we've dropped the keys.
+            return new Message("UNKNOWN", "NOSECRETS", null, false);
+        }
+
         // Its encrypted, verify sig
         let sig = Crypto.HmacSignature(secrets.HmacKey, env.enc);
         if (sig.toUpperCase() != env.hmac) {
@@ -167,7 +196,7 @@ class Message {
             return message;
 
         } catch(e) {
-            return new Message("Unknown", "unparseable", {"msg": decryptedJson}, false);
+            return new Message("UNKNOWN", "UNPARSEABLE", {"msg": decryptedJson}, false);
         }
     }
 
