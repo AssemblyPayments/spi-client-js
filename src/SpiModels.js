@@ -124,21 +124,44 @@ class InitiateTxResult
 }
 
 /// <summary>
+/// Used as a return in calls mid transaction to let you know
+/// whether the call was valid or not.
+/// These attributes work for COM interop.
+/// </summary>
+class MidTxResult
+{
+    /// <summary>
+    /// This default stucture works for COM interop.
+    /// </summary>
+    constructor(valid, message)
+    {
+        this.Valid = valid;
+        this.Message = message;
+    }
+}    
+
+/// <summary>
 /// Represents the State during a TransactionFlow
 /// </summary>
 class TransactionFlowState
 {
-    constructor(id, type, amountCents, message, msg)
+    constructor(posRefId, type, amountCents, message, msg)
     {
         /// <summary>
         ///  The id given to this transaction
         /// </summary>
-        this.Id = id;
+        this.PosRefId   = posRefId;
+        this.Id         = posRefId; // obsolete, but let's maintain it for now, to mean same as PosRefId.
 
         /// <summary>
         /// Purchase/Refund/Settle/...
         /// </summary>
         this.Type = type;
+
+        /// <summary>
+        /// A text message to display on your Transaction Flow Screen
+        /// </summary>
+        this.DisplayMessage = msg;
 
         /// <summary>
         /// Amount in cents for this transaction
@@ -174,6 +197,12 @@ class TransactionFlowState
         this.AwaitingSignatureCheck = false;
 
         /// <summary>
+        /// When this flag is on, you need to show your user the phone number to call to get the authorisation code.
+        /// Then you need to provide your user means to enter that given code and submit it via SubmitAuthCode().
+        /// </summary>
+        this.AwaitingPhoneForAuth = null;
+
+        /// <summary>
         /// Whether this transaction flow is over or not.
         /// </summary>
         this.Finished = false;
@@ -185,11 +214,6 @@ class TransactionFlowState
         this.Success = SuccessState.Unknown;
 
         /// <summary>
-        /// The request message that we are sending/sent to the server.
-        /// </summary>
-        this.Request = message;
-
-        /// <summary>
         /// The response at the end of the transaction. 
         /// Might not be present in all edge cases.
         /// You can then turn this Message into the appropriate structure,
@@ -198,19 +222,24 @@ class TransactionFlowState
         this.Response = null;
 
         /// <summary>
-        /// A text message to display on your Transaction Flow Screen
-        /// </summary>
-        this.DisplayMessage = msg;
-
-        /// <summary>
         /// The message the we received from EFTPOS that told us that signature is required.
         /// </summary>
         this.SignatureRequiredMessage = null;
     
         /// <summary>
+        /// The message the we received from EFTPOS that told us that Phone For Auth is required.
+        /// </summary>
+        this.PhoneForAuthRequiredMessage = null;
+
+        /// <summary>
         /// The time when the cancel attempt was made.
         /// </summary>
         this.CancelAttemptTime = null;
+
+        /// <summary>
+        /// The request message that we are sending/sent to the server.
+        /// </summary>
+        this.Request = message;
 
         /// <summary>
         /// Whether we're currently waiting for a Get Last Transaction Response to get an update. 
@@ -265,6 +294,19 @@ class TransactionFlowState
         this.DisplayMessage = msg;
     }
     
+    PhoneForAuthRequired(spiMessage, msg)
+    {
+        this.PhoneForAuthRequiredMessage = spiMessage;
+        this.AwaitingPhoneForAuth = true;
+        this.DisplayMessage = msg;
+    }
+    
+    AuthCodeSent(msg)
+    {
+        this.AwaitingPhoneForAuth = false;
+        this.DisplayMessage = msg;
+    }
+
     Completed(state, response, msg)
     {
         this.Success = state;
@@ -273,6 +315,7 @@ class TransactionFlowState
         this.AttemptingToCancel = false;
         this.AwaitingGltResponse = false;
         this.AwaitingSignatureCheck = false;
+        this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;
     }
 
@@ -284,6 +327,50 @@ class TransactionFlowState
         this.AttemptingToCancel = false;
         this.AwaitingGltResponse = false;
         this.AwaitingSignatureCheck = false;
+        this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;
+    }
+}
+
+/// <summary>
+/// Used as a return in the SubmitAuthCode method to signify whether Code is valid
+/// </summary>
+class SubmitAuthCodeResult
+{
+    SubmitAuthCodeResult(validFormat, message)
+    {
+        this.ValidFormat = validFormat;
+
+        /// <summary>
+        /// Text that gives reason for Invalidity
+        /// </summary>
+        this.Message = message;
+    }
+}
+
+class SpiConfig
+{
+    constructor() {
+        this.PromptForCustomerCopyOnEftpos  = false;
+        this.SignatureFlowOnEftpos          = false;
+    }
+
+    addReceiptConfig(messageData)
+    {
+        if (this.PromptForCustomerCopyOnEftpos)
+        {
+            messageData.prompt_for_customer_copy = this.PromptForCustomerCopyOnEftpos;
+        }
+        if (this.SignatureFlowOnEftpos)
+        {
+            messageData.print_for_signature_required_transactions = this.SignatureFlowOnEftpos;
+        }
+
+        return messageData;
+    }
+
+    ToString()
+    {
+        return `PromptForCustomerCopyOnEftpos:${this.PromptForCustomerCopyOnEftpos} SignatureFlowOnEftpos:${this.SignatureFlowOnEftpos}`;
     }
 }

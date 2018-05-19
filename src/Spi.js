@@ -191,6 +191,8 @@ class Spi {
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
     }
 
+
+
     /// <summary>
     /// Call this when your uses clicks the Unpair button.
     /// This will disconnect from the Eftpos and forget the secrets.
@@ -207,22 +209,23 @@ class Spi {
             return false;
         }
         
-        this.CurrentStatus = SpiStatus.Unpaired;
-
-        this._conn.Disconnect();
-        this._secrets = null;
-        this._spiMessageStamp.Secrets = null;
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        // Best effort letting the eftpos know that we're dropping the keys, so it can drop them as well.
+        this._send(new DropKeysRequest().ToMessage());
+        this._doUnpair();
         return true;
     }
+
+    // endregion
+
+    // region Transaction Methods
 
     /// <summary>
     /// Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>
-    /// <param name="id">Alphanumeric Identifier for your purchase.</param>
+    /// <param name="posRefId">Alphanumeric Identifier for your purchase.</param>
     /// <param name="amountCents">Amount in Cents to charge</param>
     /// <returns>InitiateTxResult</returns>
-    InitiatePurchaseTx(id, amountCents)
+    InitiatePurchaseTx(posRefId, amountCents)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -232,12 +235,14 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var purchase = PurchaseHelper.CreatePurchaseRequest(amountCents, id);
+        var purchaseRequest = PurchaseHelper.CreatePurchaseRequest(amountCents, posRefId);
+        purchaseRequest.Config = this.Config;
+        var purchaseMsg = purchaseRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            id, TransactionType.Purchase, amountCents, purchase.ToMessage(),
+            posRefId, TransactionType.Purchase, amountCents, purchaseMsg,
             `Waiting for EFTPOS connection to make payment request for ${amountCents / 100.0}`);
-        if (this._send(purchase.ToMessage()))
+        if (this._send(purchaseMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${amountCents / 100.0}`);
         }
@@ -247,12 +252,46 @@ class Spi {
     }
 
     /// <summary>
+    /// Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+    /// <para>Tip and cashout are not allowed simultaneously.</para>
+    /// </summary>
+    /// <param name="posRefId">An Unique Identifier for your Order/Purchase</param>
+    /// <param name="purchaseAmount">The Purchase Amount in Cents.</param>
+    /// <param name="tipAmount">The Tip Amount in Cents</param>
+    /// <param name="cashoutAmount">The Cashout Amount in Cents</param>
+    /// <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
+    /// <returns>InitiateTxResult</returns>
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout)
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (tipAmount > 0 && (cashoutAmount > 0 || promptForCashout)) return new InitiateTxResult(false, "Cannot Accept Tips and Cashout at the same time.");
+        
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        this.CurrentFlow = SpiFlow.Transaction;
+        
+        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout);
+        purchase.Config = this.Config;
+        var purchaseMsg = purchase.ToMessage();
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg,
+            `Waiting for EFTPOS connection to make payment request. ${purchase.AmountSummary()}`);
+        if (this._send(purchaseMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${purchase.AmountSummary()}`);
+        }
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new InitiateTxResult(true, "Purchase Initiated");
+    }
+
+    /// <summary>
     /// Initiates a refund transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>
-    /// <param name="id">Alphanumeric Identifier for your refund.</param>
+    /// <param name="posRefId">Alphanumeric Identifier for your refund.</param>
     /// <param name="amountCents">Amount in Cents to charge</param>
     /// <returns>InitiateTxResult</returns>
-    InitiateRefundTx(id, amountCents)
+    InitiateRefundTx(posRefId, amountCents)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -262,12 +301,14 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var purchase = PurchaseHelper.CreateRefundRequest(amountCents, id);
+        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId);
+        refundRequest.Config = this.Config;
+        var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            id, TransactionType.Refund, amountCents, purchase.ToMessage(), 
+            posRefId, TransactionType.Refund, amountCents, refundMsg, 
             `Waiting for EFTPOS connection to make refund request for ${amountCents / 100.0}`);
-        if (this._send(purchase.ToMessage()))
+        if (this._send(refundMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${amountCents / 100.0}`);
         }
@@ -282,20 +323,48 @@ class Spi {
     /// <param name="accepted">whether merchant accepted the signature from customer or not</param>
     AcceptSignature(accepted)
     {
-
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.AwaitingSignatureCheck)
         {
             this._log.info("Asked to accept signature but I was not waiting for one.");
-            return;
+            return new MidTxResult(false, "Asked to accept signature but I was not waiting for one.");
         }
 
         this.CurrentTxFlowState.SignatureResponded(accepted ? "Accepting Signature..." : "Declining Signature...");
         var sigReqMsg = this.CurrentTxFlowState.SignatureRequiredMessage;
         this._send(accepted
-            ? new SignatureAccept(sigReqMsg.RequestId).ToMessage()
-            : new SignatureDecline(sigReqMsg.RequestId).ToMessage());
+            ? new SignatureAccept(this.CurrentTxFlowState.PosRefId).ToMessage()
+            : new SignatureDecline(this.CurrentTxFlowState.PosRefId).ToMessage());
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new MidTxResult(true, "");
+    }
+
+    /// <summary>
+    /// Submit the Code obtained by your user when phoning for auth. 
+    /// It will return immediately to tell you whether the code has a valid format or not. 
+    /// If valid==true is returned, no need to do anything else. Expect updates via standard callback.
+    /// If valid==false is returned, you can show your user the accompanying message, and invite them to enter another code. 
+    /// </summary>
+    /// <param name="authCode">The code obtained by your user from the merchant call centre. It should be a 6-character alpha-numeric value.</param>
+    /// <returns>Whether code has a valid format or not.</returns>
+    SubmitAuthCode(authCode)
+    {
+        if (authCode.Length != 6)
+        {
+            return new SubmitAuthCodeResult(false, "Not a 6-digit code.");    
+        }
+                
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.AwaitingPhoneForAuth)
+        {
+            this._log.info("Asked to send auth code but I was not waiting for one.");
+            return new SubmitAuthCodeResult(false, "Was not waiting for one.");
+        }
+
+        this.CurrentTxFlowState.AuthCodeSent(`Submitting Auth Code ${authCode}`);
+        this._send(new AuthCodeAdvice(this.CurrentTxFlowState.PosRefId, authCode).ToMessage());
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new SubmitAuthCodeResult(true, "Valid Code.");
     }
 
     /// <summary>
@@ -303,12 +372,13 @@ class Spi {
     /// Be subscribed to TxFlowStateChanged event to see how it goes.
     /// Wait for the transaction to be finished and then see whether cancellation was successful or not.
     /// </summary>
+    /// <returns>MidTxResult - false only if you called it in the wrong state</returns>
     CancelTransaction()
     {
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
         {
             this._log.info("Asked to cancel transaction but I was not in the middle of one.");
-            return;
+            return new MidTxResult(false, "Asked to cancel transaction but I was not in the middle of one.");
         }
 
         // TH-1C, TH-3C - Merchant pressed cancel
@@ -325,6 +395,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        return new MidTxResult(true, "");
     }
 
     /// <summary>
@@ -495,6 +566,42 @@ class Spi {
     }
 
     /// <summary>
+    /// GltMatch attempts to conclude whether a gltResponse matches an expected transaction and returns
+    /// the outcome. 
+    /// If Success/Failed is returned, it means that the gtlResponse did match, and that transaction was succesful/failed.
+    /// If Unknown is returned, it means that the gltResponse does not match the expected transaction. 
+    /// </summary>
+    /// <param name="gltResponse">The GetLastTransactionResponse message to check</param>
+    /// <param name="posRefId">The Reference Id that you passed in with the original request.</param>
+
+    /// <returns></returns>
+    GltMatch(gltResponse, posRefId, ...deprecatedArgs) 
+    {
+        // Obsolete method call check
+        // Old interface: GltMatch(GetLastTransactionResponse gltResponse, TransactionType expectedType, int expectedAmount, DateTime requestTime, string posRefId)
+        if(deprecatedArgs.length) {
+            if(deprecatedArgs.length == 2) {
+                this._log.info("Obsolete method call detected: Use GltMatch(gltResponse, posRefId)");
+                return this.GltMatch(gltResponse, deprecatedArgs[2]);
+            } else {
+                throw new Error("Obsolete method call with unknown args: Use GltMatch(GetLastTransactionResponse gltResponse, string posRefId)");
+            }
+        }
+
+        this._log.info(`GLT CHECK: PosRefId: ${posRefId}->${gltResponse.GetPosRefId()}`);
+
+        if (!posRefId == gltResponse.GetPosRefId())
+        {
+            return SuccessState.Unknown;
+        }
+
+        return gltResponse.GetSuccessState();
+    }
+    // endregion
+        
+    // region Internals for Pairing Flow
+
+    /// <summary>
     /// Handling the 2nd interaction of the pairing process, i.e. an incoming KeyRequest.
     /// </summary>
     /// <param name="m">incoming message</param>
@@ -525,7 +632,6 @@ class Spi {
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
     }
 
-
     /// <summary>
     /// Handling the 5th and final interaction of the pairing process, i.e. an incoming PairResponse
     /// </summary>
@@ -540,11 +646,13 @@ class Spi {
             if (this.CurrentPairingFlowState.AwaitingCheckFromPos)
             {
                 // Still Waiting for User to say yes on POS
+                this._log.info("Got Pair Confirm from Eftpos, but still waiting for use to confirm from POS.");
                 this.CurrentPairingFlowState.Message = "Confirm that the following Code is what the EFTPOS showed";
+                document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
             }
             else
             {
-                this.CurrentPairingFlowState.Message = "Pairing Successful";
+                this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
                 this._onPairingSuccess();
             }
             // I need to ping/login even if the pos user has not said yes yet, 
@@ -553,11 +661,14 @@ class Spi {
         }
         else
         {
-            this.CurrentPairingFlowState.Message = "Pairing Failed";
             this._onPairingFailed();
         }
+    }
 
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+    _handleDropKeysAdvice(m)
+    {
+        this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
+        this._doUnpair();
     }
 
     _onPairingSuccess()
@@ -582,6 +693,15 @@ class Spi {
         this.CurrentPairingFlowState.Successful = false;
         this.CurrentPairingFlowState.AwaitingCheckFromPos = false;
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+    }
+
+    _doUnpair()
+    {
+        this.CurrentStatus = SpiStatus.Unpaired;
+        this._conn.Disconnect();
+        this._secrets = null;
+        this._spiMessageStamp.Secrets = null;
+        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
     }
 
     /// <summary>
@@ -695,64 +815,6 @@ class Spi {
             this._log.info(`Received Error Event But Don't know what to do with it. ${m.DecryptedJson}`);
         }
     }
-    /// <summary>
-    /// GltMatch attempts to conclude whether a gltResponse matches an expected transaction and returns
-    /// the outcome. 
-    /// If Success/Failed is returned, it means that the gtlResponse did match, and that transaction was succesful/failed.
-    /// If Unknown is returned, it means that the gtlResponse does not match the expected transaction. 
-    /// </summary>
-    /// <param name="gltResponse">The GetLastTransactionResponse message to check</param>
-    /// <param name="expectedType">The expected Type, Purchase/Refund/...</param>
-    /// <param name="expectedAmount">The expected Amount in cents</param>
-    /// <param name="requestTime">The time you made your request.</param>
-    /// <param name="posRefId">The Reference Id that you passed in with the original request. Currently not used. 
-    /// But will be used in the future for abetter conclusion.</param>
-    /// <returns></returns>
-    GltMatch(gltResponse, expectedType, expectedAmount, requestTime, posRefId) {
-
-        // adjust request time for serverTime and also give 5 seconds slack.
-        var reqServerTime = new Date(requestTime + this._spiMessageStamp.ServerTimeDelta - 5000);
-
-        /* Transformat into  ISO format */
-        var bankDateTime = gltResponse.GetBankDateTimeString();
-        var gtlBankTime = new Date(bankDateTime.substring(4, 8) + "-" 
-            + bankDateTime.substring(2, 4) + "-"
-            + bankDateTime.substring(0, 2) + "T"
-            + bankDateTime.substring(8, 10)+":"+ bankDateTime.substring(10, 12) +":"+bankDateTime.substring(12, 14));
-
-        // For now we use amount and date to match as best we can.
-        // In the future we will be able to pass our own pos_ref_id in the tx request that will be returned here.
-        this._log.info(`Amount: ${expectedAmount}->${gltResponse.GetTransactionAmount()}, Date: ${reqServerTime}->${gtlBankTime}`);
-        
-        if (gltResponse.GetTransactionAmount() != expectedAmount)
-        {
-            return SuccessState.Unknown;
-        }
-
-        switch (gltResponse.GetTxType())
-        {
-            case "PURCHASE":
-                if (expectedType != TransactionType.Purchase) 
-                    return SuccessState.Unknown;
-                break;
-            case "REFUND":
-                if (expectedType != TransactionType.Refund) 
-                    return SuccessState.Unknown;
-                break;
-            default: 
-                return SuccessState.Unknown;
-        }
-
-        if (reqServerTime > gtlBankTime) 
-        {
-            return SuccessState.Unknown;
-        }
-
-        // For now we use amount and date to match as best we can.
-        // In the future we will be able to pass our own pos_ref_id in the tx request that will be returned here.
-        return gltResponse.GetSuccessState();
-    }
-
 
     /// <summary>
     /// When the PinPad returns to us what the Last Transaction was.
@@ -769,49 +831,67 @@ class Spi {
 
         // TH-4 We were in the middle of a transaction.
         // Let's attempt recovery. This is step 4 of Transaction Processing Handling
-        this._log.info(`Got Last Transaction.. Attempting Recovery.`);
+        this._log.info(`Got Last Transaction..`);
         txState.GotGltResponse();
-
         var gtlResponse = new GetLastTransactionResponse(m);
         if (!gtlResponse.WasRetrievedSuccessfully())
         {
-            if (gtlResponse.WasOperationInProgressError())
+            if (gtlResponse.IsStillInProgress(txState.PosRefId))
             {
                 // TH-4E - Operation In Progress
-                this._log.info(`Operation still in progress... stay waiting.`);
+
+                if (gtlResponse.IsWaitingForSignatureResponse() && !txState.AwaitingSignatureCheck)
+                {
+                    this._log.info("Eftpos is waiting for us to send it signature accept/decline, but we were not aware of this. " +
+                              "The user can only really decline at this stage as there is no receipt to print for signing.");
+                    this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(txState.PosRefId, m.Id, "MISSING RECEIPT\n DECLINE AND TRY AGAIN."), "Recovered in Signature Required but we don't have receipt. You may Decline then Retry.");
+                }
+                else if (gtlResponse.IsWaitingForAuthCode() && !txState.AwaitingPhoneForAuth)
+                {
+                    this._log.info("Eftpos is waiting for us to send it auth code, but we were not aware of this. " +
+                              "We can only cancel the transaction at this stage as we don't have enough information to recover from this.");
+                    this.CurrentTxFlowState.PhoneForAuthRequired(new PhoneForAuthRequired(txState.PosRefId, m.Id, "UNKNOWN", "UNKNOWN"), "Recovered mid Phone-For-Auth but don't have details. You may Cancel then Retry.");
+                }
+                else
+                {
+                    this._log.info("Operation still in progress... stay waiting.");
+                    // No need to publish txFlowStateChanged. Can return;
+                    return;
+                }
             }
             else
             {
-                // TH-4X - Unexpected Error when recovering
-                this._log.info(`Unexpected error in Get Last Transaction Response during Transaction Recovery: ${m.GetError()}`);
-                txState.UnknownCompleted(`Unexpected Error when recovering Transaction Status. Check EFTPOS.`);
+                // TH-4X - Unexpected Response when recovering
+                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}`);
+                txState.UnknownCompleted("Unexpected Error when recovering Transaction Status. Check EFTPOS. ");
             }
         }
         else
         {
-            if (txState.Type === TransactionType.GetLastTransaction)
+            if (txState.Type == TransactionType.GetLastTransaction)
             {
                 // THIS WAS A PLAIN GET LAST TRANSACTION REQUEST, NOT FOR RECOVERY PURPOSES.
                 this._log.info("Retrieved Last Transaction as asked directly by the user.");
                 gtlResponse.CopyMerchantReceiptToCustomerReceipt();
                 txState.Completed(m.GetSuccessState(), m, "Last Transaction Retrieved");
-            } 
-            else 
+            }
+            else
             {
-                let successState = this.GltMatch(gtlResponse, txState.Type, txState.AmountCents, txState.RequestTime, "_NOT_IMPL_YET");
-                if (successState == SuccessState.Unknown) 
+                // TH-4A - Let's try to match the received last transaction against the current transaction
+                var successState = this.GltMatch(gtlResponse, txState.PosRefId);
+                if (successState == SuccessState.Unknown)
                 {
                     // TH-4N: Didn't Match our transaction. Consider Unknown State.
-                    this._log.info(`Did not match transaction.`);
+                    this._log.info("Did not match transaction.");
                     txState.UnknownCompleted("Failed to recover Transaction Status. Check EFTPOS. ");
                 }
                 else
                 {
                     // TH-4Y: We Matched, transaction finished, let's update ourselves
                     gtlResponse.CopyMerchantReceiptToCustomerReceipt();
-                    txState.Completed(m.GetSuccessState(), m, "GLT Transaction Ended.");
+                    txState.Completed(successState, m, "Transaction Ended.");
                 }
-            }
+            } 
         }
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
     }

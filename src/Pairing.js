@@ -60,3 +60,11 @@ class SecretsAndKeyResponse {
         this.KeyResponse = keyResponse;
     }
 }
+
+class DropKeysRequest
+{
+    ToMessage()
+    {
+        return new Message(RequestIdHelper.Id("drpkys"), Events.DropKeysAdvice, null, true);
+    }
+}
