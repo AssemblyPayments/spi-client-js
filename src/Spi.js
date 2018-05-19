@@ -927,6 +927,10 @@ class Spi {
         setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
     }
 
+    // endregion
+        
+    // region Internals for Connection Management
+
     _resetConn()
     {
         // Setup the Connection
@@ -946,7 +950,7 @@ class Spi {
     /// <param name="state"></param>
     _onSpiConnectionStatusChanged(state)
     {
-        switch (state)
+        switch (state.ConnectionState)
         {
             case ConnectionState.Connecting:
                 this._log.info(`I'm Connecting to the Eftpos at ${this._eftposAddress}...`);
@@ -974,8 +978,6 @@ class Spi {
                 this._mostRecentPingSent = null;
                 this._mostRecentPongReceived = null;
                 this._missedPongsCount = 0;
-                this._mostRecentLoginResponse = null;
-                this._readyToTransact = false;
                 this._stopPeriodicPing();
 
                 if (this.CurrentStatus != SpiStatus.Unpaired)
@@ -989,8 +991,8 @@ class Spi {
                         this._log.info(`Lost connection in the middle of a transaction...`);
                     }
                     
+                    if (this._conn == null) return; // This means the instance has been disposed. Aborting.
                     this._log.info(`Will try to reconnect in 5s...`);
-
                     setTimeout(() => {
                         if (this.CurrentStatus != SpiStatus.Unpaired)
                         {
@@ -1012,6 +1014,11 @@ class Spi {
         }
     }
 
+    /// <summary>
+    /// This is an important piece of the puzzle. It's a background thread that periodically
+    /// sends Pings to the server. If it doesn't receive Pongs, it considers the connection as broken
+    /// so it disconnects. 
+    /// </summary>
     _startPeriodicPing() {
         this._stopPeriodicPing();
         this._periodicPingThread = setInterval(() => this._periodicPing(),this._pingFrequency);
@@ -1043,7 +1050,6 @@ class Spi {
                     // Let's Disconnect.
                     this._log.info("Disconnecting...");
                     this._conn.Disconnect();
-                    this._readyToTransact = false;
                     this._stopPeriodicPing();
                 }
 
@@ -1063,6 +1069,8 @@ class Spi {
     /// </summary>
     _onReadyToTransact()
     {
+        this._log.info("On Ready To Transact!");
+
         // So, we have just made a connection, pinged and logged in successfully.
         this.CurrentStatus = SpiStatus.PairedConnected;
 
@@ -1079,7 +1087,7 @@ class Spi {
             {
                 // TH-3AR - We had not even sent the request yet. Let's do that now
                 this._send(this.CurrentTxFlowState.Request);
-                this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${this.CurrentTxFlowState.AmountCents / 100.0}`);
+                this.CurrentTxFlowState.Sent(`Sending Request Now...`);
                 document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
             }
         }
@@ -1096,13 +1104,13 @@ class Spi {
         }
     }
 
-
     // Send a Ping to the Server
     _doPing()
     {
         var ping = PingHelper.GeneratePingRequest();
         this._mostRecentPingSent = ping;
         this._send(ping);
+        this._mostRecentPingSentTime = Date.now();
     }
 
     /// <summary>
@@ -1114,55 +1122,22 @@ class Spi {
         // We need to maintain this time delta otherwise the server will not accept our messages.
         this._spiMessageStamp.ServerTimeDelta = m.GetServerTimeDelta();
 
-        if (this._mostRecentLoginResponse == null ||
-            this._mostRecentLoginResponse.ExpiringSoon(this._spiMessageStamp.ServerTimeDelta))
+        if (this._mostRecentPongReceived == null)
         {
-            // We have not logged in yet, or login expiring soon.
-            this._doLogin();
-        }
-        this._mostRecentPongReceived = m;
-    }
-
-    /// <summary>
-    /// Login is a mute thing but is required. 
-    /// </summary>
-    _doLogin()
-    {
-        var lr = LoginHelper.NewLoginRequest();
-        this._send(lr.ToMessage());
-    }
-
-    /// <summary>
-    /// When the server replied to our LoginRequest with a LoginResponse, we take note of it.
-    /// </summary>
-    /// <param name="m"></param>
-    _handleLoginResponse(m)
-    {
-        var lr = new LoginResponse(m);
-        if (lr.Success)
-        {
-            this._mostRecentLoginResponse = lr;
-
-            if (!this._readyToTransact)
+            // First pong received after a connection, and after the pairing process is fully finalised.
+            if (this.CurrentStatus != SpiStatus.Unpaired)
             {
-                // We are finally ready to make transactions.
-                // Let's notify ourselves so we can take some actions.
-                this._readyToTransact = true;
-                this._log.info(`Logged in Successfully. Expires: ${lr.Expires}`);
-                if (this.CurrentStatus != SpiStatus.Unpaired) {
-                    this._onReadyToTransact();
-                }
+                this._log.info("First pong of connection and in paired state.");
+                this._onReadyToTransact();
             }
             else
             {
-                this._log.info(`I have just refreshed my Login. Now Expires: ${lr.Expires}`);
+                this._log.info("First pong of connection but pairing process not finalised yet.");
             }
         }
-        else
-        {
-            this._log.info("Logged in Failure.");
-            this._conn.Disconnect();
-        }
+
+        this._mostRecentPongReceived = m;
+        this._log.debug(`PongLatency:${Date.now() - this._mostRecentPingSentTime}`);
     }
 
     /// <summary>
@@ -1184,7 +1159,6 @@ class Spi {
         this._send(gltRequest.ToMessage());
     }
 
-
     /// <summary>
     /// This method will be called whenever we receive a message from the Connection
     /// </summary>
@@ -1192,8 +1166,15 @@ class Spi {
     _onSpiMessageReceived(messageJson)
     {
         // First we parse the incoming message
-        var m = Message.FromJson(messageJson, this._secrets);
+        var m = Message.FromJson(messageJson.Message, this._secrets);
         this._log.info("Received:" + m.DecryptedJson);
+
+        if (SpiPreauth.IsPreauthEvent(m.EventName))
+        {
+            this._spiPreauth._handlePreauthMessage(m);
+            return;
+        }
+
         // And then we switch on the event type.
         switch (m.EventName)
         {
@@ -1206,8 +1187,8 @@ class Spi {
             case Events.PairResponse:
                 this._handlePairResponse(m);
                 break;
-            case Events.LoginResponse:
-                this._handleLoginResponse(m);
+            case Events.DropKeysAdvice:
+                this._handleDropKeysAdvice(m);
                 break;
             case Events.PurchaseResponse:
                 this._handlePurchaseResponse(m);
@@ -1215,14 +1196,26 @@ class Spi {
             case Events.RefundResponse:
                 this._handleRefundResponse(m);
                 break;
+            case Events.CashoutOnlyResponse:
+                this._handleCashoutOnlyResponse(m);
+                break;
+            case Events.MotoPurchaseResponse:
+                this._handleMotoPurchaseResponse(m);
+                break;
             case Events.SignatureRequired:
                 this._handleSignatureRequired(m);
+                break;
+            case Events.AuthCodeRequired:
+                this._handleAuthCodeRequired(m);
                 break;
             case Events.GetLastTransactionResponse:
                 this._handleGetLastTransactionResponse(m);
                 break;
             case Events.SettleResponse:
                 this.HandleSettleResponse(m);
+                break;
+            case Events.SettlementEnquiryResponse:
+                this._handleSettlementEnquiryResponse(m);
                 break;
             case Events.Ping:
                 this._handleIncomingPing(m);
@@ -1232,6 +1225,20 @@ class Spi {
                 break;
             case Events.KeyRollRequest:
                 this._handleKeyRollingRequest(m);
+                break;
+            case Events.PayAtTableGetTableConfig:
+                if (this._spiPat == null)
+                {
+                    this._send(PayAtTableConfig.FeatureDisableMessage(RequestIdHelper.Id("patconf")));
+                    break;
+                }
+                this._spiPat._handleGetTableConfig(m);
+                break;
+            case Events.PayAtTableGetBillDetails:
+                this._spiPat._handleGetBillDetailsRequest(m);
+                break;
+            case Events.PayAtTableBillPayment:
+                this._spiPat._handleBillPaymentAdvice(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);

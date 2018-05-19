@@ -19,7 +19,6 @@ module.exports = function (config) {
 
             // Our code
             'src/**/*.js',
-            'Pos.js',
 
             // Include the unit tests 
             'tests/**/*.spec.js'
