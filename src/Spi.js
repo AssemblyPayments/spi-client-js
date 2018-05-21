@@ -13,7 +13,7 @@ class Spi {
         document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
     }
 
-    constructor(posId, eftposAddress, secrets, log) 
+    constructor(posId, eftposAddress, secrets) 
     {
         this._posId = posId;
         this._secrets = secrets;
