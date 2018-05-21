@@ -177,7 +177,7 @@ class PreauthResponse
 {
     constructor(m)
     {
-        this.PreauthId = m.GetDataStringValue("preauth_id");
+        this.PreauthId = m["preauth_id"];
         this.Details = new PurchaseResponse(m);
         this.PosRefId = this.Details.PosRefId;
         this._m = m;
