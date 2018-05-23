@@ -159,6 +159,13 @@ class Message {
         return msgTime - now;
     }
 
+    // Helper method to parse bank date format 20042018 (ddMMyyyy)
+    static ParseBankDate(bankDate) {
+        if(bankDate.length !== 8) return null;
+
+        return new Date(`${bankDate.substr(4,4)}-${bankDate.substr(2,2)}-${bankDate.substr(0,2)}`);
+    }
+
     static FromJson(msgJson, secrets) {
         let env = JSON.parse(msgJson);
 

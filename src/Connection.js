@@ -4,7 +4,7 @@ const ConnectionState = {
     Connected: 'Connected'
 };
 
-const SPI_PROTOCOL = 'spi.2.0.0';
+const SPI_PROTOCOL = 'spi.2.1.0';
 
 class Connection {
     constructor() {

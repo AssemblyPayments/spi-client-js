@@ -73,9 +73,9 @@ class SpiPayAtTable
         }
                     
         var existingPaymentHistory = existingBillStatus.getBillPaymentHistory();
-        
-        var foundExistingEntry = existingPaymentHistory.Find(phe => phe.GetTerminalRefId() == billPayment.PurchaseResponse.GetTerminalReferenceId());
-        if (foundExistingEntry != null)
+   
+        var foundExistingEntry = existingPaymentHistory.find(phe => phe.GetTerminalRefId() == billPayment.PurchaseResponse.GetTerminalReferenceId());
+        if (foundExistingEntry)
         {
             // We have already processed this payment.
             // perhaps Eftpos did get our acknowledgement.
@@ -94,7 +94,7 @@ class SpiPayAtTable
         var updatedBillData = BillStatusResponse.ToBillData(updatedHistoryEntries);
 
         // Advise POS of new payment against this bill, and the updated BillData to Save.
-        var updatedBillStatus = BillPaymentReceived(billPayment, updatedBillData);
+        var updatedBillStatus = this.BillPaymentReceived(billPayment, updatedBillData);
 
         // Just in case client forgot to set these:
         updatedBillStatus.BillId = billPayment.BillId;

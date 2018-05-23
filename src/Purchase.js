@@ -1,15 +1,35 @@
 class PurchaseRequest {
-    constructor(amountCents, id) {
+    constructor(amountCents, posRefId) {
+        this.PosRefId = posRefId;
+        this.PurchaseAmount = amountCents;
+        this.TipAmount = 0;
+        this.CashoutAmount = 0;
+        this.PromptForCashout = false;
+        this.Config = new SpiConfig();
+
+        // Library Backwards Compatibility
+        this.Id = posRefId;
         this.AmountCents = amountCents;
-        this.Id = id;
+    }
+
+    AmountSummary()
+    {
+        return `Purchase: ${(PurchaseAmount / 100.0).toFixed(2)}; 
+            Tip: ${(TipAmount / 100.0).toFixed(2)}; 
+            Cashout: ${(CashoutAmount / 100.0).toFixed(2)};`;
     }
 
     ToMessage() {
         let data = {
-            amount_purchase: this.AmountCents
+            pos_ref_id: this.PosRefId,
+            purchase_amount: this.PurchaseAmount,
+            tip_amount: this.TipAmount,
+            cash_amount: this.CashoutAmount,
+            prompt_for_cashout: this.PromptForCashout
         };
 
-        return new Message(this.Id, Events.PurchaseRequest, data, true);
+        this.Config.addReceiptConfig(data);
+        return new Message(RequestIdHelper.Id("prchs"), Events.PurchaseRequest, data, true);
     }
 }
 
@@ -17,15 +37,42 @@ class PurchaseResponse
 {
     constructor(m)
     {
-        this.RequestId = m.Id;
         this._m = m;
+        this.RequestId = m.Id;
+        this.PosRefId = m.Data.pos_ref_id;
         this.SchemeName = m.Data.scheme_name;
+        this.SchemeAppName = m.Data.scheme_name;
         this.Success = m.GetSuccessState() == SuccessState.Success;
     }
 
     GetRRN()
     {
         return this._m.Data.rrn;
+    }
+
+    GetPurchaseAmount()
+    {
+        return this._m.Data.purchase_amount;
+    }
+
+    GetTipAmount()
+    {
+        return this._m.Data.tip_amount;
+    }
+
+    GetCashoutAmount()
+    {
+        return this._m.Data.cash_amount;
+    }
+
+    GetBankNonCashAmount()
+    {
+        return this._m.Data.bank_noncash_amount;
+    }
+
+    GetBankCashAmount()
+    {
+        return this._m.Data.bank_cash_amount;
     }
 
     GetCustomerReceipt()
@@ -43,9 +90,91 @@ class PurchaseResponse
         return this._m.Data.host_response_text || "";
     }
 
+    GetResponseCode()
+    {
+        return this._m.Data.host_response_code;
+    }
+    
+    GetTerminalReferenceId()
+    {
+        return this._m.Data.terminal_ref_id;
+    }
+
+    GetCardEntry()
+    {
+        return this._m.Data.card_entry;
+    }
+    
+    GetAccountType()
+    {
+        return this._m.Data.account_type;
+    }
+
+    GetAuthCode()
+    {
+        return this._m.Data.auth_code;
+    }
+
+    GetBankDate()
+    {
+        return this._m.Data.bank_date;
+    }
+
+    GetBankTime()
+    {
+        return this._m.Data.bank_time;
+    }
+    
+    GetMaskedPan()
+    {
+        return this._m.Data.masked_pan;
+    }
+    
+    GetTerminalId()
+    {
+        return this._m.Data.terminal_id;
+    }
+
+    WasMerchantReceiptPrinted()
+    {
+        return this._m.Data.merchant_receipt_printed;
+    }
+
+    WasCustomerReceiptPrinted()
+    {
+        return this._m.Data.customer_receipt_printed;
+    }
+    
+    GetSettlementDate()
+    {
+        //"bank_settlement_date":"20042018"
+        var dateStr = this._m.Data.bank_settlement_date;
+        if (!dateStr) return null;
+        return Message.ParseBankDate(dateStr);
+    }
+
     GetResponseValue(attribute)
     {
         return this._m.Data[attribute];
+    }
+
+    ToPaymentSummary()
+    {
+        return {
+            account_type: this.GetAccountType(),
+            auth_code: this.GetAuthCode(),
+            bank_date: this.GetBankDate(),
+            bank_time: this.GetBankTime(),
+            host_response_code: this.GetResponseCode(),
+            host_response_text: this.GetResponseText(),
+            masked_pan: this.GetMaskedPan(),
+            purchase_amount: this.GetPurchaseAmount(),
+            rrn: this.GetRRN(),
+            scheme_name: this.SchemeName,
+            terminal_id: this.GetTerminalId(),
+            terminal_ref_id: this.GetTerminalReferenceId(),
+            tip_amount: this.GetTipAmount()           
+        };
     }
 }
 

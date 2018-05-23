@@ -3,6 +3,43 @@
 /// </summary>
 class BillStatusResponse
 {
+    constructor() {
+        /// <summary>
+        /// Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
+        /// </summary>
+        this.Result = null;
+        
+        /// <summary>
+        /// This is a unique identifier that you assign to each bill.
+        /// It migt be for example, the timestamp of when the cover was opened.
+        /// </summary>
+        this.BillId = null;
+        
+        /// <summary>
+        /// This is the table id that this bill was for.
+        /// The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
+        /// retrieve the bill using the table id. 
+        /// </summary>
+        this.TableId = null;
+        
+        /// <summary>
+        /// The Total Amount on this bill, in cents.
+        /// </summary>
+        this.TotalAmount = 0;
+        
+        /// <summary>
+        /// The currently outsanding amount on this bill, in cents.
+        /// </summary>
+        this.OutstandingAmount = 0;
+
+        /// <summary>
+        /// Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
+        /// It is just a piece of string that you save against your billId.
+        /// WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
+        /// </summary>
+        this.BillData = "";
+    }
+
     getBillPaymentHistory()
     {
         if (!this.BillData)
@@ -34,14 +71,14 @@ class BillStatusResponse
 
         if (this.Result == BillRetrievalResult.SUCCESS)
         {
-            data.bill_total_amount = TotalAmount;
-            data.bill_outstanding_amount = OutstandingAmount;
-            data.bill_payment_history = getBillPaymentHistory();
+            data.bill_total_amount = this.TotalAmount;
+            data.bill_outstanding_amount = this.OutstandingAmount;
+            data.bill_payment_history = this.getBillPaymentHistory();
         }
         else
         {
-            data.error_reason = Result.toString();
-            data.error_detail = Result.toString();
+            data.error_reason = this.Result.toString();
+            data.error_detail = this.Result.toString();
         }
 
         return new Message(messageId, Events.PayAtTableBillDetails, data, true);
