@@ -166,6 +166,11 @@ class Message {
         return new Date(`${bankDate.substr(4,4)}-${bankDate.substr(2,2)}-${bankDate.substr(0,2)}`);
     }
 
+    // Parses a bank date & time str from "05Oct17" / "05:00" ("ddMMMyy/HH:mm") into date obj
+    static ParseBankDateTimeStr(date, time) {
+        return new Date(`${date.substr(0,2)} ${date.substr(2,3)} ${date.substr(5,2)} ${time}`);
+    }
+
     static FromJson(msgJson, secrets) {
         let env = JSON.parse(msgJson);
 
