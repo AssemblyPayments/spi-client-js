@@ -18,9 +18,9 @@ describe('Purchase', function() {
 
         var decryptedMsg = Message.FromJson(encryptedMsg, secrets);
 
-        expect(decryptedMsg.Id).toBe('p1');
+        expect(decryptedMsg.Id).toBe('prchs2');
         expect(decryptedMsg.EventName).toBe(Events.PurchaseRequest);
-        expect(decryptedMsg.Data.amount_purchase).toBe(purchaseAmountCents);
+        expect(decryptedMsg.Data.purchase_amount).toBe(purchaseAmountCents);
 
     });
 
