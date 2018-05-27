@@ -19,6 +19,7 @@ class Spi {
         this._secrets = secrets;
         this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
+        this.Config = new SpiConfig();
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
@@ -43,23 +44,34 @@ class Spi {
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
         this.CurrentTxFlowState         = null;
+    }
 
-        this._resetConn();
+    EnablePayAtTable()
+    {
+        this._spiPat = new SpiPayAtTable(this);
+        return _spiPat;
+    }
 
+    EnablePreauth()
+    {
+        this._spiPreauth = new SpiPreauth(this);
+        return _spiPreauth;
     }
 
     Start() {
-
+        this._resetConn();
         this._startTransactionMonitoringThread();
 
         this.CurrentFlow = SpiFlow.Idle;
         if (this._secrets != null)
         {
+            this._log.info("Starting in Paired State");
             this._currentStatus = SpiStatus.PairedConnecting;
             this._conn.Connect(); // This is non-blocking
         }
         else
         {
+            this._log.info("Starting in Unpaired State");
             this._currentStatus = SpiStatus.Unpaired;
         } 
     }
@@ -121,15 +133,60 @@ class Spi {
         return false;
     }
 
+    GetVersion()
+    {
+        return this._version;
+    }
+    // endregion
+
+    // region Flow Management Methods
+
+    /// <summary>
+    /// Call this one when a flow is finished and you want to go back to idle state.
+    /// Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
+    /// finished, or that transaction is finished.
+    /// When true, you can dismiss the flow screen and show back the idle screen.
+    /// </summary>
+    /// <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
+    AckFlowEndedAndBackToIdle()
+    {
+        if (this.CurrentFlow == SpiFlow.Idle)
+            return true; // already idle
+
+        if (this.CurrentFlow == SpiFlow.Pairing && CurrentPairingFlowState.Finished)
+        {
+            this.CurrentFlow = SpiFlow.Idle;
+            return true;
+        }
+        
+        if (this.CurrentFlow == SpiFlow.Transaction && CurrentTxFlowState.Finished)
+        {
+            this.CurrentFlow = SpiFlow.Idle;
+            return true;
+        }
+
+        return false;
+    }        
+
+    // endregion
+
     /// <summary>
     /// This will connect to the Eftpos and start the pairing process.
     /// Only call this if you are in the Unpaired state.
     /// Subscribe to the PairingFlowStateChanged event to get updates on the pairing process.
     /// </summary>
+    /// <returns>Whether pairing has initiated or not</returns>
     Pair()
     {
         if (this.CurrentStatus != SpiStatus.Unpaired) {
-            return;
+            this._log.warn("Tried to Pair but we're already so.");
+            return false;
+        }
+
+        if (!this._posId || !this._eftposAddress)
+        {
+            this._log.warn("Tried to Pair but missing posId or eftposAddress");
+            return false;
         }
 
         this.CurrentFlow = SpiFlow.Pairing;
@@ -145,6 +202,7 @@ class Spi {
 
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
         this._conn.Connect(); // Non-Blocking
+        return true;
     }
 
     /// <summary>
@@ -163,17 +221,18 @@ class Spi {
         if (this.CurrentPairingFlowState.AwaitingCheckFromEftpos)
         {
             // But we are still waiting for confirmation from Eftpos side.
+            this._log.info("Pair Code Confirmed from POS side, but am still waiting for confirmation from Eftpos.");
             this.CurrentPairingFlowState.Message =
                 "Click YES on EFTPOS if code is: " + this.CurrentPairingFlowState.ConfirmationCode;
+            document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
         }
         else
         {
             // Already confirmed from Eftpos - So all good now. We're Paired also from the POS perspective.
-            this.CurrentPairingFlowState.Message = "Pairing Successful";
+            this._log.info("Pair Code Confirmed from POS side, and was already confirmed from Eftpos side. Pairing finalised.");
             this._onPairingSuccess();
             this._onReadyToTransact();
         }
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
     }
 
     /// <summary>
@@ -185,13 +244,14 @@ class Spi {
             return;
         }
 
-        this.CurrentPairingFlowState.Message = "Pairing Canelled";
+        if (this.CurrentPairingFlowState.AwaitingCheckFromPos && !this.CurrentPairingFlowState.AwaitingCheckFromEftpos)
+        {
+            // This means that the Eftpos already thinks it's paired.
+            // Let's tell it to drop keys
+            this._send(new DropKeysRequest().ToMessage());
+        }
         this._onPairingFailed();
-
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
     }
-
-
 
     /// <summary>
     /// Call this when your uses clicks the Unpair button.
@@ -307,10 +367,10 @@ class Spi {
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.Refund, amountCents, refundMsg, 
-            `Waiting for EFTPOS connection to make refund request for ${amountCents / 100.0}`);
+            `Waiting for EFTPOS connection to make refund request for ${(amountCents / 100.0).toFixed(2)}`);
         if (this._send(refundMsg))
         {
-            this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${amountCents / 100.0}`);
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${(amountCents / 100.0).toFixed(2)}`);
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
@@ -349,7 +409,7 @@ class Spi {
     /// <returns>Whether code has a valid format or not.</returns>
     SubmitAuthCode(authCode)
     {
-        if (authCode.Length != 6)
+        if (authCode.length != 6)
         {
             return new SubmitAuthCodeResult(false, "Not a 6-digit code.");    
         }
@@ -415,10 +475,10 @@ class Spi {
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg,
-            `Waiting for EFTPOS connection to send cashout request for ${amountCents / 100}`);
+            `Waiting for EFTPOS connection to send cashout request for ${(amountCents / 100).toFixed(2)}`);
         if (this._send(cashoutMsg))
         {
-            this.CurrentTxFlowState.Sent(`Asked EFTPOS to do cashout for ${amountCents / 100}`);
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to do cashout for ${(amountCents / 100).toFixed(2)}`);
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
@@ -442,10 +502,10 @@ class Spi {
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.MOTO, amountCents, cashoutMsg,
-            `Waiting for EFTPOS connection to send MOTO request for ${amountCents / 100}`);
+            `Waiting for EFTPOS connection to send MOTO request for ${(amountCents / 100).toFixed(2)}`);
         if (this._send(cashoutMsg))
         {
-            this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${amountCents / 100}`);
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${(amountCents / 100).toFixed(2)}`);
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
@@ -726,13 +786,32 @@ class Spi {
     /// <param name="m"></param>
     _handleSignatureRequired(m)
     {
-
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            this._log.info(`Received Signature Required but I was not waiting for one. ${m.DecryptedJson}`);
+            this._log.info(`Received Signature Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
         this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m), "Ask Customer to Sign the Receipt");
+    
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+    }
+
+    /// <summary>
+    /// The PinPad server will send us this message when an auth code is required.
+    /// </summary>
+    /// <param name="m"></param>
+    _handleAuthCodeRequired(m)
+    {
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        {
+            _log.Info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+        var phoneForAuthRequired = new PhoneForAuthRequired(m);
+        var msg = `Auth Code Required. Call ${phoneForAuthRequired.GetPhoneNumber()} and quote merchant id ${phoneForAuthRequired.GetMerchantId()}`;
+        this.CurrentTxFlowState.PhoneForAuthRequired(phoneForAuthRequired, msg);
     
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
     }
@@ -743,10 +822,10 @@ class Spi {
     /// <param name="m"></param>
     _handlePurchaseResponse(m)
     {
-
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            this._log.info(`Received Purchase response but I was not waiting for one. ${m.DecryptedJson}`);
+            this._log.info(`Received Purchase response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}"`);
             return;
         }
         // TH-1A, TH-2A
@@ -758,14 +837,55 @@ class Spi {
     }
 
     /// <summary>
+    /// The PinPad server will reply to our CashoutOnlyRequest with a CashoutOnlyResponse.
+    /// </summary>
+    /// <param name="m"></param>
+    _handleCashoutOnlyResponse(m)
+    {
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        {
+            this._log.info(`Received Cashout Response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+        // TH-1A, TH-2A
+        
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Cashout Transaction Ended.");
+        // TH-6A, TH-6E
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+    }
+
+    /// <summary>
+    /// The PinPad server will reply to our MotoPurchaseRequest with a MotoPurchaseResponse.
+    /// </summary>
+    /// <param name="m"></param>
+    _handleMotoPurchaseResponse(m)
+    {
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        {
+            this._log.info(`Received Moto Response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+        // TH-1A, TH-2A
+        
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Moto Transaction Ended.");
+        // TH-6A, TH-6E
+        
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+    }   
+
+    /// <summary>
     /// The PinPad server will reply to our RefundRequest with a RefundResponse.
     /// </summary>
     /// <param name="m"></param>
     _handleRefundResponse(m)
     {
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished | !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            this._log.info(`Received Refund response but I was not waiting for one. ${m.DecryptedJson}`);
+            this._log.info(`Received Refund response but I was not waiting for this one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
         // TH-1A, TH-2A
@@ -792,6 +912,25 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settle Transaction Ended.");
         // TH-6A, TH-6E
     
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+    }
+
+    /// <summary>
+    /// Handle the Settlement Enquiry Response received from the PinPad
+    /// </summary>
+    /// <param name="m"></param>
+    _handleSettlementEnquiryResponse(m)
+    {
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        {
+            this._log.info(`Received Settlement Enquiry response but I was not waiting for one. ${m.DecryptedJson}`);
+            return;
+        }
+        // TH-1A, TH-2A
+        
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settlement Enquiry Ended.");
+        // TH-6A, TH-6E
+        
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
     }
 
@@ -1089,6 +1228,13 @@ class Spi {
                 this._send(this.CurrentTxFlowState.Request);
                 this.CurrentTxFlowState.Sent(`Sending Request Now...`);
                 document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+            }
+        }
+        else
+        {
+            // let's also tell the eftpos our latest table configuration.
+            if(this._spiPat) {
+                this._spiPat.PushPayAtTableConfig();
             }
         }
     }
