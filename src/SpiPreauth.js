@@ -1,9 +1,8 @@
 class SpiPreauth
 {
-    constructor(spi, txLock)
+    constructor(spi)
     {
         this._spi = spi;
-        this._txLock = txLock;
         this._log = console;
     }
 
