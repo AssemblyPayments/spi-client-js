@@ -117,7 +117,7 @@ class SpiPreauth
 
     _handleAccountVerifyResponse(m)
     {
-        var incomingPosRefId = m["pos_ref_id"];
+        var incomingPosRefId = m.Data.pos_ref_id;
         var currentTxFlowState = this._spi.CurrentTxFlowState;
         if (this._spi.CurrentFlow != SpiFlow.Transaction || currentTxFlowState.Finished || !currentTxFlowState.PosRefId === incomingPosRefId)
         {
@@ -134,7 +134,7 @@ class SpiPreauth
     
     _handlePreauthResponse(m)
     {
-        var incomingPosRefId = m["pos_ref_id"];
+        var incomingPosRefId = m.Data.pos_ref_id;
         var currentTxFlowState = this._spi.CurrentTxFlowState;
         if (this._spi.CurrentFlow != SpiFlow.Transaction || currentTxFlowState.Finished || !currentTxFlowState.PosRefId === incomingPosRefId)
         {

@@ -45,8 +45,8 @@ class SpiPayAtTable
     
     _handleGetBillDetailsRequest(m)
     {
-        var operatorId = m["operator_id"];
-        var tableId = m["table_id"];
+        var operatorId = m.Data["operator_id"];
+        var tableId = m.Data["table_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
         var billStatus = this.GetBillStatus(null, tableId, operatorId);

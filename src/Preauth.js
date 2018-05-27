@@ -177,7 +177,7 @@ class PreauthResponse
 {
     constructor(m)
     {
-        this.PreauthId = m["preauth_id"];
+        this.PreauthId = m.Data["preauth_id"];
         this.Details = new PurchaseResponse(m);
         this.PosRefId = this.Details.PosRefId;
         this._m = m;
@@ -185,17 +185,17 @@ class PreauthResponse
 
     GetBalanceAmount()
     {
-        var txType = this._m["transaction_type"];
+        var txType = this._m.Data["transaction_type"];
         switch (txType)
         {
             case "PRE-AUTH":
-                return this._m["preauth_amount"];
+                return this._m.Data["preauth_amount"];
             case "TOPUP":
-                return this._m["balance_amount"];
+                return this._m.Data["balance_amount"];
             case "CANCEL": // PARTIAL CANCELLATION
-                return this._m["balance_amount"];
+                return this._m.Data["balance_amount"];
             case "PRE-AUTH EXT":
-                return this._m["balance_amount"];
+                return this._m.Data["balance_amount"];
             case "PCOMP":
                 return 0; // Balance is 0 after completion
             case "PRE-AUTH CANCEL":
@@ -207,24 +207,24 @@ class PreauthResponse
 
     GetPreviousBalanceAmount()
     {
-        var txType = this._m["transaction_type"];
+        var txType = this._m.Data["transaction_type"];
         switch (txType)
         {   
             case "PRE-AUTH":
                 return 0;
             case "TOPUP":
-                return this._m["existing_preauth_amount"];
+                return this._m.Data["existing_preauth_amount"];
             case "CANCEL": // PARTIAL CANCELLATION
-                return this._m["existing_preauth_amount"];
+                return this._m.Data["existing_preauth_amount"];
             case "PRE-AUTH EXT":
-                return this._m["existing_preauth_amount"];
+                return this._m.Data["existing_preauth_amount"];
             case "PCOMP":
                 // THIS IS TECHNICALLY NOT CORRECT WHEN COMPLETION HAPPENS FOR A PARTIAL AMOUNT.
                 // BUT UNFORTUNATELY, THIS RESPONSE DOES NOT CONTAIN "existing_preauth_amount".
                 // SO "completion_amount" IS THE CLOSEST WE HAVE.
-                return this._m["completion_amount"];
+                return this._m.Data["completion_amount"];
             case "PRE-AUTH CANCEL":
-                return this._m["preauth_amount"];
+                return this._m.Data["preauth_amount"];
             default:
                 return 0;
         }
@@ -232,11 +232,11 @@ class PreauthResponse
     
     GetCompletionAmount()
     {
-        var txType = this._m["transaction_type"];
+        var txType = this._m.Data["transaction_type"];
         switch (txType)
         {   
             case "PCOMP":
-                return this._m["completion_amount"];
+                return this._m.Data["completion_amount"];
                 break;
             default:
                 return 0;

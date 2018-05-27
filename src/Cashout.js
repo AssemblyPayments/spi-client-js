@@ -25,99 +25,99 @@ class CashoutOnlyResponse
     {
         this._m = m;
         this.RequestId = m.Id;
-        this.PosRefId = m["pos_ref_id"];
-        this.SchemeName = m["scheme_name"];
+        this.PosRefId = m.Data.pos_ref_id;
+        this.SchemeName = m.Data.scheme_name;
         this.Success = m.GetSuccessState() == SuccessState.Success;
     }
 
     GetRRN()
     {
-        return this._m["rrn"];
+        return this._m.Data["rrn"];
     }
 
     GetCashoutAmount()
     {
-        return this._m["cash_amount"];
+        return this._m.Data["cash_amount"];
     }
 
     GetBankNonCashAmount()
     {
-        return this._m["bank_noncash_amount"];
+        return this._m.Data["bank_noncash_amount"];
     }
 
     GetBankCashAmount()
     {
-        return this._m["bank_cash_amount"];
+        return this._m.Data["bank_cash_amount"];
     }
     
     GetCustomerReceipt()
     {
-        return this._m["customer_receipt"];
+        return this._m.Data["customer_receipt"];
     }
 
     GetMerchantReceipt()
     {
-        return this._m["merchant_receipt"];
+        return this._m.Data["merchant_receipt"];
     }
     
     GetResponseText()
     {
-        return this._m["host_response_text"];
+        return this._m.Data["host_response_text"];
     }
 
     GetResponseCode()
     {
-        return this._m["host_response_code"];
+        return this._m.Data["host_response_code"];
     }
     
     GetTerminalReferenceId()
     {
-        return this._m["terminal_ref_id"];
+        return this._m.Data["terminal_ref_id"];
     }
 
     GetAccountType()
     {
-        return this._m["account_type"];
+        return this._m.Data["account_type"];
     }
 
     GetAuthCode()
     {
-        return this._m["auth_code"];
+        return this._m.Data["auth_code"];
     }
 
     GetBankDate()
     {
-        return this._m["bank_date"];
+        return this._m.Data["bank_date"];
     }
 
     GetBankTime()
     {
-        return this._m["bank_time"];
+        return this._m.Data["bank_time"];
     }
     
     GetMaskedPan()
     {
-        return this._m["masked_pan"];
+        return this._m.Data["masked_pan"];
     }
     
     GetTerminalId()
     {
-        return this._m["terminal_id"];
+        return this._m.Data["terminal_id"];
     }
 
     WasMerchantReceiptPrinted()
     {
-        return this._m["merchant_receipt_printed"];
+        return this._m.Data["merchant_receipt_printed"];
     }
 
     WasCustomerReceiptPrinted()
     {
-        return this._m["customer_receipt_printed"];
+        return this._m.Data["customer_receipt_printed"];
     }
     
     GetResponseValue(attribute)
     {
-        return this._m[attribute];
+        return this._m.Data[attribute];
     }
 
 }
