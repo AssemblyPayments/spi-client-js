@@ -18,17 +18,17 @@ class SpiPayAtTable
         });
     }
 
-    /// <summary>
-    /// This delegate will be called when the Eftpos needs to know the current state of a bill for a table. 
-    /// <para />
-    /// Parameters:<para />
-    /// billId - The unique identifier of the bill. If empty, it means that the PayAtTable flow on the Eftpos is just starting, and the lookup is by tableId.<para />
-    /// tableId - The identifier of the table that the bill is for. <para />
-    /// operatorId - The id of the operator entered on the eftpos. <para />
-    /// <para />
-    /// Return:<para />
-    /// You need to return the current state of the bill.
-    /// </summary>
+    // <summary>
+    // This delegate will be called when the Eftpos needs to know the current state of a bill for a table. 
+    // <para />
+    // Parameters:<para />
+    // billId - The unique identifier of the bill. If empty, it means that the PayAtTable flow on the Eftpos is just starting, and the lookup is by tableId.<para />
+    // tableId - The identifier of the table that the bill is for. <para />
+    // operatorId - The id of the operator entered on the eftpos. <para />
+    // <para />
+    // Return:<para />
+    // You need to return the current state of the bill.
+    // </summary>
     GetBillStatus(billId, tableId, operatorId) {
         throw new Exception('Method not implemented. Please overwrite this method in your POS');
     }

@@ -291,13 +291,13 @@ class GetLastTransactionResponse
         return this._m.Data.host_response_code;
     }
 
-    /// <summary>
-    /// There is a bug, VSV-920, whereby the customer_receipt is missing from a glt response.
-    /// The current recommendation is to use the merchant receipt in place of it if required.
-    /// This method modifies the underlying incoming message data by copying
-    /// the merchant receipt into the customer receipt only if there 
-    /// is a merchant_receipt and there is not a customer_receipt.   
-    /// </summary>
+    // <summary>
+    // There is a bug, VSV-920, whereby the customer_receipt is missing from a glt response.
+    // The current recommendation is to use the merchant receipt in place of it if required.
+    // This method modifies the underlying incoming message data by copying
+    // the merchant receipt into the customer receipt only if there 
+    // is a merchant_receipt and there is not a customer_receipt.   
+    // </summary>
     CopyMerchantReceiptToCustomerReceipt()
     {
         var cr = this._m.Data.customer_receipt;

@@ -1,42 +1,42 @@
-/// <summary>
-/// This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
-/// </summary>
+// <summary>
+// This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
+// </summary>
 class BillStatusResponse
 {
     constructor() {
-        /// <summary>
-        /// Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
-        /// </summary>
+        // <summary>
+        // Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
+        // </summary>
         this.Result = null;
         
-        /// <summary>
-        /// This is a unique identifier that you assign to each bill.
-        /// It migt be for example, the timestamp of when the cover was opened.
-        /// </summary>
+        // <summary>
+        // This is a unique identifier that you assign to each bill.
+        // It migt be for example, the timestamp of when the cover was opened.
+        // </summary>
         this.BillId = null;
         
-        /// <summary>
-        /// This is the table id that this bill was for.
-        /// The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
-        /// retrieve the bill using the table id. 
-        /// </summary>
+        // <summary>
+        // This is the table id that this bill was for.
+        // The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
+        // retrieve the bill using the table id. 
+        // </summary>
         this.TableId = null;
         
-        /// <summary>
-        /// The Total Amount on this bill, in cents.
-        /// </summary>
+        // <summary>
+        // The Total Amount on this bill, in cents.
+        // </summary>
         this.TotalAmount = 0;
         
-        /// <summary>
-        /// The currently outsanding amount on this bill, in cents.
-        /// </summary>
+        // <summary>
+        // The currently outsanding amount on this bill, in cents.
+        // </summary>
         this.OutstandingAmount = 0;
 
-        /// <summary>
-        /// Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
-        /// It is just a piece of string that you save against your billId.
-        /// WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
-        /// </summary>
+        // <summary>
+        // Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
+        // It is just a piece of string that you save against your billId.
+        // WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
+        // </summary>
         this.BillData = "";
     }
 
@@ -157,10 +157,10 @@ class PayAtTableConfig
         this.LabelTableId = '';
     
         // 
-        /// <summary>
-        /// Fill in with operator ids that the eftpos terminal will validate against. 
-        /// Leave Empty to allow any operator_id through. 
-        /// </summary>
+        // <summary>
+        // Fill in with operator ids that the eftpos terminal will validate against. 
+        // Leave Empty to allow any operator_id through. 
+        // </summary>
        this.AllowedOperatorIds = [];
     }
 

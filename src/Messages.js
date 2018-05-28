@@ -1,6 +1,6 @@
-/// <summary>
-/// Events statically declares the various event names in messages.
-/// </summary>
+// <summary>
+// Events statically declares the various event names in messages.
+// </summary>
 const Events = {
      PairRequest : "pair_request",
      KeyRequest : "key_request",
@@ -58,10 +58,10 @@ const SuccessState = {
     Unknown: 'Unknown', Success: 'Success', Failed: 'Failed'
 };
 
-/// <summary>
-/// MessageStamp represents what is required to turn an outgoing Message into Json
-/// including encryption and date setting.
-/// </summary>
+// <summary>
+// MessageStamp represents what is required to turn an outgoing Message into Json
+// including encryption and date setting.
+// </summary>
 class MessageStamp {
     constructor(posId, secrets, serverTimeDelta) {
         this.PosId = posId;
@@ -70,34 +70,34 @@ class MessageStamp {
     }
 }
 
-/// <summary>
-/// MessageEnvelope represents the outer structure of any message that is exchanged
-/// between the Pos and the PinPad and vice-versa.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// MessageEnvelope represents the outer structure of any message that is exchanged
+// between the Pos and the PinPad and vice-versa.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 class MessageEnvelope {
     constructor(message, enc, hmac, posId) {
-        /// <summary>
-        /// The Message field is set only when in Un-encrypted form.
-        /// In fact it is the only field in an envelope in the Un-Encrypted form.
-        /// </summary>
+        // <summary>
+        // The Message field is set only when in Un-encrypted form.
+        // In fact it is the only field in an envelope in the Un-Encrypted form.
+        // </summary>
         this.Message = message;
 
-        /// <summary>
-        /// The enc field is set only when in Encrypted form.
-        /// It contains the encrypted Json of another MessageEnvelope 
-        /// </summary>
+        // <summary>
+        // The enc field is set only when in Encrypted form.
+        // It contains the encrypted Json of another MessageEnvelope 
+        // </summary>
         this.Enc = enc;
 
-        /// <summary>
-        /// The hmac field is set only when in Encrypted form.
-        /// It is the signature of the "enc" field.
-        /// </summary>
+        // <summary>
+        // The hmac field is set only when in Encrypted form.
+        // It is the signature of the "enc" field.
+        // </summary>
         this.Hmac = hmac;
 
-        /// <summary>
-        /// The pos_id field is only filled for outgoing Encrypted messages.
-        /// </summary>
+        // <summary>
+        // The pos_id field is only filled for outgoing Encrypted messages.
+        // </summary>
         this.PosId = posId;
     }
 
@@ -111,10 +111,10 @@ class MessageEnvelope {
     }
 }
 
-/// <summary>
-/// Message represents the contents of a Message.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// Message represents the contents of a Message.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 class Message {
     constructor(id, eventName, data, needsEncryption) {
         this.Id = id;
