@@ -512,8 +512,8 @@ class PhoneForAuthRequired
     constructor(...args)
     {
         if(args.length === 4) {
-            this.RequestId = args[1];
             this.PosRefId = args[0];
+            this.RequestId = args[1];
             this._phoneNumber = args[2];
             this._merchantId = args[3];
         } else if(args.length === 1) {
