@@ -148,6 +148,18 @@ var ConnectionState = {
 
 var SPI_PROTOCOL = 'spi.2.1.0';
 
+var ConnectionStateEventArgs = function ConnectionStateEventArgs(connectionState) {
+    _classCallCheck(this, ConnectionStateEventArgs);
+
+    this.ConnectionState = connectionState;
+};
+
+var MessageEventArgs = function MessageEventArgs(message) {
+    _classCallCheck(this, MessageEventArgs);
+
+    this.Message = message;
+};
+
 var Connection = function () {
     function Connection() {
         _classCallCheck(this, Connection);
@@ -191,7 +203,7 @@ var Connection = function () {
                 return _this.onError(err);
             };
 
-            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: this.State }));
+            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: new ConnectionStateEventArgs(ConnectionState.Connecting) }));
         }
     }, {
         key: 'Disconnect',
@@ -221,7 +233,7 @@ var Connection = function () {
         value: function onOpened() {
             this.State = ConnectionState.Connected;
             this.Connected = true;
-            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: this.State }));
+            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: new ConnectionStateEventArgs(ConnectionState.Connected) }));
         }
     }, {
         key: 'onClosed',
@@ -229,7 +241,7 @@ var Connection = function () {
             this.Connected = false;
             this.State = ConnectionState.Disconnected;
             this._ws = null;
-            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: this.State }));
+            document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', { detail: new ConnectionStateEventArgs(ConnectionState.Disconnected) }));
         }
     }, {
         key: 'pollWebSocketConnection',
@@ -255,12 +267,12 @@ var Connection = function () {
     }, {
         key: 'onMessageReceived',
         value: function onMessageReceived(message) {
-            document.dispatchEvent(new CustomEvent('MessageReceived', { detail: message }));
+            document.dispatchEvent(new CustomEvent('MessageReceived', { detail: new MessageEventArgs(message.data) }));
         }
     }, {
         key: 'onError',
         value: function onError(err) {
-            document.dispatchEvent(new CustomEvent('ErrorReceived', { detail: err }));
+            document.dispatchEvent(new CustomEvent('ErrorReceived', { detail: new MessageEventArgs(err) }));
         }
     }]);
 
@@ -285,12 +297,12 @@ var Crypto = function () {
         }
     }
 
-    /// <summary>
-    /// Encrypt a block using CBC and PKCS7.
-    /// </summary>
-    /// <param name="key">The key value</param>
-    /// <param name="data">The message to encrypt</param>
-    /// <returns>Returns the resulting encrypted string data as HEX.</returns>
+    // <summary>
+    // Encrypt a block using CBC and PKCS7.
+    // </summary>
+    // <param name="key">The key value</param>
+    // <param name="data">The message to encrypt</param>
+    // <returns>Returns the resulting encrypted string data as HEX.</returns>
 
 
     _createClass(Crypto, null, [{
@@ -306,12 +318,12 @@ var Crypto = function () {
             return encryptedString;
         }
 
-        /// <summary>
-        /// Decrypt a block using a CBC and PKCS7.
-        /// </summary>
-        /// <param name="key">The key value</param>
-        /// <param name="data">the data to decrypt</param>
-        /// <returns>Returns the resulting data decrypted in plaintext.</returns>
+        // <summary>
+        // Decrypt a block using a CBC and PKCS7.
+        // </summary>
+        // <param name="key">The key value</param>
+        // <param name="data">the data to decrypt</param>
+        // <returns>Returns the resulting data decrypted in plaintext.</returns>
 
     }, {
         key: 'AesDecrypt',
@@ -326,12 +338,12 @@ var Crypto = function () {
             return decrypted;
         }
 
-        /// <summary>
-        /// Calculates the HMACSHA256 signature of a message.
-        /// </summary>
-        /// <param name="key">The Hmac Key as HEX</param>
-        /// <param name="messageToSign">The message to sign</param>
-        /// <returns>The HMACSHA256 signature as a hex string</returns>
+        // <summary>
+        // Calculates the HMACSHA256 signature of a message.
+        // </summary>
+        // <param name="key">The Hmac Key as HEX</param>
+        // <param name="messageToSign">The message to sign</param>
+        // <returns>The HMACSHA256 signature as a hex string</returns>
 
     }, {
         key: 'HmacSignature',
@@ -371,14 +383,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // REQUIREMENTS: bn.js and jssha.js
 // ASSUMPTIONS: Inputs to the functions are hexadecimal strings
 
-/// <summary>
-/// This class implements the Diffie-Hellman algorithm using BigIntegers.
-/// It can do the 3 main things:
-/// 1. Generate a random Private Key for you.
-/// 2. Generate your Public Key based on your Private Key.
-/// 3. Generate the Secret given their Public Key and your Private Key
-/// p and g are the shared constants for the algorithm, aka primeP and primeG.
-/// </summary>
+// <summary>
+// This class implements the Diffie-Hellman algorithm using BigIntegers.
+// It can do the 3 main things:
+// 1. Generate a random Private Key for you.
+// 2. Generate your Public Key based on your Private Key.
+// 3. Generate the Secret given their Public Key and your Private Key
+// p and g are the shared constants for the algorithm, aka primeP and primeG.
+// </summary>
 var DiffieHellman = function () {
     function DiffieHellman() {
         _classCallCheck(this, DiffieHellman);
@@ -392,11 +404,11 @@ var DiffieHellman = function () {
         }
     }
 
-    /// <summary>
-    /// Generates a random Private Key that you can use.
-    /// </summary>
-    /// <param name="p"></param>
-    /// <returns>Random Private Key</returns>
+    // <summary>
+    // Generates a random Private Key that you can use.
+    // </summary>
+    // <param name="p"></param>
+    // <returns>Random Private Key</returns>
 
 
     _createClass(DiffieHellman, [{
@@ -414,13 +426,13 @@ var DiffieHellman = function () {
             return randBitInt;
         }
 
-        /// <summary>
-        /// Calculates the Public Key from a Private Key.
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="g"></param>
-        /// <param name="privateKey"></param>
-        /// <returns>Public Key (Hex)</returns>
+        // <summary>
+        // Calculates the Public Key from a Private Key.
+        // </summary>
+        // <param name="p"></param>
+        // <param name="g"></param>
+        // <param name="privateKey"></param>
+        // <returns>Public Key (Hex)</returns>
 
     }, {
         key: 'PublicKey',
@@ -434,13 +446,13 @@ var DiffieHellman = function () {
             return secret;
         }
 
-        /// <summary>
-        /// Calculates the shared secret given their Public Key (A) and your Private Key (b)
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="theirPublicKey"></param>
-        /// <param name="yourPrivateKey"></param>
-        /// <returns></returns>
+        // <summary>
+        // Calculates the shared secret given their Public Key (A) and your Private Key (b)
+        // </summary>
+        // <param name="p"></param>
+        // <param name="theirPublicKey"></param>
+        // <param name="yourPrivateKey"></param>
+        // <returns></returns>
 
     }, {
         key: 'Secret',
@@ -570,9 +582,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/// <summary>
-/// Events statically declares the various event names in messages.
-/// </summary>
+// <summary>
+// Events statically declares the various event names in messages.
+// </summary>
 var Events = {
     PairRequest: "pair_request",
     KeyRequest: "key_request",
@@ -630,10 +642,10 @@ var SuccessState = {
     Unknown: 'Unknown', Success: 'Success', Failed: 'Failed'
 };
 
-/// <summary>
-/// MessageStamp represents what is required to turn an outgoing Message into Json
-/// including encryption and date setting.
-/// </summary>
+// <summary>
+// MessageStamp represents what is required to turn an outgoing Message into Json
+// including encryption and date setting.
+// </summary>
 
 var MessageStamp = function MessageStamp(posId, secrets, serverTimeDelta) {
     _classCallCheck(this, MessageStamp);
@@ -643,38 +655,38 @@ var MessageStamp = function MessageStamp(posId, secrets, serverTimeDelta) {
     this.ServerTimeDelta = serverTimeDelta;
 };
 
-/// <summary>
-/// MessageEnvelope represents the outer structure of any message that is exchanged
-/// between the Pos and the PinPad and vice-versa.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// MessageEnvelope represents the outer structure of any message that is exchanged
+// between the Pos and the PinPad and vice-versa.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 
 
 var MessageEnvelope = function () {
     function MessageEnvelope(message, enc, hmac, posId) {
         _classCallCheck(this, MessageEnvelope);
 
-        /// <summary>
-        /// The Message field is set only when in Un-encrypted form.
-        /// In fact it is the only field in an envelope in the Un-Encrypted form.
-        /// </summary>
+        // <summary>
+        // The Message field is set only when in Un-encrypted form.
+        // In fact it is the only field in an envelope in the Un-Encrypted form.
+        // </summary>
         this.Message = message;
 
-        /// <summary>
-        /// The enc field is set only when in Encrypted form.
-        /// It contains the encrypted Json of another MessageEnvelope 
-        /// </summary>
+        // <summary>
+        // The enc field is set only when in Encrypted form.
+        // It contains the encrypted Json of another MessageEnvelope 
+        // </summary>
         this.Enc = enc;
 
-        /// <summary>
-        /// The hmac field is set only when in Encrypted form.
-        /// It is the signature of the "enc" field.
-        /// </summary>
+        // <summary>
+        // The hmac field is set only when in Encrypted form.
+        // It is the signature of the "enc" field.
+        // </summary>
         this.Hmac = hmac;
 
-        /// <summary>
-        /// The pos_id field is only filled for outgoing Encrypted messages.
-        /// </summary>
+        // <summary>
+        // The pos_id field is only filled for outgoing Encrypted messages.
+        // </summary>
         this.PosId = posId;
     }
 
@@ -693,10 +705,10 @@ var MessageEnvelope = function () {
     return MessageEnvelope;
 }();
 
-/// <summary>
-/// Message represents the contents of a Message.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// Message represents the contents of a Message.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 
 
 var Message = function () {
@@ -851,9 +863,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/// <summary>
-/// Pairing Interaction 1: Outgoing
-/// </summary>
+// <summary>
+// Pairing Interaction 1: Outgoing
+// </summary>
 var PairRequest = function () {
     function PairRequest() {
         _classCallCheck(this, PairRequest);
@@ -870,7 +882,7 @@ var PairRequest = function () {
     return PairRequest;
 }();
 
-/// Pairing Interaction 2: Incoming
+// Pairing Interaction 2: Incoming
 
 
 var KeyRequest = function KeyRequest(m) {
@@ -881,7 +893,7 @@ var KeyRequest = function KeyRequest(m) {
     this.Ahmac = m.Data.hmac.A;
 };
 
-/// Pairing Interaction 3: Outgoing
+// Pairing Interaction 3: Outgoing
 
 
 var KeyResponse = function () {
@@ -912,7 +924,7 @@ var KeyResponse = function () {
     return KeyResponse;
 }();
 
-/// Pairing Interaction 4: Incoming
+// Pairing Interaction 4: Incoming
 
 
 var KeyCheck = function KeyCheck(m) {
@@ -921,7 +933,7 @@ var KeyCheck = function KeyCheck(m) {
     this.ConfirmationCode = m.IncomingHmac.substring(0, 6);
 };
 
-/// Pairing Interaction 5: Incoming
+// Pairing Interaction 5: Incoming
 
 
 var PairResponse = function PairResponse(m) {
@@ -930,7 +942,7 @@ var PairResponse = function PairResponse(m) {
     this.Success = m.Data.success;
 };
 
-/// Holder class for Secrets and KeyResponse, so that we can use them together in method signatures.
+// Holder class for Secrets and KeyResponse, so that we can use them together in method signatures.
 
 
 var SecretsAndKeyResponse = function SecretsAndKeyResponse(secrets, keyResponse) {
@@ -966,10 +978,10 @@ var GENERATOR = 2;
 // This is the prime used for diffie-hellman using 2048-bit MODP Group 14 as per (https://tools.ietf.org/html/rfc3526#section-3)
 var GROUP14_2048_BIT_MODP = 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF';
 
-/// <summary>
-/// This static class helps you with the pairing process as documented here:
-/// http://www.simplepaymentapi.com/#/api/pairing-process
-/// </summary>
+// <summary>
+// This static class helps you with the pairing process as documented here:
+// http://www.simplepaymentapi.com/#/api/pairing-process
+// </summary>
 
 var PairingHelper = function () {
     function PairingHelper() {
@@ -980,11 +992,11 @@ var PairingHelper = function () {
         key: 'GenerateSecretsAndKeyResponse',
 
 
-        /// <summary>
-        /// Calculates/Generates Secrets and KeyResponse given an incoming KeyRequest.
-        /// </summary>
-        /// <param name="keyRequest"></param>
-        /// <returns>Secrets and KeyResponse to send back.</returns>
+        // <summary>
+        // Calculates/Generates Secrets and KeyResponse given an incoming KeyRequest.
+        // </summary>
+        // <param name="keyRequest"></param>
+        // <returns>Secrets and KeyResponse to send back.</returns>
         value: function GenerateSecretsAndKeyResponse(keyRequest) {
             var encPubAndSec = this._calculateMyPublicKeyAndSecret(keyRequest.Aenc);
             var Benc = encPubAndSec.MyPublicKey;
@@ -1000,12 +1012,12 @@ var PairingHelper = function () {
             return new SecretsAndKeyResponse(secrets, keyResponse);
         }
 
-        /// <summary>
-        /// Turns an incoming "A" value from the PinPad into the outgoing "B" value 
-        /// and the secret value using DiffieHelmman helper.
-        /// </summary>
-        /// <param name="theirPublicKey">The incoming A value</param>
-        /// <returns>Your B value and the Secret</returns>
+        // <summary>
+        // Turns an incoming "A" value from the PinPad into the outgoing "B" value 
+        // and the secret value using DiffieHelmman helper.
+        // </summary>
+        // <param name="theirPublicKey">The incoming A value</param>
+        // <returns>Your B value and the Secret</returns>
 
     }, {
         key: '_calculateMyPublicKeyAndSecret',
@@ -1021,13 +1033,13 @@ var PairingHelper = function () {
             return new PublicKeyAndSecret(myPublicBI, secret);
         }
 
-        /// <summary>
-        /// Converts the DH secret BigInteger into the hex-string to be used as the secret.
-        /// There are some "gotchyas" here which is why this piece of work is abstracted so it can be tested separately.
-        /// See: http://www.simplepaymentapi.com/#/api/pairing-process
-        /// </summary>
-        /// <param name="secretBI">Secret as BigInteger</param>
-        /// <returns>Secret as Hex-String</returns>
+        // <summary>
+        // Converts the DH secret BigInteger into the hex-string to be used as the secret.
+        // There are some "gotchyas" here which is why this piece of work is abstracted so it can be tested separately.
+        // See: http://www.simplepaymentapi.com/#/api/pairing-process
+        // </summary>
+        // <param name="secretBI">Secret as BigInteger</param>
+        // <returns>Secret as Hex-String</returns>
 
     }, {
         key: 'DHSecretToSPISecret',
@@ -1045,10 +1057,10 @@ var PairingHelper = function () {
     }], [{
         key: 'NewPairRequest',
 
-        /// <summary>
-        /// Generates a pairing Request.
-        /// </summary>
-        /// <returns>New PairRequest</returns>
+        // <summary>
+        // Generates a pairing Request.
+        // </summary>
+        // <returns>New PairRequest</returns>
         value: function NewPairRequest() {
             return new PairRequest();
         }
@@ -1057,9 +1069,9 @@ var PairingHelper = function () {
     return PairingHelper;
 }();
 
-/// <summary>
-/// Internal Holder class for Public and Secret, so that we can use them together in method signatures. 
-/// </summary>
+// <summary>
+// Internal Holder class for Public and Secret, so that we can use them together in method signatures. 
+// </summary>
 
 
 var PublicKeyAndSecret = function PublicKeyAndSecret(myPublicKey, sharedSecretKey) {
@@ -1074,46 +1086,46 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/// <summary>
-/// This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
-/// </summary>
+// <summary>
+// This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
+// </summary>
 var BillStatusResponse = function () {
     function BillStatusResponse() {
         _classCallCheck(this, BillStatusResponse);
 
-        /// <summary>
-        /// Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
-        /// </summary>
+        // <summary>
+        // Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
+        // </summary>
         this.Result = null;
 
-        /// <summary>
-        /// This is a unique identifier that you assign to each bill.
-        /// It migt be for example, the timestamp of when the cover was opened.
-        /// </summary>
+        // <summary>
+        // This is a unique identifier that you assign to each bill.
+        // It migt be for example, the timestamp of when the cover was opened.
+        // </summary>
         this.BillId = null;
 
-        /// <summary>
-        /// This is the table id that this bill was for.
-        /// The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
-        /// retrieve the bill using the table id. 
-        /// </summary>
+        // <summary>
+        // This is the table id that this bill was for.
+        // The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
+        // retrieve the bill using the table id. 
+        // </summary>
         this.TableId = null;
 
-        /// <summary>
-        /// The Total Amount on this bill, in cents.
-        /// </summary>
+        // <summary>
+        // The Total Amount on this bill, in cents.
+        // </summary>
         this.TotalAmount = 0;
 
-        /// <summary>
-        /// The currently outsanding amount on this bill, in cents.
-        /// </summary>
+        // <summary>
+        // The currently outsanding amount on this bill, in cents.
+        // </summary>
         this.OutstandingAmount = 0;
 
-        /// <summary>
-        /// Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
-        /// It is just a piece of string that you save against your billId.
-        /// WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
-        /// </summary>
+        // <summary>
+        // Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
+        // It is just a piece of string that you save against your billId.
+        // WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
+        // </summary>
         this.BillData = "";
     }
 
@@ -1235,10 +1247,10 @@ var PayAtTableConfig = function () {
         this.LabelTableId = '';
 
         // 
-        /// <summary>
-        /// Fill in with operator ids that the eftpos terminal will validate against. 
-        /// Leave Empty to allow any operator_id through. 
-        /// </summary>
+        // <summary>
+        // Fill in with operator ids that the eftpos terminal will validate against. 
+        // Leave Empty to allow any operator_id through. 
+        // </summary>
         this.AllowedOperatorIds = [];
     }
 
@@ -1952,13 +1964,13 @@ var GetLastTransactionResponse = function () {
             return this._m.Data.host_response_code;
         }
 
-        /// <summary>
-        /// There is a bug, VSV-920, whereby the customer_receipt is missing from a glt response.
-        /// The current recommendation is to use the merchant receipt in place of it if required.
-        /// This method modifies the underlying incoming message data by copying
-        /// the merchant receipt into the customer receipt only if there 
-        /// is a merchant_receipt and there is not a customer_receipt.   
-        /// </summary>
+        // <summary>
+        // There is a bug, VSV-920, whereby the customer_receipt is missing from a glt response.
+        // The current recommendation is to use the merchant receipt in place of it if required.
+        // This method modifies the underlying incoming message data by copying
+        // the merchant receipt into the customer receipt only if there 
+        // is a merchant_receipt and there is not a customer_receipt.   
+        // </summary>
 
     }, {
         key: "CopyMerchantReceiptToCustomerReceipt",
@@ -2212,8 +2224,8 @@ var PhoneForAuthRequired = function () {
         }
 
         if (args.length === 4) {
-            this.RequestId = args[1];
             this.PosRefId = args[0];
+            this.RequestId = args[1];
             this._phoneNumber = args[2];
             this._merchantId = args[3];
         } else if (args.length === 1) {
@@ -2602,10 +2614,10 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// Allows you to set the PosId which identifies this instance of your POS.
-        /// Can only be called in thge Unpaired state. 
-        /// </summary>
+        // <summary>
+        // Allows you to set the PosId which identifies this instance of your POS.
+        // Can only be called in thge Unpaired state. 
+        // </summary>
 
     }, {
         key: "SetPosId",
@@ -2617,11 +2629,11 @@ var Spi = function () {
             return true;
         }
 
-        /// <summary>
-        /// Allows you to set the PinPad address. Sometimes the PinPad might change IP address 
-        /// (we recommend reserving static IPs if possible).
-        /// Either way you need to allow your User to enter the IP address of the PinPad.
-        /// </summary>
+        // <summary>
+        // Allows you to set the PinPad address. Sometimes the PinPad might change IP address 
+        // (we recommend reserving static IPs if possible).
+        // Either way you need to allow your User to enter the IP address of the PinPad.
+        // </summary>
 
     }, {
         key: "SetEftposAddress",
@@ -2635,13 +2647,13 @@ var Spi = function () {
             return true;
         }
 
-        /// <summary>
-        /// Call this one when a flow is finished and you want to go back to idle state.
-        /// Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
-        /// finished, or that transaction is finished.
-        /// When true, you can dismiss the flow screen and show back the idle screen.
-        /// </summary>
-        /// <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
+        // <summary>
+        // Call this one when a flow is finished and you want to go back to idle state.
+        // Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
+        // finished, or that transaction is finished.
+        // When true, you can dismiss the flow screen and show back the idle screen.
+        // </summary>
+        // <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
 
     }, {
         key: "AckFlowEndedAndBackToIdle",
@@ -2669,13 +2681,13 @@ var Spi = function () {
 
         // region Flow Management Methods
 
-        /// <summary>
-        /// Call this one when a flow is finished and you want to go back to idle state.
-        /// Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
-        /// finished, or that transaction is finished.
-        /// When true, you can dismiss the flow screen and show back the idle screen.
-        /// </summary>
-        /// <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
+        // <summary>
+        // Call this one when a flow is finished and you want to go back to idle state.
+        // Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
+        // finished, or that transaction is finished.
+        // When true, you can dismiss the flow screen and show back the idle screen.
+        // </summary>
+        // <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
 
     }, {
         key: "AckFlowEndedAndBackToIdle",
@@ -2697,12 +2709,12 @@ var Spi = function () {
 
         // endregion
 
-        /// <summary>
-        /// This will connect to the Eftpos and start the pairing process.
-        /// Only call this if you are in the Unpaired state.
-        /// Subscribe to the PairingFlowStateChanged event to get updates on the pairing process.
-        /// </summary>
-        /// <returns>Whether pairing has initiated or not</returns>
+        // <summary>
+        // This will connect to the Eftpos and start the pairing process.
+        // Only call this if you are in the Unpaired state.
+        // Subscribe to the PairingFlowStateChanged event to get updates on the pairing process.
+        // </summary>
+        // <returns>Whether pairing has initiated or not</returns>
 
     }, {
         key: "Pair",
@@ -2732,10 +2744,10 @@ var Spi = function () {
             return true;
         }
 
-        /// <summary>
-        /// Call this when your user clicks yes to confirm the pairing code on your 
-        /// screen matches the one on the Eftpos.
-        /// </summary>
+        // <summary>
+        // Call this when your user clicks yes to confirm the pairing code on your 
+        // screen matches the one on the Eftpos.
+        // </summary>
 
     }, {
         key: "PairingConfirmCode",
@@ -2759,9 +2771,9 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// Call this if your user clicks CANCEL or NO during the pairing process.
-        /// </summary>
+        // <summary>
+        // Call this if your user clicks CANCEL or NO during the pairing process.
+        // </summary>
 
     }, {
         key: "PairingCancel",
@@ -2778,12 +2790,12 @@ var Spi = function () {
             this._onPairingFailed();
         }
 
-        /// <summary>
-        /// Call this when your uses clicks the Unpair button.
-        /// This will disconnect from the Eftpos and forget the secrets.
-        /// The CurrentState is then changed to Unpaired.
-        /// Call this only if you are not yet in the Unpaired state.
-        /// </summary>
+        // <summary>
+        // Call this when your uses clicks the Unpair button.
+        // This will disconnect from the Eftpos and forget the secrets.
+        // The CurrentState is then changed to Unpaired.
+        // Call this only if you are not yet in the Unpaired state.
+        // </summary>
 
     }, {
         key: "Unpair",
@@ -2806,12 +2818,12 @@ var Spi = function () {
 
         // region Transaction Methods
 
-        /// <summary>
-        /// Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// </summary>
-        /// <param name="posRefId">Alphanumeric Identifier for your purchase.</param>
-        /// <param name="amountCents">Amount in Cents to charge</param>
-        /// <returns>InitiateTxResult</returns>
+        // <summary>
+        // Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // </summary>
+        // <param name="posRefId">Alphanumeric Identifier for your purchase.</param>
+        // <param name="amountCents">Amount in Cents to charge</param>
+        // <returns>InitiateTxResult</returns>
 
     }, {
         key: "InitiatePurchaseTx",
@@ -2837,16 +2849,16 @@ var Spi = function () {
             return new InitiateTxResult(true, "Purchase Initiated");
         }
 
-        /// <summary>
-        /// Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// <para>Tip and cashout are not allowed simultaneously.</para>
-        /// </summary>
-        /// <param name="posRefId">An Unique Identifier for your Order/Purchase</param>
-        /// <param name="purchaseAmount">The Purchase Amount in Cents.</param>
-        /// <param name="tipAmount">The Tip Amount in Cents</param>
-        /// <param name="cashoutAmount">The Cashout Amount in Cents</param>
-        /// <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
-        /// <returns>InitiateTxResult</returns>
+        // <summary>
+        // Initiates a purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // <para>Tip and cashout are not allowed simultaneously.</para>
+        // </summary>
+        // <param name="posRefId">An Unique Identifier for your Order/Purchase</param>
+        // <param name="purchaseAmount">The Purchase Amount in Cents.</param>
+        // <param name="tipAmount">The Tip Amount in Cents</param>
+        // <param name="cashoutAmount">The Cashout Amount in Cents</param>
+        // <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
+        // <returns>InitiateTxResult</returns>
 
     }, {
         key: "InitiatePurchaseTxV2",
@@ -2870,12 +2882,12 @@ var Spi = function () {
             return new InitiateTxResult(true, "Purchase Initiated");
         }
 
-        /// <summary>
-        /// Initiates a refund transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// </summary>
-        /// <param name="posRefId">Alphanumeric Identifier for your refund.</param>
-        /// <param name="amountCents">Amount in Cents to charge</param>
-        /// <returns>InitiateTxResult</returns>
+        // <summary>
+        // Initiates a refund transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // </summary>
+        // <param name="posRefId">Alphanumeric Identifier for your refund.</param>
+        // <param name="amountCents">Amount in Cents to charge</param>
+        // <returns>InitiateTxResult</returns>
 
     }, {
         key: "InitiateRefundTx",
@@ -2901,10 +2913,10 @@ var Spi = function () {
             return new InitiateTxResult(true, "Refund Initiated");
         }
 
-        /// <summary>
-        /// Let the EFTPOS know whether merchant accepted or declined the signature
-        /// </summary>
-        /// <param name="accepted">whether merchant accepted the signature from customer or not</param>
+        // <summary>
+        // Let the EFTPOS know whether merchant accepted or declined the signature
+        // </summary>
+        // <param name="accepted">whether merchant accepted the signature from customer or not</param>
 
     }, {
         key: "AcceptSignature",
@@ -2922,14 +2934,14 @@ var Spi = function () {
             return new MidTxResult(true, "");
         }
 
-        /// <summary>
-        /// Submit the Code obtained by your user when phoning for auth. 
-        /// It will return immediately to tell you whether the code has a valid format or not. 
-        /// If valid==true is returned, no need to do anything else. Expect updates via standard callback.
-        /// If valid==false is returned, you can show your user the accompanying message, and invite them to enter another code. 
-        /// </summary>
-        /// <param name="authCode">The code obtained by your user from the merchant call centre. It should be a 6-character alpha-numeric value.</param>
-        /// <returns>Whether code has a valid format or not.</returns>
+        // <summary>
+        // Submit the Code obtained by your user when phoning for auth. 
+        // It will return immediately to tell you whether the code has a valid format or not. 
+        // If valid==true is returned, no need to do anything else. Expect updates via standard callback.
+        // If valid==false is returned, you can show your user the accompanying message, and invite them to enter another code. 
+        // </summary>
+        // <param name="authCode">The code obtained by your user from the merchant call centre. It should be a 6-character alpha-numeric value.</param>
+        // <returns>Whether code has a valid format or not.</returns>
 
     }, {
         key: "SubmitAuthCode",
@@ -2950,12 +2962,12 @@ var Spi = function () {
             return new SubmitAuthCodeResult(true, "Valid Code.");
         }
 
-        /// <summary>
-        /// Attempts to cancel a Transaction. 
-        /// Be subscribed to TxFlowStateChanged event to see how it goes.
-        /// Wait for the transaction to be finished and then see whether cancellation was successful or not.
-        /// </summary>
-        /// <returns>MidTxResult - false only if you called it in the wrong state</returns>
+        // <summary>
+        // Attempts to cancel a Transaction. 
+        // Be subscribed to TxFlowStateChanged event to see how it goes.
+        // Wait for the transaction to be finished and then see whether cancellation was successful or not.
+        // </summary>
+        // <returns>MidTxResult - false only if you called it in the wrong state</returns>
 
     }, {
         key: "CancelTransaction",
@@ -2979,12 +2991,12 @@ var Spi = function () {
             return new MidTxResult(true, "");
         }
 
-        /// <summary>
-        /// Initiates a cashout only transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// </summary>
-        /// <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
-        /// <param name="amountCents">Amount in Cents to cash out</param>
-        /// <returns>InitiateTxResult</returns>
+        // <summary>
+        // Initiates a cashout only transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // </summary>
+        // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
+        // <param name="amountCents">Amount in Cents to cash out</param>
+        // <returns>InitiateTxResult</returns>
 
     }, {
         key: "InitiateCashoutOnlyTx",
@@ -3005,12 +3017,12 @@ var Spi = function () {
             return new InitiateTxResult(true, "Cashout Initiated");
         }
 
-        /// <summary>
-        /// Initiates a Mail Order / Telephone Order Purchase Transaction
-        /// </summary>
-        /// <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
-        /// <param name="amountCents">Amount in Cents</param>
-        /// <returns>InitiateTxResult</returns>
+        // <summary>
+        // Initiates a Mail Order / Telephone Order Purchase Transaction
+        // </summary>
+        // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
+        // <param name="amountCents">Amount in Cents</param>
+        // <returns>InitiateTxResult</returns>
 
     }, {
         key: "InitiateMotoPurchaseTx",
@@ -3031,10 +3043,10 @@ var Spi = function () {
             return new InitiateTxResult(true, "MOTO Initiated");
         }
 
-        /// <summary>
-        /// Initiates a settlement transaction.
-        /// Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// </summary>
+        // <summary>
+        // Initiates a settlement transaction.
+        // Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // </summary>
 
     }, {
         key: "InitiateSettleTx",
@@ -3059,8 +3071,8 @@ var Spi = function () {
             return new InitiateTxResult(true, "Settle Initiated");
         }
 
-        /// <summary>
-        /// </summary>
+        // <summary>
+        // </summary>
 
     }, {
         key: "InitiateSettlementEnquiry",
@@ -3079,11 +3091,11 @@ var Spi = function () {
             return new InitiateTxResult(true, "Settle Initiated");
         }
 
-        /// <summary>
-        /// Initiates a Get Last Transaction. Use this when you want to retrieve the most recent transaction
-        /// that was processed by the Eftpos.
-        /// Be subscribed to TxFlowStateChanged event to get updates on the process.
-        /// </summary>
+        // <summary>
+        // Initiates a Get Last Transaction. Use this when you want to retrieve the most recent transaction
+        // that was processed by the Eftpos.
+        // Be subscribed to TxFlowStateChanged event to get updates on the process.
+        // </summary>
 
     }, {
         key: "InitiateGetLastTx",
@@ -3109,16 +3121,16 @@ var Spi = function () {
             return new InitiateTxResult(true, "GLT Initiated");
         }
 
-        /// <summary>
-        /// This is useful to recover from your POS crashing in the middle of a transaction.
-        /// When you restart your POS, if you had saved enough state, you can call this method to recover the client library state.
-        /// You need to have the posRefId that you passed in with the original transaction, and the transaction type.
-        /// This method will return immediately whether recovery has started or not.
-        /// If recovery has started, you need to bring up the transaction modal to your user a be listening to TxFlowStateChanged.
-        /// </summary>
-        /// <param name="posRefId">The is that you had assigned to the transaction that you are trying to recover.</param>
-        /// <param name="txType">The transaction type.</param>
-        /// <returns></returns>
+        // <summary>
+        // This is useful to recover from your POS crashing in the middle of a transaction.
+        // When you restart your POS, if you had saved enough state, you can call this method to recover the client library state.
+        // You need to have the posRefId that you passed in with the original transaction, and the transaction type.
+        // This method will return immediately whether recovery has started or not.
+        // If recovery has started, you need to bring up the transaction modal to your user a be listening to TxFlowStateChanged.
+        // </summary>
+        // <param name="posRefId">The is that you had assigned to the transaction that you are trying to recover.</param>
+        // <param name="txType">The transaction type.</param>
+        // <returns></returns>
 
     }, {
         key: "InitiateRecovery",
@@ -3140,16 +3152,16 @@ var Spi = function () {
             return new InitiateTxResult(true, "Recovery Initiated");
         }
 
-        /// <summary>
-        /// GltMatch attempts to conclude whether a gltResponse matches an expected transaction and returns
-        /// the outcome. 
-        /// If Success/Failed is returned, it means that the gtlResponse did match, and that transaction was succesful/failed.
-        /// If Unknown is returned, it means that the gltResponse does not match the expected transaction. 
-        /// </summary>
-        /// <param name="gltResponse">The GetLastTransactionResponse message to check</param>
-        /// <param name="posRefId">The Reference Id that you passed in with the original request.</param>
+        // <summary>
+        // GltMatch attempts to conclude whether a gltResponse matches an expected transaction and returns
+        // the outcome. 
+        // If Success/Failed is returned, it means that the gtlResponse did match, and that transaction was succesful/failed.
+        // If Unknown is returned, it means that the gltResponse does not match the expected transaction. 
+        // </summary>
+        // <param name="gltResponse">The GetLastTransactionResponse message to check</param>
+        // <param name="posRefId">The Reference Id that you passed in with the original request.</param>
 
-        /// <returns></returns>
+        // <returns></returns>
 
     }, {
         key: "GltMatch",
@@ -3177,10 +3189,10 @@ var Spi = function () {
 
         // region Internals for Pairing Flow
 
-        /// <summary>
-        /// Handling the 2nd interaction of the pairing process, i.e. an incoming KeyRequest.
-        /// </summary>
-        /// <param name="m">incoming message</param>
+        // <summary>
+        // Handling the 2nd interaction of the pairing process, i.e. an incoming KeyRequest.
+        // </summary>
+        // <param name="m">incoming message</param>
 
     }, {
         key: "_handleKeyRequest",
@@ -3196,10 +3208,10 @@ var Spi = function () {
             this._send(result.KeyResponse.ToMessage()); // send the key_response, i.e. interaction 3 of pairing.
         }
 
-        /// <summary>
-        /// Handling the 4th interaction of the pairing process i.e. an incoming KeyCheck.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Handling the 4th interaction of the pairing process i.e. an incoming KeyCheck.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleKeyCheck",
@@ -3212,10 +3224,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         }
 
-        /// <summary>
-        /// Handling the 5th and final interaction of the pairing process, i.e. an incoming PairResponse
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Handling the 5th and final interaction of the pairing process, i.e. an incoming PairResponse
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handlePairResponse",
@@ -3280,10 +3292,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
         }
 
-        /// <summary>
-        /// Sometimes the server asks us to roll our secrets.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Sometimes the server asks us to roll our secrets.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleKeyRollingRequest",
@@ -3296,12 +3308,12 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
         }
 
-        /// <summary>
-        /// The PinPad server will send us this message when a customer signature is reqired.
-        /// We need to ask the customer to sign the incoming receipt.
-        /// And then tell the pinpad whether the signature is ok or not.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will send us this message when a customer signature is reqired.
+        // We need to ask the customer to sign the incoming receipt.
+        // And then tell the pinpad whether the signature is ok or not.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleSignatureRequired",
@@ -3316,10 +3328,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// The PinPad server will send us this message when an auth code is required.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will send us this message when an auth code is required.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleAuthCodeRequired",
@@ -3336,10 +3348,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// The PinPad server will reply to our PurchaseRequest with a PurchaseResponse.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will reply to our PurchaseRequest with a PurchaseResponse.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handlePurchaseResponse",
@@ -3357,10 +3369,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// The PinPad server will reply to our CashoutOnlyRequest with a CashoutOnlyResponse.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will reply to our CashoutOnlyRequest with a CashoutOnlyResponse.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleCashoutOnlyResponse",
@@ -3378,10 +3390,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// The PinPad server will reply to our MotoPurchaseRequest with a MotoPurchaseResponse.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will reply to our MotoPurchaseRequest with a MotoPurchaseResponse.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleMotoPurchaseResponse",
@@ -3399,10 +3411,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// The PinPad server will reply to our RefundRequest with a RefundResponse.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The PinPad server will reply to our RefundRequest with a RefundResponse.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleRefundResponse",
@@ -3420,10 +3432,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// TODO: Handle the Settlement Response received from the PinPad
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // TODO: Handle the Settlement Response received from the PinPad
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "HandleSettleResponse",
@@ -3440,10 +3452,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// Handle the Settlement Enquiry Response received from the PinPad
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Handle the Settlement Enquiry Response received from the PinPad
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleSettlementEnquiryResponse",
@@ -3460,10 +3472,10 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        /// <summary>
-        /// Sometimes we receive event type "error" from the server, such as when calling cancel_transaction and there is no transaction in progress.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Sometimes we receive event type "error" from the server, such as when calling cancel_transaction and there is no transaction in progress.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleErrorEvent",
@@ -3477,10 +3489,10 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// When the PinPad returns to us what the Last Transaction was.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // When the PinPad returns to us what the Last Transaction was.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleGetLastTransactionResponse",
@@ -3588,18 +3600,18 @@ var Spi = function () {
                 return _this2._onSpiConnectionStatusChanged(e.detail);
             });
             document.addEventListener('MessageReceived', function (e) {
-                return _this2._onSpiMessageReceived(e.detail.data);
+                return _this2._onSpiMessageReceived(e.detail);
             });
             document.addEventListener('ErrorReceived', function (e) {
                 return _this2._onWsErrorReceived(e.detail);
             });
         }
 
-        /// <summary>
-        /// This method will be called when the connection status changes.
-        /// You are encouraged to display a PinPad Connection Indicator on the POS screen.
-        /// </summary>
-        /// <param name="state"></param>
+        // <summary>
+        // This method will be called when the connection status changes.
+        // You are encouraged to display a PinPad Connection Indicator on the POS screen.
+        // </summary>
+        // <param name="state"></param>
 
     }, {
         key: "_onSpiConnectionStatusChanged",
@@ -3661,11 +3673,11 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// This is an important piece of the puzzle. It's a background thread that periodically
-        /// sends Pings to the server. If it doesn't receive Pongs, it considers the connection as broken
-        /// so it disconnects. 
-        /// </summary>
+        // <summary>
+        // This is an important piece of the puzzle. It's a background thread that periodically
+        // sends Pings to the server. If it doesn't receive Pongs, it considers the connection as broken
+        // so it disconnects. 
+        // </summary>
 
     }, {
         key: "_startPeriodicPing",
@@ -3715,10 +3727,10 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// We call this ourselves as soon as we're ready to transact with the PinPad after a connection is established.
-        /// This function is effectively called after we received the first Login Response from the PinPad.
-        /// </summary>
+        // <summary>
+        // We call this ourselves as soon as we're ready to transact with the PinPad after a connection is established.
+        // This function is effectively called after we received the first Login Response from the PinPad.
+        // </summary>
 
     }, {
         key: "_onReadyToTransact",
@@ -3748,9 +3760,9 @@ var Spi = function () {
             }
         }
 
-        /// <summary>
-        /// When we disconnect, we should also stop the periodic ping.
-        /// </summary>
+        // <summary>
+        // When we disconnect, we should also stop the periodic ping.
+        // </summary>
 
     }, {
         key: "_stopPeriodicPing",
@@ -3773,10 +3785,10 @@ var Spi = function () {
             this._mostRecentPingSentTime = Date.now();
         }
 
-        /// <summary>
-        /// Received a Pong from the server
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // Received a Pong from the server
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleIncomingPong",
@@ -3798,10 +3810,10 @@ var Spi = function () {
             this._log.debug("PongLatency:" + (Date.now() - this._mostRecentPingSentTime));
         }
 
-        /// <summary>
-        /// The server will also send us pings. We need to reply with a pong so it doesn't disconnect us.
-        /// </summary>
-        /// <param name="m"></param>
+        // <summary>
+        // The server will also send us pings. We need to reply with a pong so it doesn't disconnect us.
+        // </summary>
+        // <param name="m"></param>
 
     }, {
         key: "_handleIncomingPing",
@@ -3810,9 +3822,9 @@ var Spi = function () {
             this._send(pong);
         }
 
-        /// <summary>
-        /// Ask the PinPad to tell us what the Most Recent Transaction was
-        /// </summary>
+        // <summary>
+        // Ask the PinPad to tell us what the Most Recent Transaction was
+        // </summary>
 
     }, {
         key: "_callGetLastTransaction",
@@ -3821,10 +3833,10 @@ var Spi = function () {
             this._send(gltRequest.ToMessage());
         }
 
-        /// <summary>
-        /// This method will be called whenever we receive a message from the Connection
-        /// </summary>
-        /// <param name="messageJson"></param>
+        // <summary>
+        // This method will be called whenever we receive a message from the Connection
+        // </summary>
+        // <param name="messageJson"></param>
 
     }, {
         key: "_onSpiMessageReceived",
@@ -3915,7 +3927,7 @@ var Spi = function () {
     }, {
         key: "_onWsErrorReceived",
         value: function _onWsErrorReceived(error) {
-            this._log.warn("Received WS Error: " + error);
+            this._log.warn("Received WS Error: " + error.Message);
         }
     }, {
         key: "_send",
@@ -3940,86 +3952,86 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/// <summary>
-/// Represents the 3 Pairing statuses that the Spi instanxce can be in.
-/// </summary>
+// <summary>
+// Represents the 3 Pairing statuses that the Spi instanxce can be in.
+// </summary>
 var SpiStatus = {
-    /// <summary>
-    /// Paired and Connected
-    /// </summary>
+    // <summary>
+    // Paired and Connected
+    // </summary>
     PairedConnected: 'PairedConnected',
 
-    /// <summary>
-    /// Paired but trying to establish a connection 
-    /// </summary>
+    // <summary>
+    // Paired but trying to establish a connection 
+    // </summary>
     PairedConnecting: 'PairedConnecting',
 
-    /// <summary>
-    /// Unpaired
-    /// </summary>
+    // <summary>
+    // Unpaired
+    // </summary>
     Unpaired: 'Unpaired'
 };
 
-/// <summary>
-/// The Spi instance can be in one of these flows at any point in time.
-/// </summary>
+// <summary>
+// The Spi instance can be in one of these flows at any point in time.
+// </summary>
 var SpiFlow = {
-    /// <summary>
-    /// Currently going through the Pairing Process Flow.
-    /// Happens during the Unpaired SpiStatus.
-    /// </summary>
+    // <summary>
+    // Currently going through the Pairing Process Flow.
+    // Happens during the Unpaired SpiStatus.
+    // </summary>
     Pairing: 'Pairing',
 
-    /// <summary>
-    /// Currently going through the transaction Process Flow.
-    /// Cannot happen in the Unpaired SpiStatus.
-    /// </summary>
+    // <summary>
+    // Currently going through the transaction Process Flow.
+    // Cannot happen in the Unpaired SpiStatus.
+    // </summary>
     Transaction: 'Transaction',
 
-    /// <summary>
-    /// Not in any of the other states.
-    /// </summary>
+    // <summary>
+    // Not in any of the other states.
+    // </summary>
     Idle: 'Idle'
 };
 
-/// <summary>
-/// Represents the Pairing Flow State during the pairing process 
-/// </summary>
+// <summary>
+// Represents the Pairing Flow State during the pairing process 
+// </summary>
 
 var PairingFlowState = function PairingFlowState(state) {
     _classCallCheck(this, PairingFlowState);
 
-    /// <summary>
-    /// Some text that can be displayed in the Pairing Process Screen
-    /// that indicates what the pairing process is up to.
-    /// </summary>
+    // <summary>
+    // Some text that can be displayed in the Pairing Process Screen
+    // that indicates what the pairing process is up to.
+    // </summary>
     this.Message = null;
 
-    /// <summary>
-    /// When true, it means that the EFTPOS is shoing the confirmation code,
-    /// and your user needs to press YES or NO on the EFTPOS.
-    /// </summary>
+    // <summary>
+    // When true, it means that the EFTPOS is shoing the confirmation code,
+    // and your user needs to press YES or NO on the EFTPOS.
+    // </summary>
     this.AwaitingCheckFromEftpos = null;
 
-    /// <summary>
-    /// When true, you need to display the YES/NO buttons on you pairing screen
-    /// for your user to confirm the code.
-    /// </summary>
+    // <summary>
+    // When true, you need to display the YES/NO buttons on you pairing screen
+    // for your user to confirm the code.
+    // </summary>
     this.AwaitingCheckFromPos = null;
 
-    /// <summary>
-    /// This is the confirmation code for the pairing process.
-    /// </summary>
+    // <summary>
+    // This is the confirmation code for the pairing process.
+    // </summary>
     this.ConfirmationCode = null;
 
-    /// <summary>
-    /// Indicates whether the Pairing Flow has finished its job.
-    /// </summary>
+    // <summary>
+    // Indicates whether the Pairing Flow has finished its job.
+    // </summary>
     this.Finished = null;
 
-    /// <summary>
-    /// Indicates whether pairing was successful or not.
-    /// </summary>
+    // <summary>
+    // Indicates whether pairing was successful or not.
+    // </summary>
     this.Successful = null;
 
     if (state) {
@@ -4040,38 +4052,38 @@ var TransactionType = {
     AccountVerify: 'AccountVerify'
 };
 
-/// <summary>
-/// Used as a return in the InitiateTx methods to signify whether 
-/// the transaction was initiated or not, and a reason to go with it.
-/// </summary>
+// <summary>
+// Used as a return in the InitiateTx methods to signify whether 
+// the transaction was initiated or not, and a reason to go with it.
+// </summary>
 
 var InitiateTxResult = function InitiateTxResult(initiated, message) {
     _classCallCheck(this, InitiateTxResult);
 
-    /// <summary>
-    /// Whether the tx was initiated.
-    /// When true, you can expect updated to your registered callback.
-    /// When false, you can retry calling the InitiateX method.
-    /// </summary>
+    // <summary>
+    // Whether the tx was initiated.
+    // When true, you can expect updated to your registered callback.
+    // When false, you can retry calling the InitiateX method.
+    // </summary>
     this.Initiated = initiated;
 
-    /// <summary>
-    /// Text that gives reason for the Initiated flag, especially in case of false. 
-    /// </summary>
+    // <summary>
+    // Text that gives reason for the Initiated flag, especially in case of false. 
+    // </summary>
     this.Message = message;
 };
 
-/// <summary>
-/// Used as a return in calls mid transaction to let you know
-/// whether the call was valid or not.
-/// These attributes work for COM interop.
-/// </summary>
+// <summary>
+// Used as a return in calls mid transaction to let you know
+// whether the call was valid or not.
+// These attributes work for COM interop.
+// </summary>
 
 
 var MidTxResult =
-/// <summary>
-/// This default stucture works for COM interop.
-/// </summary>
+// <summary>
+// This default stucture works for COM interop.
+// </summary>
 function MidTxResult(valid, message) {
     _classCallCheck(this, MidTxResult);
 
@@ -4079,112 +4091,112 @@ function MidTxResult(valid, message) {
     this.Message = message;
 };
 
-/// <summary>
-/// Represents the State during a TransactionFlow
-/// </summary>
+// <summary>
+// Represents the State during a TransactionFlow
+// </summary>
 
 
 var TransactionFlowState = function () {
     function TransactionFlowState(posRefId, type, amountCents, message, msg) {
         _classCallCheck(this, TransactionFlowState);
 
-        /// <summary>
-        ///  The id given to this transaction
-        /// </summary>
+        // <summary>
+        //  The id given to this transaction
+        // </summary>
         this.PosRefId = posRefId;
         this.Id = posRefId; // obsolete, but let's maintain it for now, to mean same as PosRefId.
 
-        /// <summary>
-        /// Purchase/Refund/Settle/...
-        /// </summary>
+        // <summary>
+        // Purchase/Refund/Settle/...
+        // </summary>
         this.Type = type;
 
-        /// <summary>
-        /// A text message to display on your Transaction Flow Screen
-        /// </summary>
+        // <summary>
+        // A text message to display on your Transaction Flow Screen
+        // </summary>
         this.DisplayMessage = msg;
 
-        /// <summary>
-        /// Amount in cents for this transaction
-        /// </summary>
+        // <summary>
+        // Amount in cents for this transaction
+        // </summary>
         this.AmountCents = amountCents;
 
-        /// <summary>
-        /// Whther the request has been sent to the EFTPOS yet or not.
-        /// In the PairedConnecting state, the transaction is initiated
-        /// but the request is only sent once the connection is recovered.
-        /// </summary>
+        // <summary>
+        // Whther the request has been sent to the EFTPOS yet or not.
+        // In the PairedConnecting state, the transaction is initiated
+        // but the request is only sent once the connection is recovered.
+        // </summary>
         this.RequestSent = false;
 
-        /// <summary>
-        /// The time when the request was sent to the EFTPOS.
-        /// </summary>
+        // <summary>
+        // The time when the request was sent to the EFTPOS.
+        // </summary>
         this.RequestTime = null;
 
-        /// <summary>
-        /// The time when we last asked for an update, including the original request at first
-        /// </summary>
+        // <summary>
+        // The time when we last asked for an update, including the original request at first
+        // </summary>
         this.LastStateRequestTime = null;
 
-        /// <summary>
-        /// Whether we're currently attempting to Cancel the transaction.
-        /// </summary>
+        // <summary>
+        // Whether we're currently attempting to Cancel the transaction.
+        // </summary>
         this.AttemptingToCancel = null;
 
-        /// <summary>
-        /// When this flag is on, you need to display the dignature accept/decline buttons in your 
-        /// transaction flow screen.
-        /// </summary>
+        // <summary>
+        // When this flag is on, you need to display the dignature accept/decline buttons in your 
+        // transaction flow screen.
+        // </summary>
         this.AwaitingSignatureCheck = false;
 
-        /// <summary>
-        /// When this flag is on, you need to show your user the phone number to call to get the authorisation code.
-        /// Then you need to provide your user means to enter that given code and submit it via SubmitAuthCode().
-        /// </summary>
+        // <summary>
+        // When this flag is on, you need to show your user the phone number to call to get the authorisation code.
+        // Then you need to provide your user means to enter that given code and submit it via SubmitAuthCode().
+        // </summary>
         this.AwaitingPhoneForAuth = null;
 
-        /// <summary>
-        /// Whether this transaction flow is over or not.
-        /// </summary>
+        // <summary>
+        // Whether this transaction flow is over or not.
+        // </summary>
         this.Finished = false;
 
-        /// <summary>
-        /// The success state of this transaction. Starts off as Unknown.
-        /// When finished, can be Success, Failed OR Unknown.
-        /// </summary>
+        // <summary>
+        // The success state of this transaction. Starts off as Unknown.
+        // When finished, can be Success, Failed OR Unknown.
+        // </summary>
         this.Success = SuccessState.Unknown;
 
-        /// <summary>
-        /// The response at the end of the transaction. 
-        /// Might not be present in all edge cases.
-        /// You can then turn this Message into the appropriate structure,
-        /// such as PurchaseResponse, RefundResponse, etc
-        /// </summary>
+        // <summary>
+        // The response at the end of the transaction. 
+        // Might not be present in all edge cases.
+        // You can then turn this Message into the appropriate structure,
+        // such as PurchaseResponse, RefundResponse, etc
+        // </summary>
         this.Response = null;
 
-        /// <summary>
-        /// The message the we received from EFTPOS that told us that signature is required.
-        /// </summary>
+        // <summary>
+        // The message the we received from EFTPOS that told us that signature is required.
+        // </summary>
         this.SignatureRequiredMessage = null;
 
-        /// <summary>
-        /// The message the we received from EFTPOS that told us that Phone For Auth is required.
-        /// </summary>
+        // <summary>
+        // The message the we received from EFTPOS that told us that Phone For Auth is required.
+        // </summary>
         this.PhoneForAuthRequiredMessage = null;
 
-        /// <summary>
-        /// The time when the cancel attempt was made.
-        /// </summary>
+        // <summary>
+        // The time when the cancel attempt was made.
+        // </summary>
         this.CancelAttemptTime = null;
 
-        /// <summary>
-        /// The request message that we are sending/sent to the server.
-        /// </summary>
+        // <summary>
+        // The request message that we are sending/sent to the server.
+        // </summary>
         this.Request = message;
 
-        /// <summary>
-        /// Whether we're currently waiting for a Get Last Transaction Response to get an update. 
-        /// </summary>
+        // <summary>
+        // Whether we're currently waiting for a Get Last Transaction Response to get an update. 
+        // </summary>
         this.AwaitingGltResponse = null;
     }
 
@@ -4277,9 +4289,9 @@ var TransactionFlowState = function () {
     return TransactionFlowState;
 }();
 
-/// <summary>
-/// Used as a return in the SubmitAuthCode method to signify whether Code is valid
-/// </summary>
+// <summary>
+// Used as a return in the SubmitAuthCode method to signify whether Code is valid
+// </summary>
 
 
 var SubmitAuthCodeResult = function () {
@@ -4292,9 +4304,9 @@ var SubmitAuthCodeResult = function () {
         value: function SubmitAuthCodeResult(validFormat, message) {
             this.ValidFormat = validFormat;
 
-            /// <summary>
-            /// Text that gives reason for Invalidity
-            /// </summary>
+            // <summary>
+            // Text that gives reason for Invalidity
+            // </summary>
             this.Message = message;
         }
     }]);
@@ -4357,17 +4369,17 @@ var SpiPayAtTable = function () {
         });
     }
 
-    /// <summary>
-    /// This delegate will be called when the Eftpos needs to know the current state of a bill for a table. 
-    /// <para />
-    /// Parameters:<para />
-    /// billId - The unique identifier of the bill. If empty, it means that the PayAtTable flow on the Eftpos is just starting, and the lookup is by tableId.<para />
-    /// tableId - The identifier of the table that the bill is for. <para />
-    /// operatorId - The id of the operator entered on the eftpos. <para />
-    /// <para />
-    /// Return:<para />
-    /// You need to return the current state of the bill.
-    /// </summary>
+    // <summary>
+    // This delegate will be called when the Eftpos needs to know the current state of a bill for a table. 
+    // <para />
+    // Parameters:<para />
+    // billId - The unique identifier of the bill. If empty, it means that the PayAtTable flow on the Eftpos is just starting, and the lookup is by tableId.<para />
+    // tableId - The identifier of the table that the bill is for. <para />
+    // operatorId - The id of the operator entered on the eftpos. <para />
+    // <para />
+    // Return:<para />
+    // You need to return the current state of the bill.
+    // </summary>
 
 
     _createClass(SpiPayAtTable, [{
