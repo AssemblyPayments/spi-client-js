@@ -6,6 +6,20 @@ const ConnectionState = {
 
 const SPI_PROTOCOL = 'spi.2.1.0';
 
+class ConnectionStateEventArgs
+{
+    constructor(connectionState) {
+        this.ConnectionState = connectionState;
+    }
+}
+
+class MessageEventArgs
+{
+    constructor(message) {
+        this.Message = message;
+    }
+}
+
 class Connection {
     constructor() {
         this.Address    = null;
@@ -35,7 +49,7 @@ class Connection {
         this._ws.onclose   = () => this.onClosed();
         this._ws.onerror   = (err) => this.onError(err);
 
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connecting)}));
     }
 
     Disconnect() {
@@ -62,14 +76,14 @@ class Connection {
     onOpened() {
         this.State = ConnectionState.Connected;
         this.Connected = true;
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connected)}));
     }
 
     onClosed() {
         this.Connected = false;
         this.State = ConnectionState.Disconnected;
         this._ws = null;
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: this.State}));
+        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Disconnected)}));
     }
 
     pollWebSocketConnection(count = 0) {
@@ -87,10 +101,10 @@ class Connection {
     }
 
     onMessageReceived(message) {
-        document.dispatchEvent(new CustomEvent('MessageReceived', {detail: message}));
+        document.dispatchEvent(new CustomEvent('MessageReceived', {detail: new MessageEventArgs(message.data)}));
     }
 
     onError(err) {
-        document.dispatchEvent(new CustomEvent('ErrorReceived', {detail: err}));
+        document.dispatchEvent(new CustomEvent('ErrorReceived', {detail: new MessageEventArgs(err)}));
     }
 }

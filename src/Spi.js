@@ -1078,7 +1078,7 @@ class Spi {
 
         // Register our Event Handlers
         document.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
-        document.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail.data));
+        document.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
         document.addEventListener('ErrorReceived', (e) => this._onWsErrorReceived(e.detail));
     }
 
@@ -1400,7 +1400,7 @@ class Spi {
 
     _onWsErrorReceived(error)
     {
-        this._log.warn("Received WS Error: " + error);
+        this._log.warn("Received WS Error: " + error.Message);
     }
 
     _send(message)
