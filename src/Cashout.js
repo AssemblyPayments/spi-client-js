@@ -10,8 +10,8 @@ class CashoutOnlyRequest
     ToMessage()
     {
         var data = {
-            "pos_ref_id": PosRefId,
-            "cash_amount": CashoutAmount
+            "pos_ref_id": this.PosRefId,
+            "cash_amount": this.CashoutAmount
         };
 
         this.Config.addReceiptConfig(data);

@@ -17,8 +17,8 @@ var CashoutOnlyRequest = function () {
         key: "ToMessage",
         value: function ToMessage() {
             var data = {
-                "pos_ref_id": PosRefId,
-                "cash_amount": CashoutAmount
+                "pos_ref_id": this.PosRefId,
+                "cash_amount": this.CashoutAmount
             };
 
             this.Config.addReceiptConfig(data);
@@ -2970,7 +2970,7 @@ var Spi = function () {
 
             if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
             var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId);
-            cashoutOnlyRequest.Config = Config;
+            cashoutOnlyRequest.Config = this.Config;
             var cashoutMsg = cashoutOnlyRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
             this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg, "Waiting for EFTPOS connection to send cashout request for " + (amountCents / 100).toFixed(2));
@@ -2996,7 +2996,7 @@ var Spi = function () {
 
             if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
             var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId);
-            motoPurchaseRequest.Config = Config;
+            motoPurchaseRequest.Config = this.Config;
             var cashoutMsg = motoPurchaseRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
             this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.MOTO, amountCents, cashoutMsg, "Waiting for EFTPOS connection to send MOTO request for " + (amountCents / 100).toFixed(2));

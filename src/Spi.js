@@ -439,7 +439,7 @@ class Spi {
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId);
-        cashoutOnlyRequest.Config = Config;
+        cashoutOnlyRequest.Config = this.Config;
         var cashoutMsg = cashoutOnlyRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
@@ -466,7 +466,7 @@ class Spi {
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId);
-        motoPurchaseRequest.Config = Config;
+        motoPurchaseRequest.Config = this.Config;
         var cashoutMsg = motoPurchaseRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
