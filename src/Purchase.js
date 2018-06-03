@@ -14,9 +14,9 @@ class PurchaseRequest {
 
     AmountSummary()
     {
-        return `Purchase: ${(PurchaseAmount / 100.0).toFixed(2)}; 
-            Tip: ${(TipAmount / 100.0).toFixed(2)}; 
-            Cashout: ${(CashoutAmount / 100.0).toFixed(2)};`;
+        return `Purchase: ${(this.PurchaseAmount / 100.0).toFixed(2)}; 
+            Tip: ${(this.TipAmount / 100.0).toFixed(2)}; 
+            Cashout: ${(this.CashoutAmount / 100.0).toFixed(2)};`;
     }
 
     ToMessage() {

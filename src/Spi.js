@@ -133,41 +133,10 @@ class Spi {
         return false;
     }
 
-    GetVersion()
+    static GetVersion()
     {
-        return this._version;
+        return '2.1.0';
     }
-    // endregion
-
-    // region Flow Management Methods
-
-    // <summary>
-    // Call this one when a flow is finished and you want to go back to idle state.
-    // Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
-    // finished, or that transaction is finished.
-    // When true, you can dismiss the flow screen and show back the idle screen.
-    // </summary>
-    // <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
-    AckFlowEndedAndBackToIdle()
-    {
-        if (this.CurrentFlow == SpiFlow.Idle)
-            return true; // already idle
-
-        if (this.CurrentFlow == SpiFlow.Pairing && CurrentPairingFlowState.Finished)
-        {
-            this.CurrentFlow = SpiFlow.Idle;
-            return true;
-        }
-        
-        if (this.CurrentFlow == SpiFlow.Transaction && CurrentTxFlowState.Finished)
-        {
-            this.CurrentFlow = SpiFlow.Idle;
-            return true;
-        }
-
-        return false;
-    }        
-
     // endregion
 
     // <summary>

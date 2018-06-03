@@ -1667,7 +1667,7 @@ var PurchaseRequest = function () {
     _createClass(PurchaseRequest, [{
         key: "AmountSummary",
         value: function AmountSummary() {
-            return "Purchase: " + (PurchaseAmount / 100.0).toFixed(2) + "; \n            Tip: " + (TipAmount / 100.0).toFixed(2) + "; \n            Cashout: " + (CashoutAmount / 100.0).toFixed(2) + ";";
+            return "Purchase: " + (this.PurchaseAmount / 100.0).toFixed(2) + "; \n            Tip: " + (this.TipAmount / 100.0).toFixed(2) + "; \n            Cashout: " + (this.CashoutAmount / 100.0).toFixed(2) + ";";
         }
     }, {
         key: "ToMessage",
@@ -2673,39 +2673,7 @@ var Spi = function () {
             return false;
         }
     }, {
-        key: "GetVersion",
-        value: function GetVersion() {
-            return this._version;
-        }
-        // endregion
-
-        // region Flow Management Methods
-
-        // <summary>
-        // Call this one when a flow is finished and you want to go back to idle state.
-        // Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
-        // finished, or that transaction is finished.
-        // When true, you can dismiss the flow screen and show back the idle screen.
-        // </summary>
-        // <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
-
-    }, {
-        key: "AckFlowEndedAndBackToIdle",
-        value: function AckFlowEndedAndBackToIdle() {
-            if (this.CurrentFlow == SpiFlow.Idle) return true; // already idle
-
-            if (this.CurrentFlow == SpiFlow.Pairing && CurrentPairingFlowState.Finished) {
-                this.CurrentFlow = SpiFlow.Idle;
-                return true;
-            }
-
-            if (this.CurrentFlow == SpiFlow.Transaction && CurrentTxFlowState.Finished) {
-                this.CurrentFlow = SpiFlow.Idle;
-                return true;
-            }
-
-            return false;
-        }
+        key: "Pair",
 
         // endregion
 
@@ -2715,9 +2683,6 @@ var Spi = function () {
         // Subscribe to the PairingFlowStateChanged event to get updates on the pairing process.
         // </summary>
         // <returns>Whether pairing has initiated or not</returns>
-
-    }, {
-        key: "Pair",
         value: function Pair() {
             if (this.CurrentStatus != SpiStatus.Unpaired) {
                 this._log.warn("Tried to Pair but we're already so.");
@@ -3941,6 +3906,11 @@ var Spi = function () {
                 this._log.info("Asked to send, but not connected: " + message.DecryptedJson);
                 return false;
             }
+        }
+    }], [{
+        key: "GetVersion",
+        value: function GetVersion() {
+            return '2.1.0';
         }
     }]);
 
