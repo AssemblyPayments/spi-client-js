@@ -1349,18 +1349,13 @@ var PreauthEvents = {
 };
 
 var AccountVerifyRequest = function () {
-    function AccountVerifyRequest() {
+    function AccountVerifyRequest(posRefId) {
         _classCallCheck(this, AccountVerifyRequest);
 
-        this.PosRefId = null;
+        this.PosRefId = posRefId;
     }
 
     _createClass(AccountVerifyRequest, [{
-        key: "AccountVerifyRequest",
-        value: function AccountVerifyRequest(posRefId) {
-            this.PosRefId = posRefId;
-        }
-    }, {
         key: "ToMessage",
         value: function ToMessage() {
             var data = {
@@ -2589,13 +2584,13 @@ var Spi = function () {
         key: "EnablePayAtTable",
         value: function EnablePayAtTable() {
             this._spiPat = new SpiPayAtTable(this);
-            return _spiPat;
+            return this._spiPat;
         }
     }, {
         key: "EnablePreauth",
         value: function EnablePreauth() {
             this._spiPreauth = new SpiPreauth(this);
-            return _spiPreauth;
+            return this._spiPreauth;
         }
     }, {
         key: "Start",

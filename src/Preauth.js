@@ -24,11 +24,7 @@ const PreauthEvents =
 
 class AccountVerifyRequest
 {
-    constructor() {
-        this.PosRefId = null;
-    }
-
-    AccountVerifyRequest(posRefId)
+    constructor(posRefId)
     {
         this.PosRefId = posRefId;
     }
