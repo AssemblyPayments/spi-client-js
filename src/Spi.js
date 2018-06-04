@@ -49,13 +49,13 @@ class Spi {
     EnablePayAtTable()
     {
         this._spiPat = new SpiPayAtTable(this);
-        return _spiPat;
+        return this._spiPat;
     }
 
     EnablePreauth()
     {
         this._spiPreauth = new SpiPreauth(this);
-        return _spiPreauth;
+        return this._spiPreauth;
     }
 
     Start() {
