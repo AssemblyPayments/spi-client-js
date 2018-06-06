@@ -57,7 +57,7 @@ class BillStatusResponse
             return "";
         }
 
-        return JSON.serialize(ph);
+        return JSON.stringify(ph);
     }
     
     ToMessage(messageId)
@@ -66,8 +66,8 @@ class BillStatusResponse
             "success": this.Result==BillRetrievalResult.SUCCESS
         };
         
-        if (BillId) data.bill_id = BillId;
-        if (TableId) data.table_id = TableId;
+        if (this.BillId) data.bill_id = this.BillId;
+        if (this.TableId) data.table_id = this.TableId;
 
         if (this.Result == BillRetrievalResult.SUCCESS)
         {
@@ -104,11 +104,11 @@ class BillPayment
     constructor(m)
     {
         this._incomingAdvice = m;
-        this.BillId = this._incomingAdvice["bill_id"];
-        this.TableId = this._incomingAdvice["table_id"];
-        this.OperatorId = this._incomingAdvice["operator_id"];
+        this.BillId = this._incomingAdvice.Data["bill_id"];
+        this.TableId = this._incomingAdvice.Data["table_id"];
+        this.OperatorId = this._incomingAdvice.Data["operator_id"];
         
-        var pt = this._incomingAdvice["payment_type"];
+        var pt = this._incomingAdvice.Data["payment_type"];
         this.PaymentType = pt;
         
         // this is when we ply the sub object "payment_details" into a purchase response for convenience.
