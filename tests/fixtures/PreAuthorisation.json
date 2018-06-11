@@ -1,0 +1,42 @@
+{
+    "message": {
+       "data": {
+          "account_type": "CREDIT",
+          "preauth_amount": 1000,
+          "auth_code": "201633",
+          "bank_date": "08092017",
+          "bank_time": "122314",
+          "card_entry": "EMV_INSERT",
+          "currency": "AUD",
+          "bank_settlement_date": "21102017",
+          "customer_receipt": "xxx",
+          "expiry_date": "1018",
+          "host_response_code": "000",
+          "host_response_text": "APPROVED",
+          "informative_text": "                ",
+          "masked_pan": "............2958",
+          "merchant_acquirer": "EFTPOS FROM BANK SA",
+          "merchant_addr": "275 Kent St",
+          "merchant_city": "Sydney",
+          "merchant_country": "Australia",
+          "merchant_id": "20150726",
+          "merchant_name": "TEST Term M2",
+          "merchant_postcode": "2000",
+          "merchant_receipt": "xxx",
+          "online_indicator": "Y",
+          "scheme_name": "Visa",
+          "stan": "002750",
+          "rrn": "180205002750",
+          "success": true,
+          "terminal_id": "100381990118",
+          "transaction_type": "PRE-AUTH",
+          "preauth_id": "12345678",
+          "merchant_receipt_printed": false,
+          "customer_receipt_printed": false,
+          "pos_ref_id":"POS_REF_ID_7"
+       },
+       "datetime": "2017-09-08T12:23:41.000",
+       "event": "preauth_response",
+       "id": "67"
+    }
+ }

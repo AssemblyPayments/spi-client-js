@@ -1,0 +1,45 @@
+{
+    "message": {
+        "event": "bill_details",
+        "datetime":"2018-03-12T07:55:24.795",
+        "id":"C1.2",
+        "data": {
+            "bill_id":"2018-03-12T09:53:49.934",
+            "bill_outstanding_amount":2532,
+            "bill_total_amount":5000,
+            "success":true ,
+            "table_id":"123456",
+            "bill_payment_history":[
+                {
+                    "payment_type":"cash",
+                    "payment_summary":{
+                        "bank_date":"12032018",
+                        "bank_time":"075403",
+                        "purchase_amount":1234,
+                        "terminal_id":"P2015071",
+                        "terminal_ref_id":"some string",
+                        "tip_amount":0
+                    }
+                },
+                {
+                    "payment_type":"card",
+                    "payment_summary":{
+                        "account_type":"CHEQUE",
+                        "auth_code":"094224",
+                        "bank_date":"12032018",
+                        "bank_time":"075447",
+                        "host_response_code":"000",
+                        "host_response_text":"APPROVED",
+                        "masked_pan":"............4351",
+                        "purchase_amount":1234,
+                        "rrn":"180312000379",
+                        "scheme_name":"Amex",
+                        "terminal_id":"1004P2015071",
+                        "terminal_ref_id":"some string",
+                        "tip_amount":1234
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,37 @@
+{
+    "message": {
+        "data": {
+            "account_type": "CREDIT",
+            "auth_code": "201633",
+            "bank_date": "08092017",
+            "bank_time": "122314",
+            "card_entry": "EMV_INSERT",
+            "bank_settlement_date": "21102017",
+            "customer_receipt": "xxx",
+            "expiry_date": "1018",
+            "host_response_code": "000",
+            "host_response_text": "APPROVED",
+            "informative_text": "                ",
+            "masked_pan": "............2958",
+            "merchant_acquirer": "EFTPOS FROM BANK SA",
+            "merchant_addr": "275 Kent St",
+            "merchant_city": "Sydney",
+            "merchant_country": "Australia",
+            "merchant_id": "02447508",
+            "merchant_name": "TEST Term M2",
+            "merchant_postcode": "2000",
+            "merchant_receipt": "xxx",
+            "online_indicator": "Y",
+            "scheme_name": "MasterCard",
+            "stan": "000005",
+            "rrn": "170908000005",
+            "success": true,
+            "terminal_id": "123456789884",
+            "transaction_type": "VERIFY",
+            "pos_ref_id":"POS_REF_ID_7"
+        },
+        "datetime": "2017-09-08T12:23:41.000",
+        "event": "account_verify_response",
+        "id": "67"
+    }
+}

@@ -27,7 +27,8 @@
     "jasmine": "^2.8.0",
     "karma": "^2.0.2",
     "karma-chrome-launcher": "^2.2.0",
-    "karma-jasmine": "^1.1.1"
+    "karma-jasmine": "^1.1.1",
+    "karma-json-fixtures-preprocessor": "0.0.6"
   },
   "bugs": {
     "url": "https://github.com/AssemblyPayments/spi-client-js/issues"

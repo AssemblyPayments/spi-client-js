@@ -337,7 +337,7 @@ class TransactionFlowState
 // </summary>
 class SubmitAuthCodeResult
 {
-    SubmitAuthCodeResult(validFormat, message)
+    constructor(validFormat, message)
     {
         this.ValidFormat = validFormat;
 
