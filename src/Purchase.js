@@ -206,13 +206,14 @@ class GetLastTransactionResponse
     {
         // We can't rely on checking "success" flag or "error" fields here,
         // as retrieval may be successful, but the retrieved transaction was a fail.
-        // So we check if we got back an RRN.
-        return !!this.GetRRN();
+        // So we check if we got back an ResponseCode.
+        // (as opposed to say an operation_in_progress_error)
+        return !!this.GetResponseCode();
     }
 
     WasOperationInProgressError()
     {
-        return this._m.GetError() == "OPERATION_IN_PROGRESS";
+        return this._m.GetError().startsWith("OPERATION_IN_PROGRESS");
     }
 
     IsWaitingForSignatureResponse()

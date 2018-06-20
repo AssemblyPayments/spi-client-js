@@ -47,7 +47,12 @@ class BillStatusResponse
             return [];
         }
         
-        return JSON.parse(this.BillData);
+        let billPaymentHistory = [];
+        let savedBillData = JSON.parse(this.BillData);
+
+        return savedBillData.map((bill) => {
+            return new PaymentHistoryEntry(bill.payment_type, bill.payment_summary);
+        });
     }
 
     static ToBillData(ph)

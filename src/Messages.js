@@ -136,7 +136,7 @@ class Message {
     }
 
     GetError() {
-        return this.Data.error_reason ? this.Data.error_reason : null;
+        return this.Data.error_reason ? this.Data.error_reason : "";
     }
 
     GetErrorDetail() {

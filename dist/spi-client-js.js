@@ -737,7 +737,7 @@ var Message = function () {
     }, {
         key: "GetError",
         value: function GetError() {
-            return this.Data.error_reason ? this.Data.error_reason : null;
+            return this.Data.error_reason ? this.Data.error_reason : "";
         }
     }, {
         key: "GetErrorDetail",
@@ -1136,7 +1136,12 @@ var BillStatusResponse = function () {
                 return [];
             }
 
-            return JSON.parse(this.BillData);
+            var billPaymentHistory = [];
+            var savedBillData = JSON.parse(this.BillData);
+
+            return savedBillData.map(function (bill) {
+                return new PaymentHistoryEntry(bill.payment_type, bill.payment_summary);
+            });
         }
     }, {
         key: "ToMessage",
@@ -1874,13 +1879,14 @@ var GetLastTransactionResponse = function () {
         value: function WasRetrievedSuccessfully() {
             // We can't rely on checking "success" flag or "error" fields here,
             // as retrieval may be successful, but the retrieved transaction was a fail.
-            // So we check if we got back an RRN.
-            return !!this.GetRRN();
+            // So we check if we got back an ResponseCode.
+            // (as opposed to say an operation_in_progress_error)
+            return !!this.GetResponseCode();
         }
     }, {
         key: "WasOperationInProgressError",
         value: function WasOperationInProgressError() {
-            return this._m.GetError() == "OPERATION_IN_PROGRESS";
+            return this._m.GetError().startsWith("OPERATION_IN_PROGRESS");
         }
     }, {
         key: "IsWaitingForSignatureResponse",
@@ -4259,25 +4265,16 @@ var TransactionFlowState = function () {
 // </summary>
 
 
-var SubmitAuthCodeResult = function () {
-    function SubmitAuthCodeResult() {
-        _classCallCheck(this, SubmitAuthCodeResult);
-    }
+var SubmitAuthCodeResult = function SubmitAuthCodeResult(validFormat, message) {
+    _classCallCheck(this, SubmitAuthCodeResult);
 
-    _createClass(SubmitAuthCodeResult, [{
-        key: 'SubmitAuthCodeResult',
-        value: function SubmitAuthCodeResult(validFormat, message) {
-            this.ValidFormat = validFormat;
+    this.ValidFormat = validFormat;
 
-            // <summary>
-            // Text that gives reason for Invalidity
-            // </summary>
-            this.Message = message;
-        }
-    }]);
-
-    return SubmitAuthCodeResult;
-}();
+    // <summary>
+    // Text that gives reason for Invalidity
+    // </summary>
+    this.Message = message;
+};
 
 var SpiConfig = function () {
     function SpiConfig() {
