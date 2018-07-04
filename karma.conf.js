@@ -19,11 +19,17 @@ module.exports = function (config) {
 
             // Our code
             'src/**/*.js',
-            'Pos.js',
 
             // Include the unit tests 
-            'tests/**/*.spec.js'
+            'tests/**/*.spec.js',
+
+            // Mock fixtures 
+            './tests/fixtures/**/*.json'
         ],
+
+        // plugins: [
+        //     'karma-json-fixtures-preprocessor'
+        // ],
 
         // list of files to exclude
         exclude: [
@@ -32,7 +38,12 @@ module.exports = function (config) {
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
+            './tests/fixtures/**/*.json': ['json_fixtures']
+        },
 
+        jsonFixturesPreprocessor: {
+            // strip this from the file path \ fixture name
+            stripPrefix: 'tests/fixtures/'
         },
 
         // test results reporter to use

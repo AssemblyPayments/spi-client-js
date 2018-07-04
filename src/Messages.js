@@ -1,12 +1,13 @@
-/// <summary>
-/// Events statically declares the various event names in messages.
-/// </summary>
+// <summary>
+// Events statically declares the various event names in messages.
+// </summary>
 const Events = {
      PairRequest : "pair_request",
      KeyRequest : "key_request",
      KeyResponse : "key_response",
      KeyCheck : "key_check",
      PairResponse : "pair_response",
+     DropKeysAdvice : "drop_keys",
 
      LoginRequest : "login_request",
      LoginResponse : "login_response",
@@ -24,26 +25,43 @@ const Events = {
      SignatureRequired : "signature_required",
      SignatureDeclined : "signature_decline",
      SignatureAccepted : "signature_accept",
-    
+     AuthCodeRequired : "authorisation_code_required",
+     AuthCodeAdvice : "authorisation_code_advice",
+
+     CashoutOnlyRequest : "cash",
+     CashoutOnlyResponse : "cash_response",
+
+     MotoPurchaseRequest : "moto_purchase",
+     MotoPurchaseResponse : "moto_purchase_response",
+
      SettleRequest : "settle",
      SettleResponse : "settle_response",
-    
+     SettlementEnquiryRequest : "settlement_enquiry",
+     SettlementEnquiryResponse : "settlement_enquiry_response",
+
      KeyRollRequest : "request_use_next_keys",
      KeyRollResponse : "response_use_next_keys",
 
      Error : "error",
     
-     InvalidHmacSignature : "_INVALID_SIGNATURE_"
+     InvalidHmacSignature : "_INVALID_SIGNATURE_",
+
+    // Pay At Table Related Messages
+    PayAtTableGetTableConfig : "get_table_config", // incoming. When eftpos wants to ask us for P@T configuration.
+    PayAtTableSetTableConfig : "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
+    PayAtTableGetBillDetails : "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
+    PayAtTableBillDetails : "bill_details",        // outgoing. We reply with this when eftpos requests to us get_bill_details.
+    PayAtTableBillPayment : "bill_payment"         // incoming. When the eftpos advices 
 };
 
 const SuccessState = {
     Unknown: 'Unknown', Success: 'Success', Failed: 'Failed'
 };
 
-/// <summary>
-/// MessageStamp represents what is required to turn an outgoing Message into Json
-/// including encryption and date setting.
-/// </summary>
+// <summary>
+// MessageStamp represents what is required to turn an outgoing Message into Json
+// including encryption and date setting.
+// </summary>
 class MessageStamp {
     constructor(posId, secrets, serverTimeDelta) {
         this.PosId = posId;
@@ -52,34 +70,34 @@ class MessageStamp {
     }
 }
 
-/// <summary>
-/// MessageEnvelope represents the outer structure of any message that is exchanged
-/// between the Pos and the PinPad and vice-versa.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// MessageEnvelope represents the outer structure of any message that is exchanged
+// between the Pos and the PinPad and vice-versa.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 class MessageEnvelope {
     constructor(message, enc, hmac, posId) {
-        /// <summary>
-        /// The Message field is set only when in Un-encrypted form.
-        /// In fact it is the only field in an envelope in the Un-Encrypted form.
-        /// </summary>
+        // <summary>
+        // The Message field is set only when in Un-encrypted form.
+        // In fact it is the only field in an envelope in the Un-Encrypted form.
+        // </summary>
         this.Message = message;
 
-        /// <summary>
-        /// The enc field is set only when in Encrypted form.
-        /// It contains the encrypted Json of another MessageEnvelope 
-        /// </summary>
+        // <summary>
+        // The enc field is set only when in Encrypted form.
+        // It contains the encrypted Json of another MessageEnvelope 
+        // </summary>
         this.Enc = enc;
 
-        /// <summary>
-        /// The hmac field is set only when in Encrypted form.
-        /// It is the signature of the "enc" field.
-        /// </summary>
+        // <summary>
+        // The hmac field is set only when in Encrypted form.
+        // It is the signature of the "enc" field.
+        // </summary>
         this.Hmac = hmac;
 
-        /// <summary>
-        /// The pos_id field is only filled for outgoing Encrypted messages.
-        /// </summary>
+        // <summary>
+        // The pos_id field is only filled for outgoing Encrypted messages.
+        // </summary>
         this.PosId = posId;
     }
 
@@ -93,10 +111,10 @@ class MessageEnvelope {
     }
 }
 
-/// <summary>
-/// Message represents the contents of a Message.
-/// See http://www.simplepaymentapi.com/#/api/message-encryption
-/// </summary>
+// <summary>
+// Message represents the contents of a Message.
+// See http://www.simplepaymentapi.com/#/api/message-encryption
+// </summary>
 class Message {
     constructor(id, eventName, data, needsEncryption) {
         this.Id = id;
@@ -118,7 +136,11 @@ class Message {
     }
 
     GetError() {
-        return this.Data.error_reason ? this.Data.error_reason : "NONE";
+        return this.Data.error_reason ? this.Data.error_reason : "";
+    }
+
+    GetErrorDetail() {
+        return this.Data.error_detail;
     }
 
     GetServerTimeDelta()
@@ -137,6 +159,18 @@ class Message {
         return msgTime - now;
     }
 
+    // Helper method to parse bank date format 20042018 (ddMMyyyy)
+    static ParseBankDate(bankDate) {
+        if(bankDate.length !== 8) return null;
+
+        return new Date(`${bankDate.substr(4,4)}-${bankDate.substr(2,2)}-${bankDate.substr(0,2)}`);
+    }
+
+    // Parses a bank date & time str from "05Oct17" / "05:00" ("ddMMMyy/HH:mm") into date obj
+    static ParseBankDateTimeStr(date, time) {
+        return new Date(`${date.substr(0,2)} ${date.substr(2,3)} ${date.substr(5,2)} ${time}`);
+    }
+
     static FromJson(msgJson, secrets) {
         let env = JSON.parse(msgJson);
 
@@ -144,6 +178,13 @@ class Message {
             let message = new Message(env.message.id, env.message.event, env.message.data, false);
             message.DecryptedJson = msgJson;
             return message;
+        }
+
+        if (secrets == null)
+        {
+            // This may happen if we somehow received an encrypted message from eftpos but we're not configered with secrets.
+            // For example, if we cancel the pairing process a little late in the game and we get an encrypted key_check message after we've dropped the keys.
+            return new Message("UNKNOWN", "NOSECRETS", null, false);
         }
 
         // Its encrypted, verify sig
@@ -167,7 +208,7 @@ class Message {
             return message;
 
         } catch(e) {
-            return new Message("Unknown", "unparseable", {"msg": decryptedJson}, false);
+            return new Message("UNKNOWN", "UNPARSEABLE", {"msg": decryptedJson}, false);
         }
     }
 

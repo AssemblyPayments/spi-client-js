@@ -1,6 +1,6 @@
-/// <summary>
-/// Pairing Interaction 1: Outgoing
-/// </summary>
+// <summary>
+// Pairing Interaction 1: Outgoing
+// </summary>
 class PairRequest {
     ToMessage() {
         let data = {padding: true};
@@ -8,7 +8,7 @@ class PairRequest {
     }
 }
 
-/// Pairing Interaction 2: Incoming
+// Pairing Interaction 2: Incoming
 class KeyRequest {
     constructor(m) {
         this.RequestId = m.Id;
@@ -17,7 +17,7 @@ class KeyRequest {
     }
 }
 
-/// Pairing Interaction 3: Outgoing
+// Pairing Interaction 3: Outgoing
 class KeyResponse {
     constructor(requestId, Benc, Bhmac) {
         this.RequestId = requestId;
@@ -39,24 +39,32 @@ class KeyResponse {
     }
 }
 
-/// Pairing Interaction 4: Incoming
+// Pairing Interaction 4: Incoming
 class KeyCheck {
     constructor(m) {
         this.ConfirmationCode = m.IncomingHmac.substring(0,6);
     }
 }
 
-/// Pairing Interaction 5: Incoming
+// Pairing Interaction 5: Incoming
 class PairResponse {
     constructor(m) {
         this.Success = m.Data.success;
     }
 }
 
-/// Holder class for Secrets and KeyResponse, so that we can use them together in method signatures.
+// Holder class for Secrets and KeyResponse, so that we can use them together in method signatures.
 class SecretsAndKeyResponse {
     constructor(secrets, keyResponse) {
         this.Secrets = secrets;
         this.KeyResponse = keyResponse;
+    }
+}
+
+class DropKeysRequest
+{
+    ToMessage()
+    {
+        return new Message(RequestIdHelper.Id("drpkys"), Events.DropKeysAdvice, null, true);
     }
 }

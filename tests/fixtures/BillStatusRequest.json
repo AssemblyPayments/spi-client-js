@@ -1,0 +1,11 @@
+{
+    "message": {
+        "event":"get_bill_details",
+        "datetime":"2018-03-12T07:53:50.502",
+        "id":"C1.0",
+        "data":{
+            "operator_id":"12345",
+            "table_id":"123456"
+        }
+    }
+}

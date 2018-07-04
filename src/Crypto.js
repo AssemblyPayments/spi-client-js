@@ -10,12 +10,12 @@ class Crypto {
         }
     }
 
-    /// <summary>
-    /// Encrypt a block using CBC and PKCS7.
-    /// </summary>
-    /// <param name="key">The key value</param>
-    /// <param name="data">The message to encrypt</param>
-    /// <returns>Returns the resulting encrypted string data as HEX.</returns>
+    // <summary>
+    // Encrypt a block using CBC and PKCS7.
+    // </summary>
+    // <param name="key">The key value</param>
+    // <param name="data">The message to encrypt</param>
+    // <returns>Returns the resulting encrypted string data as HEX.</returns>
     static AesEncrypt (key, data) {
         let bytes = aesjs.utils.hex.toBytes(key);
         const iv = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
@@ -27,12 +27,12 @@ class Crypto {
         return encryptedString;
     }
     
-    /// <summary>
-    /// Decrypt a block using a CBC and PKCS7.
-    /// </summary>
-    /// <param name="key">The key value</param>
-    /// <param name="data">the data to decrypt</param>
-    /// <returns>Returns the resulting data decrypted in plaintext.</returns>
+    // <summary>
+    // Decrypt a block using a CBC and PKCS7.
+    // </summary>
+    // <param name="key">The key value</param>
+    // <param name="data">the data to decrypt</param>
+    // <returns>Returns the resulting data decrypted in plaintext.</returns>
     static AesDecrypt(key, data) {
         let bytes = aesjs.utils.hex.toBytes(key);
         const iv = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
@@ -44,12 +44,12 @@ class Crypto {
         return decrypted;
     }
 
-    /// <summary>
-    /// Calculates the HMACSHA256 signature of a message.
-    /// </summary>
-    /// <param name="key">The Hmac Key as HEX</param>
-    /// <param name="messageToSign">The message to sign</param>
-    /// <returns>The HMACSHA256 signature as a hex string</returns>
+    // <summary>
+    // Calculates the HMACSHA256 signature of a message.
+    // </summary>
+    // <param name="key">The Hmac Key as HEX</param>
+    // <param name="messageToSign">The message to sign</param>
+    // <returns>The HMACSHA256 signature as a hex string</returns>
     static HmacSignature(key, messageToSign) {
         let shaObj = new jsSHA("SHA-256", "TEXT");
 

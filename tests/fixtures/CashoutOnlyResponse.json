@@ -1,0 +1,41 @@
+{
+    "message": {
+        "data": {
+            "account_type": "SAVINGS",
+            "cash_amount": 1500,
+            "bank_cash_amount": 1500,
+            "auth_code": "839791",
+            "bank_date": "06022018",
+            "bank_settlement_date": "07022018",
+            "bank_time": "144752",
+            "card_entry": "EMV_INSERT",
+            "currency": "AUD",
+            "customer_receipt": "",
+            "customer_receipt_printed": false,
+            "expiry_date": "0721",
+            "host_response_code": "000",
+            "host_response_text": "APPROVED",
+            "informative_text": "                ",
+            "masked_pan": "............2958",
+            "merchant_acquirer": "EFTPOS FROM WESTPAC",
+            "merchant_addr": "275 Kent St",
+            "merchant_city": "Sydney",
+            "merchant_country": "Australia",
+            "merchant_id": "02447508",
+            "merchant_name": "VAAS Product 4",
+            "merchant_postcode": "2000",
+            "merchant_receipt": "",
+            "merchant_receipt_printed": false,
+            "online_indicator": "Y",
+            "rrn": "180206002786",
+            "scheme_name": "Debit",
+            "stan": "002786",
+            "success": true,
+            "terminal_id": "100381990118",
+            "transaction_type": "CASH"
+        },
+        "datetime": "2018-02-06T14:48:12.915",
+        "event": "cash_response",
+        "id": "7"
+    }
+ }
