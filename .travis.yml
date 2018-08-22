@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - "8"
+
+sudo: required
+
+addons:
+  chrome: stable
+
+deploy:
+- provider: script
+  script: set -o pipefail && ./deploy-check.sh $TRAVIS_TAG
+  on:
+    tags: true
+- provider: npm
+  email: $NPM_EMAIL
+  api_key: $NPM_TOKEN
+  on:
+    tags: true
