@@ -1,4 +1,4 @@
-# SPI Client JavaScript
+# SPI Client JavaScript [![Build Status](https://travis-ci.org/AssemblyPayments/spi-client-js.svg?branch=master)](https://travis-ci.org/AssemblyPayments/spi-client-js)
 
 This is the JavaScript client library for Assembly Payments in-store integration.
 
