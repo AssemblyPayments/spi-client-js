@@ -1065,7 +1065,7 @@ class Spi {
                 break;
 
             case ConnectionState.Connected:
-                if (this.CurrentFlow == SpiFlow.Pairing)
+                if (this.CurrentStatus == SpiStatus.Unpaired && this.CurrentFlow == SpiFlow.Pairing)
                 {
                     this.CurrentPairingFlowState.Message = "Requesting to Pair...";
                     document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
