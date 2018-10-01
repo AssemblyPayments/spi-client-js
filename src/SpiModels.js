@@ -262,6 +262,12 @@ class TransactionFlowState
         this.DisplayMessage = msg;
     }
 
+    CancelFailed(msg)
+    {
+        this.AttemptingToCancel = false;
+        this.DisplayMessage = msg;
+    }
+
     CallingGlt()
     {
         this.AwaitingGltResponse = true;
@@ -353,6 +359,7 @@ class SpiConfig
     constructor() {
         this.PromptForCustomerCopyOnEftpos  = false;
         this.SignatureFlowOnEftpos          = false;
+        this.PrintMerchantCopy              = false;
     }
 
     addReceiptConfig(messageData)
@@ -365,12 +372,52 @@ class SpiConfig
         {
             messageData.print_for_signature_required_transactions = this.SignatureFlowOnEftpos;
         }
-
+        if (this.PrintMerchantCopy)
+        {
+            messageData.print_merchant_copy = this.PrintMerchantCopy;
+        }
         return messageData;
     }
 
     ToString()
     {
-        return `PromptForCustomerCopyOnEftpos:${this.PromptForCustomerCopyOnEftpos} SignatureFlowOnEftpos:${this.SignatureFlowOnEftpos}`;
+        return `PromptForCustomerCopyOnEftpos:${this.PromptForCustomerCopyOnEftpos} SignatureFlowOnEftpos:${this.SignatureFlowOnEftpos} PrintMerchantCopy: ${this.PrintMerchantCopy}`;
+    }
+}
+
+class TransactionOptions
+{
+    constructor() {
+        this.CustomerReceiptHeader = null;
+        this.CustomerReceiptFooter = null;
+        this.MerchantReceiptHeader = null;
+        this.MerchantReceiptFooter = null;
+    }
+
+    SetCustomerReceiptHeader(customerReceiptHeader)
+    {
+        this.CustomerReceiptHeader = customerReceiptHeader;
+    }
+
+    SetCustomerReceiptFooter(customerReceiptFooter)
+    {
+        this.CustomerReceiptFooter = customerReceiptFooter;
+    }
+    SetMerchantReceiptHeader(merchantReceiptHeader)
+    {
+        this.MerchantReceiptHeader = merchantReceiptHeader;
+    }
+    SetMerchantReceiptFooter(merchantReceiptFooter)
+    {
+        this.MerchantReceiptFooter = merchantReceiptFooter;
+    }
+    AddOptions(messageData)
+    {
+        messageData.customer_receipt_header = this.CustomerReceiptHeader;
+        messageData.customer_receipt_footer = this.CustomerReceiptFooter;
+        messageData.merchant_receipt_header = this.MerchantReceiptHeader;
+        messageData.merchant_receipt_footer = this.MerchantReceiptFooter;
+
+        return messageData;
     }
 }

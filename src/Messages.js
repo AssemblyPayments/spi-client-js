@@ -39,6 +39,9 @@ const Events = {
      SettlementEnquiryRequest : "settlement_enquiry",
      SettlementEnquiryResponse : "settlement_enquiry_response",
 
+     SetPosInfoRequest : "set_pos_info",
+     SetPosInfoResponse : "set_pos_info_response",
+
      KeyRollRequest : "request_use_next_keys",
      KeyRollResponse : "response_use_next_keys",
 

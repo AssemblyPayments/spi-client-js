@@ -1,3 +1,5 @@
+const SPI_VERSION = '2.4.0';
+
 class Spi {
 
     get CurrentStatus() {
@@ -23,6 +25,10 @@ class Spi {
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
+
+        this._posVendorId = null;
+        this._posVersion = null;
+        this._hasSetInfo = null;
 
         // We will maintain some state
         this._mostRecentPingSent = null;
@@ -59,6 +65,14 @@ class Spi {
     }
 
     Start() {
+
+        if (!this._posVendorId || !this._posVersion)
+        {
+            // POS information is now required to be set
+            this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+        }
+
         this._resetConn();
         this._startTransactionMonitoringThread();
 
@@ -106,6 +120,19 @@ class Spi {
         return true;
     }
 
+    /**
+     * Sets values used to identify the POS software to the EFTPOS terminal.
+     * Must be set before starting!
+     *
+     * @param posVendorId Vendor identifier of the POS itself.
+     * @param posVersion  Version string of the POS itself.
+     */
+    SetPosInfo(posVendorId, posVersion)
+    {
+        this._posVendorId = posVendorId;
+        this._posVersion = posVersion;
+    }
+
     // <summary>
     // Call this one when a flow is finished and you want to go back to idle state.
     // Typically when your user clicks the "OK" bubtton to acknowldge that pairing is
@@ -135,7 +162,7 @@ class Spi {
 
     static GetVersion()
     {
-        return '2.1.0';
+        return SPI_VERSION;
     }
     // endregion
 
@@ -290,7 +317,7 @@ class Spi {
     // <param name="cashoutAmount">The Cashout Amount in Cents</param>
     // <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -301,6 +328,7 @@ class Spi {
         
         var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout);
         purchase.Config = this.Config;
+        purchase.Options = options;
         var purchaseMsg = purchase.ToMessage();
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg,
@@ -343,7 +371,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Refund Initiated");
+        return new InitiateTxResult(true, "Refund Initiated");
     }
     
     // <summary>
@@ -507,7 +535,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Settle Initiated");   
+        return new InitiateTxResult(true, "Settle Initiated");   
     }
 
     // <summary>
@@ -528,7 +556,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Settle Initiated");   
+        return new InitiateTxResult(true, "Settle Initiated");   
     }
 
     // <summary>
@@ -1004,6 +1032,42 @@ class Spi {
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
     }
 
+    //When the transaction cancel response is returned.
+    _handleCancelTransactionResponse(m)
+    {
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        {
+            this._log.Info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+
+        var txState = this.CurrentTxFlowState;
+        var cancelResponse = new CancelTransactionResponse(m);
+
+        if (cancelResponse.Success) return;
+
+        this._log.Warn("Failed to cancel transaction: reason=" + cancelResponse.GetErrorReason() + ", detail=" + cancelResponse.GetErrorDetail());
+
+        txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
+    
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
+    }
+
+    _handleSetPosInfoResponse(m)
+    {
+        var response = new SetPosInfoResponse(m);
+        if (response.isSuccess())
+        {
+            this._hasSetInfo = true;
+            this._log.Info("Setting POS info successful");
+        }
+        else
+        {
+            this._log.Warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
+        }
+    }
+
     _startTransactionMonitoringThread()
     {
         var needsPublishing = false;
@@ -1201,11 +1265,21 @@ class Spi {
         }
         else
         {
+            if (!this._hasSetInfo) { 
+                this._callSetPosInfo(); 
+            }
+
             // let's also tell the eftpos our latest table configuration.
             if(this._spiPat) {
                 this._spiPat.PushPayAtTableConfig();
             }
         }
+    }
+
+    _callSetPosInfo()
+    {
+        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
+        this._send(setPosInfoRequest.toMessage());
     }
 
     // <summary>
@@ -1340,6 +1414,12 @@ class Spi {
                 break;
             case Events.KeyRollRequest:
                 this._handleKeyRollingRequest(m);
+                break;
+            case Events.CancelTransactionResponse:
+                this._handleCancelTransactionResponse(m);
+                break;
+            case Events.SetPosInfoResponse:
+                this._handleSetPosInfoResponse(m);
                 break;
             case Events.PayAtTableGetTableConfig:
                 if (this._spiPat == null)
