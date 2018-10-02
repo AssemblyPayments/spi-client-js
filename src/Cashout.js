@@ -5,6 +5,7 @@ class CashoutOnlyRequest
         this.PosRefId = posRefId;
         this.CashoutAmount = amountCents;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
     
     ToMessage()
@@ -15,6 +16,7 @@ class CashoutOnlyRequest
         };
 
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("cshout"), Events.CashoutOnlyRequest, data, true);
     }
 }

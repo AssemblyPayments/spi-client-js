@@ -18,6 +18,7 @@ const Events = {
      PurchaseRequest : "purchase",
      PurchaseResponse : "purchase_response",
      CancelTransactionRequest : "cancel_transaction",
+     CancelTransactionResponse : "cancel_response",
      GetLastTransactionRequest : "get_last_transaction",
      GetLastTransactionResponse : "last_transaction",
      RefundRequest : "refund",

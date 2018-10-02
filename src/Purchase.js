@@ -6,6 +6,7 @@ class PurchaseRequest {
         this.CashoutAmount = 0;
         this.PromptForCashout = false;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
 
         // Library Backwards Compatibility
         this.Id = posRefId;
@@ -29,6 +30,7 @@ class PurchaseRequest {
         };
 
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prchs"), Events.PurchaseRequest, data, true);
     }
 }
@@ -187,6 +189,31 @@ class CancelTransactionRequest
     }
 }
 
+class CancelTransactionResponse
+{
+    constructor(m)
+    {
+        this._m = m;
+        this.PosRefId = this._m.Data.pos_ref_id;
+        this.Success = this._m.GetSuccessState() == SuccessState.Success;
+    }
+
+    GetErrorReason()
+    {
+        return this._m.Data.error_reason;
+    }
+
+    GetErrorDetail()
+    {
+        return this._m.Data.error_detail;
+    }
+
+    GetResponseValueWithAttribute(attribute)
+    {
+        return this._m.Data[attribute];
+    }
+}
+
 class GetLastTransactionRequest
 {
     ToMessage()
@@ -318,12 +345,14 @@ class RefundRequest
         this.Id = RequestIdHelper.Id("refund");
         this.PosRefId = posRefId;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
     
     ToMessage()
     {
         let data = {refund_amount: this.AmountCents, pos_ref_id: this.PosRefId};
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
     }
 }
@@ -486,6 +515,7 @@ class MotoPurchaseRequest
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -495,6 +525,7 @@ class MotoPurchaseRequest
             purchase_amount: this.PurchaseAmount
         };
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);
     }
 }
