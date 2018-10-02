@@ -62,6 +62,11 @@ class PurchaseResponse
         return this._m.Data.tip_amount;
     }
 
+    GetSurchargeAmount()
+    {
+        return this._m.Data.surcharge_amount;
+    }
+
     GetCashoutAmount()
     {
         return this._m.Data.cash_amount;
@@ -175,7 +180,8 @@ class PurchaseResponse
             scheme_name: this.SchemeName,
             terminal_id: this.GetTerminalId(),
             terminal_ref_id: this.GetTerminalReferenceId(),
-            tip_amount: this.GetTipAmount()           
+            tip_amount: this.GetTipAmount(),
+            surcharge_amount: this.GetSurchargeAmount()
         };
     }
 }
