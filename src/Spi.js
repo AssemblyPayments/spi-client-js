@@ -654,6 +654,11 @@ class Spi {
 
         return gltResponse.GetSuccessState();
     }
+
+    PrintReceipt(key, payload)
+    {
+        this._send(new PrintingRequest(key, payload).toMessage());
+    }
     // endregion
         
     // region Internals for Pairing Flow
@@ -1099,6 +1104,15 @@ class Spi {
         setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
     }
 
+    PrintingResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    _handlePrintingResponse(m)
+    {
+        this.PrintingResponse(m);
+    }
+
     // endregion
         
     // region Internals for Connection Management
@@ -1434,6 +1448,9 @@ class Spi {
                 break;
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
+                break;
+            case Events.PrintingResponse:
+                this._handlePrintingResponse(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);

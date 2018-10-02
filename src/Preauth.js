@@ -233,7 +233,6 @@ class PreauthResponse
         {   
             case "PCOMP":
                 return this._m.Data["completion_amount"];
-                break;
             default:
                 return 0;
         }

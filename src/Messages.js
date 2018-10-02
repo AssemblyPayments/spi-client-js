@@ -55,7 +55,10 @@ const Events = {
     PayAtTableSetTableConfig : "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
     PayAtTableGetBillDetails : "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
     PayAtTableBillDetails : "bill_details",        // outgoing. We reply with this when eftpos requests to us get_bill_details.
-    PayAtTableBillPayment : "bill_payment"         // incoming. When the eftpos advices 
+    PayAtTableBillPayment : "bill_payment",        // incoming. When the eftpos advices 
+
+    PrintingRequest : "print",
+    PrintingResponse : "print_response"
 };
 
 const SuccessState = {

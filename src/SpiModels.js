@@ -388,35 +388,35 @@ class SpiConfig
 class TransactionOptions
 {
     constructor() {
-        this.CustomerReceiptHeader = null;
-        this.CustomerReceiptFooter = null;
-        this.MerchantReceiptHeader = null;
-        this.MerchantReceiptFooter = null;
+        this._customerReceiptHeader = null;
+        this._customerReceiptFooter = null;
+        this._merchantReceiptHeader = null;
+        this._merchantReceiptFooter = null;
     }
 
     SetCustomerReceiptHeader(customerReceiptHeader)
     {
-        this.CustomerReceiptHeader = customerReceiptHeader;
+        this._customerReceiptHeader = customerReceiptHeader;
     }
 
     SetCustomerReceiptFooter(customerReceiptFooter)
     {
-        this.CustomerReceiptFooter = customerReceiptFooter;
+        this._customerReceiptFooter = customerReceiptFooter;
     }
     SetMerchantReceiptHeader(merchantReceiptHeader)
     {
-        this.MerchantReceiptHeader = merchantReceiptHeader;
+        this._merchantReceiptHeader = merchantReceiptHeader;
     }
     SetMerchantReceiptFooter(merchantReceiptFooter)
     {
-        this.MerchantReceiptFooter = merchantReceiptFooter;
+        this._merchantReceiptFooter = merchantReceiptFooter;
     }
     AddOptions(messageData)
     {
-        messageData.customer_receipt_header = this.CustomerReceiptHeader;
-        messageData.customer_receipt_footer = this.CustomerReceiptFooter;
-        messageData.merchant_receipt_header = this.MerchantReceiptHeader;
-        messageData.merchant_receipt_footer = this.MerchantReceiptFooter;
+        messageData.customer_receipt_header = this._customerReceiptHeader;
+        messageData.customer_receipt_footer = this._customerReceiptFooter;
+        messageData.merchant_receipt_header = this._merchantReceiptHeader;
+        messageData.merchant_receipt_footer = this._merchantReceiptFooter;
 
         return messageData;
     }
