@@ -149,6 +149,7 @@ class PaymentHistoryEntry
 class PayAtTableConfig
 {
     constructor() {
+        this.PayAtTabledEnabled = false;
         this.OperatorIdEnabled = false;
         this.SplitByAmountEnabled = false;
         this.EqualSplitEnabled = false;
@@ -172,7 +173,7 @@ class PayAtTableConfig
     ToMessage(messageId)
     {
         var data = {
-            "pay_at_table_enabled": true,
+            "pay_at_table_enabled": this.PayAtTabledEnabled,
             "operator_id_enabled": this.OperatorIdEnabled,
             "split_by_amount_enabled": this.SplitByAmountEnabled,
             "equal_split_enabled": this.EqualSplitEnabled,

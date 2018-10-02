@@ -6,6 +6,7 @@ class SpiPayAtTable
         this._log = console;
 
         this.Config = Object.assign(new PayAtTableConfig(), {
+            PayAtTabledEnabled: true,
             OperatorIdEnabled: true,
             AllowedOperatorIds: [],
             EqualSplitEnabled: true,
