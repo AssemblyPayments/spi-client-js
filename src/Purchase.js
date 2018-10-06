@@ -244,6 +244,11 @@ class GetLastTransactionResponse
         return !!this.GetResponseCode();
     }
 
+    WasTimeOutOfSyncError()
+    {
+        return this._m.GetError().startsWith("TIME_OUT_OF_SYNC");
+    }
+
     WasOperationInProgressError()
     {
         return this._m.GetError().startsWith("OPERATION_IN_PROGRESS");
