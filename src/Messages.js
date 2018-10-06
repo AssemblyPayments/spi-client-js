@@ -58,7 +58,12 @@ const Events = {
     PayAtTableBillPayment : "bill_payment",        // incoming. When the eftpos advices 
 
     PrintingRequest : "print",
-    PrintingResponse : "print_response"
+    PrintingResponse : "print_response",
+
+    TerminalStatusRequest : "get_terminal_status",
+    TerminalStatusResponse : "terminal_status",
+
+    BatteryLevelChanged : "battery_level_changed"
 };
 
 const SuccessState = {

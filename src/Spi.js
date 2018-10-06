@@ -659,6 +659,13 @@ class Spi {
     {
         this._send(new PrintingRequest(key, payload).toMessage());
     }
+
+    
+    GetTerminalStatus()
+    {
+        this._send(new TerminalStatusRequest().ToMessage());
+    }
+
     // endregion
         
     // region Internals for Pairing Flow
@@ -1116,9 +1123,27 @@ class Spi {
         throw new Exception('Method not implemented. Please overwrite this method in your POS');
     }
 
+    TerminalStatusResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    BatteryLevelChanged(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
     _handlePrintingResponse(m)
     {
         this.PrintingResponse(m);
+    }
+
+    _handleTerminalStatusResponse(m)
+    {
+        this.TerminalStatusResponse(m);
+    }
+
+    _handleBatteryLevelChanged(m)
+    {
+        this.BatteryLevelChanged(m);
     }
 
     // endregion
@@ -1459,6 +1484,12 @@ class Spi {
                 break;
             case Events.PrintingResponse:
                 this._handlePrintingResponse(m);
+                break;
+            case Events.TerminalStatusResponse:
+                this._handleTerminalStatusResponse(m);
+                break;
+            case Events.BatteryLevelChanged:
+                this._handleBatteryLevelChanged(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);
