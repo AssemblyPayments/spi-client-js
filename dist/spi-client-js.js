@@ -11,6 +11,7 @@ var CashoutOnlyRequest = function () {
         this.PosRefId = posRefId;
         this.CashoutAmount = amountCents;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     _createClass(CashoutOnlyRequest, [{
@@ -22,6 +23,7 @@ var CashoutOnlyRequest = function () {
             };
 
             this.Config.addReceiptConfig(data);
+            this.Options.AddOptions(data);
             return new Message(RequestIdHelper.Id("cshout"), Events.CashoutOnlyRequest, data, true);
         }
     }]);
@@ -146,7 +148,7 @@ var ConnectionState = {
     Connected: 'Connected'
 };
 
-var SPI_PROTOCOL = 'spi.2.1.0';
+var SPI_PROTOCOL = 'spi.2.4.0';
 
 var ConnectionStateEventArgs = function ConnectionStateEventArgs(connectionState) {
     _classCallCheck(this, ConnectionStateEventArgs);
@@ -602,6 +604,7 @@ var Events = {
     PurchaseRequest: "purchase",
     PurchaseResponse: "purchase_response",
     CancelTransactionRequest: "cancel_transaction",
+    CancelTransactionResponse: "cancel_response",
     GetLastTransactionRequest: "get_last_transaction",
     GetLastTransactionResponse: "last_transaction",
     RefundRequest: "refund",
@@ -623,6 +626,9 @@ var Events = {
     SettlementEnquiryRequest: "settlement_enquiry",
     SettlementEnquiryResponse: "settlement_enquiry_response",
 
+    SetPosInfoRequest: "set_pos_info",
+    SetPosInfoResponse: "set_pos_info_response",
+
     KeyRollRequest: "request_use_next_keys",
     KeyRollResponse: "response_use_next_keys",
 
@@ -635,7 +641,15 @@ var Events = {
     PayAtTableSetTableConfig: "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
     PayAtTableGetBillDetails: "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
     PayAtTableBillDetails: "bill_details", // outgoing. We reply with this when eftpos requests to us get_bill_details.
-    PayAtTableBillPayment: "bill_payment" // incoming. When the eftpos advices 
+    PayAtTableBillPayment: "bill_payment", // incoming. When the eftpos advices 
+
+    PrintingRequest: "print",
+    PrintingResponse: "print_response",
+
+    TerminalStatusRequest: "get_terminal_status",
+    TerminalStatusResponse: "terminal_status",
+
+    BatteryLevelChanged: "battery_level_changed"
 };
 
 var SuccessState = {
@@ -1239,6 +1253,7 @@ var PayAtTableConfig = function () {
     function PayAtTableConfig() {
         _classCallCheck(this, PayAtTableConfig);
 
+        this.PayAtTabledEnabled = false;
         this.OperatorIdEnabled = false;
         this.SplitByAmountEnabled = false;
         this.EqualSplitEnabled = false;
@@ -1263,7 +1278,7 @@ var PayAtTableConfig = function () {
         key: "ToMessage",
         value: function ToMessage(messageId) {
             var data = {
-                "pay_at_table_enabled": true,
+                "pay_at_table_enabled": this.PayAtTabledEnabled,
                 "operator_id_enabled": this.OperatorIdEnabled,
                 "split_by_amount_enabled": this.SplitByAmountEnabled,
                 "equal_split_enabled": this.EqualSplitEnabled,
@@ -1323,6 +1338,91 @@ var PingHelper = function () {
     }]);
 
     return PingHelper;
+}();
+"use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var SetPosInfoRequest = function () {
+    function SetPosInfoRequest(version, vendorId, libraryLanguage, libraryVersion, otherInfo) {
+        _classCallCheck(this, SetPosInfoRequest);
+
+        this._version = version;
+        this._vendorId = vendorId;
+        this._libraryLanguage = libraryLanguage;
+        this._libraryVersion = libraryVersion;
+        this._otherInfo = otherInfo;
+    }
+
+    _createClass(SetPosInfoRequest, [{
+        key: "toMessage",
+        value: function toMessage() {
+            var data = {
+                pos_version: this._version,
+                pos_vendor_id: this._vendorId,
+                library_language: this._libraryLanguage,
+                library_version: this._libraryVersion,
+                other_info: this._otherInfo
+            };
+
+            return new Message(RequestIdHelper.Id("prav"), Events.SetPosInfoRequest, data, true);
+        }
+    }]);
+
+    return SetPosInfoRequest;
+}();
+
+var SetPosInfoResponse = function () {
+    function SetPosInfoResponse(m) {
+        _classCallCheck(this, SetPosInfoResponse);
+
+        this._success = m.GetSuccessState() == SuccessState.Success;
+        this._m = m;
+    }
+
+    _createClass(SetPosInfoResponse, [{
+        key: "isSuccess",
+        value: function isSuccess() {
+            return this._success;
+        }
+    }, {
+        key: "getErrorReason",
+        value: function getErrorReason() {
+            return this._m.Data.error_reason;
+        }
+    }, {
+        key: "getErrorDetail",
+        value: function getErrorDetail() {
+            return this._m.Data.error_detail;
+        }
+    }, {
+        key: "getResponseValueWithAttribute",
+        value: function getResponseValueWithAttribute(attribute) {
+            return this._m.Data[attribute];
+        }
+    }]);
+
+    return SetPosInfoResponse;
+}();
+
+var DeviceInfo = function () {
+    function DeviceInfo() {
+        _classCallCheck(this, DeviceInfo);
+    }
+
+    _createClass(DeviceInfo, null, [{
+        key: "GetAppDeviceInfo",
+        value: function GetAppDeviceInfo() {
+            var deviceInfo = {};
+            deviceInfo['device_system'] = navigator.userAgent;
+            // deviceInfo.Add("device_system", Environment.OSVersion.Platform.ToString() + " " + Environment.OSVersion.Version.ToString());
+            return deviceInfo;
+        }
+    }]);
+
+    return DeviceInfo;
 }();
 "use strict";
 
@@ -1590,7 +1690,6 @@ var PreauthResponse = function () {
             switch (txType) {
                 case "PCOMP":
                     return this._m.Data["completion_amount"];
-                    break;
                 default:
                     return 0;
             }
@@ -1599,15 +1698,73 @@ var PreauthResponse = function () {
 
     return PreauthResponse;
 }();
-'use strict';
+"use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var PrintingRequest = function () {
+    function PrintingRequest(key, payload) {
+        _classCallCheck(this, PrintingRequest);
+
+        this._key = key;
+        this._payload = payload;
+    }
+
+    _createClass(PrintingRequest, [{
+        key: "toMessage",
+        value: function toMessage() {
+            var data = {
+                "key": this._key,
+                "payload": this._payload
+            };
+
+            return new Message(RequestIdHelper.Id("print"), Events.PrintingRequest, data, true);
+        }
+    }]);
+
+    return PrintingRequest;
+}();
+
+var PrintingResponse = function () {
+    function PrintingResponse(m) {
+        _classCallCheck(this, PrintingResponse);
+
+        this._success = m.GetSuccessState() == SuccessState.Success;
+        this._m = m;
+    }
+
+    _createClass(PrintingResponse, [{
+        key: "isSuccess",
+        value: function isSuccess() {
+            return this._success;
+        }
+    }, {
+        key: "getErrorReason",
+        value: function getErrorReason() {
+            return this._m.Data.error_reason;
+        }
+    }, {
+        key: "getErrorDetail",
+        value: function getErrorDetail() {
+            return this._m.Data.error_detail;
+        }
+    }, {
+        key: "getResponseValueWithAttribute",
+        value: function getResponseValueWithAttribute(attribute) {
+            return this._m.Data[attribute];
+        }
+    }]);
+
+    return PrintingResponse;
+}();
+
 /**
  * This class is a mock printer for the terminal to print Receipts
  */
+
+
 var Printer = function () {
     function Printer(element) {
         _classCallCheck(this, Printer);
@@ -1617,7 +1774,7 @@ var Printer = function () {
     }
 
     _createClass(Printer, [{
-        key: 'print',
+        key: "print",
         value: function print() {
             for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
                 args[_key] = arguments[_key];
@@ -1627,13 +1784,13 @@ var Printer = function () {
             this._render();
         }
     }, {
-        key: '_render',
+        key: "_render",
         value: function _render() {
-            this.element.innerText = this.buffer.join('\n\n \\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/ \n\n');
+            this.element.innerText = this.buffer.join("\n\n \\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/ \n\n");
             this.element.scrollTop = this.element.scrollHeight;
         }
     }, {
-        key: 'Clear',
+        key: "Clear",
         value: function Clear() {
             this.buffer = [];
             this._render();
@@ -1658,6 +1815,7 @@ var PurchaseRequest = function () {
         this.CashoutAmount = 0;
         this.PromptForCashout = false;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
 
         // Library Backwards Compatibility
         this.Id = posRefId;
@@ -1681,6 +1839,7 @@ var PurchaseRequest = function () {
             };
 
             this.Config.addReceiptConfig(data);
+            this.Options.AddOptions(data);
             return new Message(RequestIdHelper.Id("prchs"), Events.PurchaseRequest, data, true);
         }
     }]);
@@ -1714,6 +1873,11 @@ var PurchaseResponse = function () {
         key: "GetTipAmount",
         value: function GetTipAmount() {
             return this._m.Data.tip_amount;
+        }
+    }, {
+        key: "GetSurchargeAmount",
+        value: function GetSurchargeAmount() {
+            return this._m.Data.surcharge_amount;
         }
     }, {
         key: "GetCashoutAmount",
@@ -1829,7 +1993,8 @@ var PurchaseResponse = function () {
                 scheme_name: this.SchemeName,
                 terminal_id: this.GetTerminalId(),
                 terminal_ref_id: this.GetTerminalReferenceId(),
-                tip_amount: this.GetTipAmount()
+                tip_amount: this.GetTipAmount(),
+                surcharge_amount: this.GetSurchargeAmount()
             };
         }
     }]);
@@ -1850,6 +2015,35 @@ var CancelTransactionRequest = function () {
     }]);
 
     return CancelTransactionRequest;
+}();
+
+var CancelTransactionResponse = function () {
+    function CancelTransactionResponse(m) {
+        _classCallCheck(this, CancelTransactionResponse);
+
+        this._m = m;
+        this.PosRefId = this._m.Data.pos_ref_id;
+        this.Success = this._m.GetSuccessState() == SuccessState.Success;
+    }
+
+    _createClass(CancelTransactionResponse, [{
+        key: "GetErrorReason",
+        value: function GetErrorReason() {
+            return this._m.Data.error_reason;
+        }
+    }, {
+        key: "GetErrorDetail",
+        value: function GetErrorDetail() {
+            return this._m.Data.error_detail;
+        }
+    }, {
+        key: "GetResponseValueWithAttribute",
+        value: function GetResponseValueWithAttribute(attribute) {
+            return this._m.Data[attribute];
+        }
+    }]);
+
+    return CancelTransactionResponse;
 }();
 
 var GetLastTransactionRequest = function () {
@@ -1882,6 +2076,11 @@ var GetLastTransactionResponse = function () {
             // So we check if we got back an ResponseCode.
             // (as opposed to say an operation_in_progress_error)
             return !!this.GetResponseCode();
+        }
+    }, {
+        key: "WasTimeOutOfSyncError",
+        value: function WasTimeOutOfSyncError() {
+            return this._m.GetError().startsWith("TIME_OUT_OF_SYNC");
         }
     }, {
         key: "WasOperationInProgressError",
@@ -1995,6 +2194,7 @@ var RefundRequest = function () {
         this.Id = RequestIdHelper.Id("refund");
         this.PosRefId = posRefId;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     _createClass(RefundRequest, [{
@@ -2002,6 +2202,7 @@ var RefundRequest = function () {
         value: function ToMessage() {
             var data = { refund_amount: this.AmountCents, pos_ref_id: this.PosRefId };
             this.Config.addReceiptConfig(data);
+            this.Options.AddOptions(data);
             return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
         }
     }]);
@@ -2192,6 +2393,7 @@ var MotoPurchaseRequest = function () {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     _createClass(MotoPurchaseRequest, [{
@@ -2202,6 +2404,7 @@ var MotoPurchaseRequest = function () {
                 purchase_amount: this.PurchaseAmount
             };
             this.Config.addReceiptConfig(data);
+            this.Options.AddOptions(data);
             return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);
         }
     }]);
@@ -2530,15 +2733,17 @@ var SettlementEnquiryRequest = function () {
 
     return SettlementEnquiryRequest;
 }();
-"use strict";
+'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var SPI_VERSION = '2.4.0';
+
 var Spi = function () {
     _createClass(Spi, [{
-        key: "CurrentStatus",
+        key: 'CurrentStatus',
         get: function get() {
             return this._currentStatus;
         },
@@ -2564,6 +2769,10 @@ var Spi = function () {
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
 
+        this._posVendorId = null;
+        this._posVersion = null;
+        this._hasSetInfo = null;
+
         // We will maintain some state
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
@@ -2587,20 +2796,27 @@ var Spi = function () {
     }
 
     _createClass(Spi, [{
-        key: "EnablePayAtTable",
+        key: 'EnablePayAtTable',
         value: function EnablePayAtTable() {
             this._spiPat = new SpiPayAtTable(this);
             return this._spiPat;
         }
     }, {
-        key: "EnablePreauth",
+        key: 'EnablePreauth',
         value: function EnablePreauth() {
             this._spiPreauth = new SpiPreauth(this);
             return this._spiPreauth;
         }
     }, {
-        key: "Start",
+        key: 'Start',
         value: function Start() {
+
+            if (!this._posVendorId || !this._posVersion) {
+                // POS information is now required to be set
+                this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+                throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            }
+
             this._resetConn();
             this._startTransactionMonitoringThread();
 
@@ -2621,7 +2837,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "SetPosId",
+        key: 'SetPosId',
         value: function SetPosId(posId) {
             if (this.CurrentStatus != SpiStatus.Unpaired) return false;
 
@@ -2637,7 +2853,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "SetEftposAddress",
+        key: 'SetEftposAddress',
         value: function SetEftposAddress(address) {
             if (this.CurrentStatus == SpiStatus.PairedConnected) {
                 return false;
@@ -2646,6 +2862,21 @@ var Spi = function () {
             this._eftposAddress = "ws://" + address;
             this._conn.Address = this._eftposAddress;
             return true;
+        }
+
+        /**
+         * Sets values used to identify the POS software to the EFTPOS terminal.
+         * Must be set before starting!
+         *
+         * @param posVendorId Vendor identifier of the POS itself.
+         * @param posVersion  Version string of the POS itself.
+         */
+
+    }, {
+        key: 'SetPosInfo',
+        value: function SetPosInfo(posVendorId, posVersion) {
+            this._posVendorId = posVendorId;
+            this._posVersion = posVersion;
         }
 
         // <summary>
@@ -2657,7 +2888,7 @@ var Spi = function () {
         // <returns>true means we have moved back to the Idle state. false means current flow was not finished yet.</returns>
 
     }, {
-        key: "AckFlowEndedAndBackToIdle",
+        key: 'AckFlowEndedAndBackToIdle',
         value: function AckFlowEndedAndBackToIdle() {
             if (this.CurrentFlow == SpiFlow.Idle) return true; // already idle
 
@@ -2674,7 +2905,7 @@ var Spi = function () {
             return false;
         }
     }, {
-        key: "Pair",
+        key: 'Pair',
 
         // endregion
 
@@ -2716,7 +2947,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "PairingConfirmCode",
+        key: 'PairingConfirmCode',
         value: function PairingConfirmCode() {
             if (!this.CurrentPairingFlowState.AwaitingCheckFromPos) {
                 // We weren't expecting this
@@ -2742,7 +2973,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "PairingCancel",
+        key: 'PairingCancel',
         value: function PairingCancel() {
             if (this.CurrentFlow != SpiFlow.Pairing || this.CurrentPairingFlowState.Finished) {
                 return;
@@ -2764,7 +2995,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "Unpair",
+        key: 'Unpair',
         value: function Unpair() {
             if (this.CurrentStatus == SpiStatus.Unpaired) {
                 return false;
@@ -2792,7 +3023,7 @@ var Spi = function () {
         // <returns>InitiateTxResult</returns>
 
     }, {
-        key: "InitiatePurchaseTx",
+        key: 'InitiatePurchaseTx',
         value: function InitiatePurchaseTx(posRefId, amountCents) {
             if (this.CurrentStatus == SpiStatus.Unpaired) {
                 return new InitiateTxResult(false, "Not Paired");
@@ -2806,9 +3037,9 @@ var Spi = function () {
             purchaseRequest.Config = this.Config;
             var purchaseMsg = purchaseRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Purchase, amountCents, purchaseMsg, "Waiting for EFTPOS connection to make payment request for " + amountCents / 100.0);
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Purchase, amountCents, purchaseMsg, 'Waiting for EFTPOS connection to make payment request for ' + amountCents / 100.0);
             if (this._send(purchaseMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to accept payment for " + amountCents / 100.0);
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to accept payment for ' + amountCents / 100.0);
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2827,8 +3058,8 @@ var Spi = function () {
         // <returns>InitiateTxResult</returns>
 
     }, {
-        key: "InitiatePurchaseTxV2",
-        value: function InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout) {
+        key: 'InitiatePurchaseTxV2',
+        value: function InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options) {
             if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
             if (tipAmount > 0 && (cashoutAmount > 0 || promptForCashout)) return new InitiateTxResult(false, "Cannot Accept Tips and Cashout at the same time.");
@@ -2838,10 +3069,11 @@ var Spi = function () {
 
             var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout);
             purchase.Config = this.Config;
+            purchase.Options = options;
             var purchaseMsg = purchase.ToMessage();
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg, "Waiting for EFTPOS connection to make payment request. " + purchase.AmountSummary());
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg, 'Waiting for EFTPOS connection to make payment request. ' + purchase.AmountSummary());
             if (this._send(purchaseMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to accept payment for " + purchase.AmountSummary());
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to accept payment for ' + purchase.AmountSummary());
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2856,7 +3088,7 @@ var Spi = function () {
         // <returns>InitiateTxResult</returns>
 
     }, {
-        key: "InitiateRefundTx",
+        key: 'InitiateRefundTx',
         value: function InitiateRefundTx(posRefId, amountCents) {
             if (this.CurrentStatus == SpiStatus.Unpaired) {
                 return new InitiateTxResult(false, "Not Paired");
@@ -2870,9 +3102,9 @@ var Spi = function () {
             refundRequest.Config = this.Config;
             var refundMsg = refundRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Refund, amountCents, refundMsg, "Waiting for EFTPOS connection to make refund request for " + (amountCents / 100.0).toFixed(2));
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Refund, amountCents, refundMsg, 'Waiting for EFTPOS connection to make refund request for ' + (amountCents / 100.0).toFixed(2));
             if (this._send(refundMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to refund " + (amountCents / 100.0).toFixed(2));
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to refund ' + (amountCents / 100.0).toFixed(2));
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2885,7 +3117,7 @@ var Spi = function () {
         // <param name="accepted">whether merchant accepted the signature from customer or not</param>
 
     }, {
-        key: "AcceptSignature",
+        key: 'AcceptSignature',
         value: function AcceptSignature(accepted) {
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.AwaitingSignatureCheck) {
                 this._log.info("Asked to accept signature but I was not waiting for one.");
@@ -2910,7 +3142,7 @@ var Spi = function () {
         // <returns>Whether code has a valid format or not.</returns>
 
     }, {
-        key: "SubmitAuthCode",
+        key: 'SubmitAuthCode',
         value: function SubmitAuthCode(authCode) {
             if (authCode.length != 6) {
                 return new SubmitAuthCodeResult(false, "Not a 6-digit code.");
@@ -2921,7 +3153,7 @@ var Spi = function () {
                 return new SubmitAuthCodeResult(false, "Was not waiting for one.");
             }
 
-            this.CurrentTxFlowState.AuthCodeSent("Submitting Auth Code " + authCode);
+            this.CurrentTxFlowState.AuthCodeSent('Submitting Auth Code ' + authCode);
             this._send(new AuthCodeAdvice(this.CurrentTxFlowState.PosRefId, authCode).ToMessage());
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2936,7 +3168,7 @@ var Spi = function () {
         // <returns>MidTxResult - false only if you called it in the wrong state</returns>
 
     }, {
-        key: "CancelTransaction",
+        key: 'CancelTransaction',
         value: function CancelTransaction() {
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished) {
                 this._log.info("Asked to cancel transaction but I was not in the middle of one.");
@@ -2965,7 +3197,7 @@ var Spi = function () {
         // <returns>InitiateTxResult</returns>
 
     }, {
-        key: "InitiateCashoutOnlyTx",
+        key: 'InitiateCashoutOnlyTx',
         value: function InitiateCashoutOnlyTx(posRefId, amountCents) {
             if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -2974,9 +3206,9 @@ var Spi = function () {
             cashoutOnlyRequest.Config = this.Config;
             var cashoutMsg = cashoutOnlyRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg, "Waiting for EFTPOS connection to send cashout request for " + (amountCents / 100).toFixed(2));
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg, 'Waiting for EFTPOS connection to send cashout request for ' + (amountCents / 100).toFixed(2));
             if (this._send(cashoutMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to do cashout for " + (amountCents / 100).toFixed(2));
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to do cashout for ' + (amountCents / 100).toFixed(2));
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2991,7 +3223,7 @@ var Spi = function () {
         // <returns>InitiateTxResult</returns>
 
     }, {
-        key: "InitiateMotoPurchaseTx",
+        key: 'InitiateMotoPurchaseTx',
         value: function InitiateMotoPurchaseTx(posRefId, amountCents) {
             if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -3000,9 +3232,9 @@ var Spi = function () {
             motoPurchaseRequest.Config = this.Config;
             var cashoutMsg = motoPurchaseRequest.ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.MOTO, amountCents, cashoutMsg, "Waiting for EFTPOS connection to send MOTO request for " + (amountCents / 100).toFixed(2));
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.MOTO, amountCents, cashoutMsg, 'Waiting for EFTPOS connection to send MOTO request for ' + (amountCents / 100).toFixed(2));
             if (this._send(cashoutMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS do MOTO for " + (amountCents / 100).toFixed(2));
+                this.CurrentTxFlowState.Sent('Asked EFTPOS do MOTO for ' + (amountCents / 100).toFixed(2));
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -3015,7 +3247,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "InitiateSettleTx",
+        key: 'InitiateSettleTx',
         value: function InitiateSettleTx(posRefId) {
             if (this.CurrentStatus == SpiStatus.Unpaired) {
                 return new InitiateTxResult(false, "Not Paired");
@@ -3027,10 +3259,10 @@ var Spi = function () {
 
             var settleRequestMsg = new SettleRequest(RequestIdHelper.Id("settle")).ToMessage();
             this.CurrentFlow = SpiFlow.Transaction;
-            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Settle, 0, settleRequestMsg, "Waiting for EFTPOS connection to make a settle request");
+            this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.Settle, 0, settleRequestMsg, 'Waiting for EFTPOS connection to make a settle request');
 
             if (this._send(settleRequestMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to settle.");
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to settle.');
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -3041,7 +3273,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "InitiateSettlementEnquiry",
+        key: 'InitiateSettlementEnquiry',
         value: function InitiateSettlementEnquiry(posRefId) {
             if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -3064,7 +3296,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "InitiateGetLastTx",
+        key: 'InitiateGetLastTx',
         value: function InitiateGetLastTx() {
             if (this.CurrentStatus == SpiStatus.Unpaired) {
                 return new InitiateTxResult(false, "Not Paired");
@@ -3080,7 +3312,7 @@ var Spi = function () {
             this.CurrentTxFlowState = new TransactionFlowState(posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg, "Waiting for EFTPOS connection to make a Get-Last-Transaction request.");
 
             if (this._send(gltRequestMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS for last transaction.");
+                this.CurrentTxFlowState.Sent('Asked EFTPOS for last transaction.');
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -3099,7 +3331,7 @@ var Spi = function () {
         // <returns></returns>
 
     }, {
-        key: "InitiateRecovery",
+        key: 'InitiateRecovery',
         value: function InitiateRecovery(posRefId, txType) {
             if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -3111,7 +3343,7 @@ var Spi = function () {
             this.CurrentTxFlowState = new TransactionFlowState(posRefId, txType, 0, gltRequestMsg, "Waiting for EFTPOS connection to attempt recovery.");
 
             if (this._send(gltRequestMsg)) {
-                this.CurrentTxFlowState.Sent("Asked EFTPOS to recover state.");
+                this.CurrentTxFlowState.Sent('Asked EFTPOS to recover state.');
             }
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -3130,7 +3362,7 @@ var Spi = function () {
         // <returns></returns>
 
     }, {
-        key: "GltMatch",
+        key: 'GltMatch',
         value: function GltMatch(gltResponse, posRefId) {
             // Obsolete method call check
             // Old interface: GltMatch(GetLastTransactionResponse gltResponse, TransactionType expectedType, int expectedAmount, DateTime requestTime, string posRefId)
@@ -3143,7 +3375,7 @@ var Spi = function () {
                 }
             }
 
-            this._log.info("GLT CHECK: PosRefId: " + posRefId + "->" + gltResponse.GetPosRefId());
+            this._log.info('GLT CHECK: PosRefId: ' + posRefId + '->' + gltResponse.GetPosRefId());
 
             if (!posRefId == gltResponse.GetPosRefId()) {
                 return SuccessState.Unknown;
@@ -3151,6 +3383,17 @@ var Spi = function () {
 
             return gltResponse.GetSuccessState();
         }
+    }, {
+        key: 'PrintReceipt',
+        value: function PrintReceipt(key, payload) {
+            this._send(new PrintingRequest(key, payload).toMessage());
+        }
+    }, {
+        key: 'GetTerminalStatus',
+        value: function GetTerminalStatus() {
+            this._send(new TerminalStatusRequest().ToMessage());
+        }
+
         // endregion
 
         // region Internals for Pairing Flow
@@ -3161,7 +3404,7 @@ var Spi = function () {
         // <param name="m">incoming message</param>
 
     }, {
-        key: "_handleKeyRequest",
+        key: '_handleKeyRequest',
         value: function _handleKeyRequest(m) {
             this.CurrentPairingFlowState.Message = "Negotiating Pairing...";
             document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
@@ -3180,7 +3423,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleKeyCheck",
+        key: '_handleKeyCheck',
         value: function _handleKeyCheck(m) {
             var keyCheck = new KeyCheck(m);
             this.CurrentPairingFlowState.ConfirmationCode = keyCheck.ConfirmationCode;
@@ -3196,7 +3439,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handlePairResponse",
+        key: '_handlePairResponse',
         value: function _handlePairResponse(m) {
             var pairResp = new PairResponse(m);
 
@@ -3219,13 +3462,13 @@ var Spi = function () {
             }
         }
     }, {
-        key: "_handleDropKeysAdvice",
+        key: '_handleDropKeysAdvice',
         value: function _handleDropKeysAdvice(m) {
             this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
             this._doUnpair();
         }
     }, {
-        key: "_onPairingSuccess",
+        key: '_onPairingSuccess',
         value: function _onPairingSuccess() {
             this.CurrentPairingFlowState.Successful = true;
             this.CurrentPairingFlowState.Finished = true;
@@ -3235,7 +3478,7 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         }
     }, {
-        key: "_onPairingFailed",
+        key: '_onPairingFailed',
         value: function _onPairingFailed() {
             this._secrets = null;
             this._spiMessageStamp.Secrets = null;
@@ -3249,7 +3492,7 @@ var Spi = function () {
             document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         }
     }, {
-        key: "_doUnpair",
+        key: '_doUnpair',
         value: function _doUnpair() {
             this.CurrentStatus = SpiStatus.Unpaired;
             this._conn.Disconnect();
@@ -3264,7 +3507,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleKeyRollingRequest",
+        key: '_handleKeyRollingRequest',
         value: function _handleKeyRollingRequest(m) {
             // we calculate the new ones...
             var krRes = KeyRollingHelper.PerformKeyRolling(m, this._secrets);
@@ -3282,11 +3525,11 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleSignatureRequired",
+        key: '_handleSignatureRequired',
         value: function _handleSignatureRequired(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                this._log.info("Received Signature Required but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
+                this._log.info('Received Signature Required but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId);
                 return;
             }
             this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m), "Ask Customer to Sign the Receipt");
@@ -3300,15 +3543,15 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleAuthCodeRequired",
+        key: '_handleAuthCodeRequired',
         value: function _handleAuthCodeRequired(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                _log.Info("Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
+                _log.Info('Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId);
                 return;
             }
             var phoneForAuthRequired = new PhoneForAuthRequired(m);
-            var msg = "Auth Code Required. Call " + phoneForAuthRequired.GetPhoneNumber() + " and quote merchant id " + phoneForAuthRequired.GetMerchantId();
+            var msg = 'Auth Code Required. Call ' + phoneForAuthRequired.GetPhoneNumber() + ' and quote merchant id ' + phoneForAuthRequired.GetMerchantId();
             this.CurrentTxFlowState.PhoneForAuthRequired(phoneForAuthRequired, msg);
 
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -3320,11 +3563,11 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handlePurchaseResponse",
+        key: '_handlePurchaseResponse',
         value: function _handlePurchaseResponse(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                this._log.info("Received Purchase response but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId + "\"");
+                this._log.info('Received Purchase response but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId + '"');
                 return;
             }
             // TH-1A, TH-2A
@@ -3341,11 +3584,11 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleCashoutOnlyResponse",
+        key: '_handleCashoutOnlyResponse',
         value: function _handleCashoutOnlyResponse(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                this._log.info("Received Cashout Response but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
+                this._log.info('Received Cashout Response but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId);
                 return;
             }
             // TH-1A, TH-2A
@@ -3362,11 +3605,11 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleMotoPurchaseResponse",
+        key: '_handleMotoPurchaseResponse',
         value: function _handleMotoPurchaseResponse(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                this._log.info("Received Moto Response but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
+                this._log.info('Received Moto Response but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId);
                 return;
             }
             // TH-1A, TH-2A
@@ -3383,11 +3626,11 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleRefundResponse",
+        key: '_handleRefundResponse',
         value: function _handleRefundResponse(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished | !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                this._log.info("Received Refund response but I was not waiting for this one. Incoming Pos Ref ID: " + incomingPosRefId);
+                this._log.info('Received Refund response but I was not waiting for this one. Incoming Pos Ref ID: ' + incomingPosRefId);
                 return;
             }
             // TH-1A, TH-2A
@@ -3404,10 +3647,10 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "HandleSettleResponse",
+        key: 'HandleSettleResponse',
         value: function HandleSettleResponse(m) {
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished) {
-                this._log.info("Received Settle response but I was not waiting for one. " + m.DecryptedJson);
+                this._log.info('Received Settle response but I was not waiting for one. ' + m.DecryptedJson);
                 return;
             }
             // TH-1A, TH-2A
@@ -3424,10 +3667,10 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleSettlementEnquiryResponse",
+        key: '_handleSettlementEnquiryResponse',
         value: function _handleSettlementEnquiryResponse(m) {
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished) {
-                this._log.info("Received Settlement Enquiry response but I was not waiting for one. " + m.DecryptedJson);
+                this._log.info('Received Settlement Enquiry response but I was not waiting for one. ' + m.DecryptedJson);
                 return;
             }
             // TH-1A, TH-2A
@@ -3444,14 +3687,14 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleErrorEvent",
+        key: '_handleErrorEvent',
         value: function _handleErrorEvent(m) {
             if (this.CurrentFlow == SpiFlow.Transaction && !this.CurrentTxFlowState.Finished && this.CurrentTxFlowState.AttemptingToCancel && m.GetError() == "NO_TRANSACTION") {
                 // TH-2E
-                this._log.info("Was trying to cancel a transaction but there is nothing to cancel. Calling GLT to see what's up");
+                this._log.info('Was trying to cancel a transaction but there is nothing to cancel. Calling GLT to see what\'s up');
                 this._callGetLastTransaction();
             } else {
-                this._log.info("Received Error Event But Don't know what to do with it. " + m.DecryptedJson);
+                this._log.info('Received Error Event But Don\'t know what to do with it. ' + m.DecryptedJson);
             }
         }
 
@@ -3461,7 +3704,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleGetLastTransactionResponse",
+        key: '_handleGetLastTransactionResponse',
         value: function _handleGetLastTransactionResponse(m) {
             var txState = this.CurrentTxFlowState;
             if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished) {
@@ -3471,7 +3714,7 @@ var Spi = function () {
 
             // TH-4 We were in the middle of a transaction.
             // Let's attempt recovery. This is step 4 of Transaction Processing Handling
-            this._log.info("Got Last Transaction..");
+            this._log.info('Got Last Transaction..');
             txState.GotGltResponse();
             var gtlResponse = new GetLastTransactionResponse(m);
             if (!gtlResponse.WasRetrievedSuccessfully()) {
@@ -3489,9 +3732,15 @@ var Spi = function () {
                         // No need to publish txFlowStateChanged. Can return;
                         return;
                     }
+                } else if (gtlResponse.WasTimeOutOfSyncError()) {
+                    // Let's not give up based on a TOOS error.
+                    // Let's log it, and ignore it. 
+                    this._log.info('Time-Out-Of-Sync error in Get Last Transaction response. Let\'s ignore it and we\'ll try again.');
+                    // No need to publish txFlowStateChanged. Can return;
+                    return;
                 } else {
                     // TH-4X - Unexpected Response when recovering
-                    this._log.info("Unexpected Response in Get Last Transaction during - Received posRefId:" + gtlResponse.GetPosRefId() + " Error:" + m.GetError());
+                    this._log.info('Unexpected Response in Get Last Transaction during - Received posRefId:' + gtlResponse.GetPosRefId() + ' Error:' + m.GetError());
                     txState.UnknownCompleted("Unexpected Error when recovering Transaction Status. Check EFTPOS. ");
                 }
             } else {
@@ -3516,8 +3765,42 @@ var Spi = function () {
             }
             document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
         }
+
+        //When the transaction cancel response is returned.
+
     }, {
-        key: "_startTransactionMonitoringThread",
+        key: '_handleCancelTransactionResponse',
+        value: function _handleCancelTransactionResponse(m) {
+            var incomingPosRefId = m.Data.pos_ref_id;
+            if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
+                this._log.Info('Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ' + incomingPosRefId);
+                return;
+            }
+
+            var txState = this.CurrentTxFlowState;
+            var cancelResponse = new CancelTransactionResponse(m);
+
+            if (cancelResponse.Success) return;
+
+            this._log.Warn("Failed to cancel transaction: reason=" + cancelResponse.GetErrorReason() + ", detail=" + cancelResponse.GetErrorDetail());
+
+            txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
+
+            document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+        }
+    }, {
+        key: '_handleSetPosInfoResponse',
+        value: function _handleSetPosInfoResponse(m) {
+            var response = new SetPosInfoResponse(m);
+            if (response.isSuccess()) {
+                this._hasSetInfo = true;
+                this._log.Info("Setting POS info successful");
+            } else {
+                this._log.Warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
+            }
+        }
+    }, {
+        key: '_startTransactionMonitoringThread',
         value: function _startTransactionMonitoringThread() {
             var _this = this;
 
@@ -3528,12 +3811,12 @@ var Spi = function () {
                 var state = txState;
                 if (state.AttemptingToCancel && Date.now() > state.CancelAttemptTime + this._maxWaitForCancelTx) {
                     // TH-2T - too long since cancel attempt - Consider unknown
-                    this._log.info("Been too long waiting for transaction to cancel.");
-                    txState.UnknownCompleted("Waited long enough for Cancel Transaction result. Check EFTPOS. ");
+                    this._log.info('Been too long waiting for transaction to cancel.');
+                    txState.UnknownCompleted('Waited long enough for Cancel Transaction result. Check EFTPOS. ');
                     needsPublishing = true;
                 } else if (state.RequestSent && Date.now() > state.LastStateRequestTime + this._checkOnTxFrequency) {
                     // TH-1T, TH-4T - It's been a while since we received an update, let's call a GLT
-                    this._log.info("Checking on our transaction. Last we asked was at " + state.LastStateRequestTime + "...");
+                    this._log.info('Checking on our transaction. Last we asked was at ' + state.LastStateRequestTime + '...');
                     txState.CallingGlt();
                     this._callGetLastTransaction();
                 }
@@ -3547,13 +3830,43 @@ var Spi = function () {
                 return _this._startTransactionMonitoringThread();
             }, this._txMonitorCheckFrequency);
         }
+    }, {
+        key: 'PrintingResponse',
+        value: function PrintingResponse(m) {
+            throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        }
+    }, {
+        key: 'TerminalStatusResponse',
+        value: function TerminalStatusResponse(m) {
+            throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        }
+    }, {
+        key: 'BatteryLevelChanged',
+        value: function BatteryLevelChanged(m) {
+            throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        }
+    }, {
+        key: '_handlePrintingResponse',
+        value: function _handlePrintingResponse(m) {
+            this.PrintingResponse(m);
+        }
+    }, {
+        key: '_handleTerminalStatusResponse',
+        value: function _handleTerminalStatusResponse(m) {
+            this.TerminalStatusResponse(m);
+        }
+    }, {
+        key: '_handleBatteryLevelChanged',
+        value: function _handleBatteryLevelChanged(m) {
+            this.BatteryLevelChanged(m);
+        }
 
         // endregion
 
         // region Internals for Connection Management
 
     }, {
-        key: "_resetConn",
+        key: '_resetConn',
         value: function _resetConn() {
             var _this2 = this;
 
@@ -3580,23 +3893,23 @@ var Spi = function () {
         // <param name="state"></param>
 
     }, {
-        key: "_onSpiConnectionStatusChanged",
+        key: '_onSpiConnectionStatusChanged',
         value: function _onSpiConnectionStatusChanged(state) {
             var _this3 = this;
 
             switch (state.ConnectionState) {
                 case ConnectionState.Connecting:
-                    this._log.info("I'm Connecting to the Eftpos at " + this._eftposAddress + "...");
+                    this._log.info('I\'m Connecting to the Eftpos at ' + this._eftposAddress + '...');
                     break;
 
                 case ConnectionState.Connected:
-                    if (this.CurrentFlow == SpiFlow.Pairing) {
+                    if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired) {
                         this.CurrentPairingFlowState.Message = "Requesting to Pair...";
                         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                         var pr = PairingHelper.NewPairRequest();
                         this._send(pr.ToMessage());
                     } else {
-                        this._log.info("I'm Connected to " + this._eftposAddress + "...");
+                        this._log.info('I\'m Connected to ' + this._eftposAddress + '...');
                         this._spiMessageStamp.Secrets = this._secrets;
                         this._startPeriodicPing();
                     }
@@ -3604,7 +3917,7 @@ var Spi = function () {
 
                 case ConnectionState.Disconnected:
                     // Let's reset some lifecycle related to connection state, ready for next connection
-                    this._log.info("I'm disconnected from " + this._eftposAddress + "...");
+                    this._log.info('I\'m disconnected from ' + this._eftposAddress + '...');
                     this._mostRecentPingSent = null;
                     this._mostRecentPongReceived = null;
                     this._missedPongsCount = 0;
@@ -3616,11 +3929,11 @@ var Spi = function () {
                         if (this.CurrentFlow == SpiFlow.Transaction && !this.CurrentTxFlowState.Finished) {
                             // we're in the middle of a transaction, just so you know!
                             // TH-1D
-                            this._log.info("Lost connection in the middle of a transaction...");
+                            this._log.info('Lost connection in the middle of a transaction...');
                         }
 
                         if (this._conn == null) return; // This means the instance has been disposed. Aborting.
-                        this._log.info("Will try to reconnect in 5s...");
+                        this._log.info('Will try to reconnect in 5s...');
                         setTimeout(function () {
                             if (_this3.CurrentStatus != SpiStatus.Unpaired) {
                                 // This is non-blocking
@@ -3646,7 +3959,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "_startPeriodicPing",
+        key: '_startPeriodicPing',
         value: function _startPeriodicPing() {
             var _this4 = this;
 
@@ -3657,7 +3970,7 @@ var Spi = function () {
             this._periodicPing();
         }
     }, {
-        key: "_periodicPing",
+        key: '_periodicPing',
         value: function _periodicPing() {
             var _this5 = this;
 
@@ -3669,7 +3982,7 @@ var Spi = function () {
                     if (_this5._mostRecentPingSent != null && (_this5._mostRecentPongReceived == null || _this5._mostRecentPongReceived.Id != _this5._mostRecentPingSent.Id)) {
                         _this5._missedPongsCount += 1;
 
-                        _this5._log.info("Eftpos didn't reply to my Ping. Missed Count: " + _this5._missedPongsCount + "/" + _this5._missedPongsToDisconnect + ".");
+                        _this5._log.info('Eftpos didn\'t reply to my Ping. Missed Count: ' + _this5._missedPongsCount + '/' + _this5._missedPongsToDisconnect + '.');
 
                         if (_this5._missedPongsCount < _this5._missedPongsToDisconnect) {
                             _this5._log.info("Trying another ping...");
@@ -3699,7 +4012,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "_onReadyToTransact",
+        key: '_onReadyToTransact',
         value: function _onReadyToTransact() {
             this._log.info("On Ready To Transact!");
 
@@ -3715,15 +4028,25 @@ var Spi = function () {
                 } else {
                     // TH-3AR - We had not even sent the request yet. Let's do that now
                     this._send(this.CurrentTxFlowState.Request);
-                    this.CurrentTxFlowState.Sent("Sending Request Now...");
+                    this.CurrentTxFlowState.Sent('Sending Request Now...');
                     document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
                 }
             } else {
+                if (!this._hasSetInfo) {
+                    this._callSetPosInfo();
+                }
+
                 // let's also tell the eftpos our latest table configuration.
                 if (this._spiPat) {
                     this._spiPat.PushPayAtTableConfig();
                 }
             }
+        }
+    }, {
+        key: '_callSetPosInfo',
+        value: function _callSetPosInfo() {
+            var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
+            this._send(setPosInfoRequest.toMessage());
         }
 
         // <summary>
@@ -3731,7 +4054,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "_stopPeriodicPing",
+        key: '_stopPeriodicPing',
         value: function _stopPeriodicPing() {
             if (this._periodicPingThread) {
                 // If we were already set up, clean up before restarting.
@@ -3743,7 +4066,7 @@ var Spi = function () {
         // Send a Ping to the Server
 
     }, {
-        key: "_doPing",
+        key: '_doPing',
         value: function _doPing() {
             var ping = PingHelper.GeneratePingRequest();
             this._mostRecentPingSent = ping;
@@ -3757,7 +4080,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleIncomingPong",
+        key: '_handleIncomingPong',
         value: function _handleIncomingPong(m) {
             // We need to maintain this time delta otherwise the server will not accept our messages.
             this._spiMessageStamp.ServerTimeDelta = m.GetServerTimeDelta();
@@ -3773,7 +4096,7 @@ var Spi = function () {
             }
 
             this._mostRecentPongReceived = m;
-            this._log.debug("PongLatency:" + (Date.now() - this._mostRecentPingSentTime));
+            this._log.debug('PongLatency:' + (Date.now() - this._mostRecentPingSentTime));
         }
 
         // <summary>
@@ -3782,7 +4105,7 @@ var Spi = function () {
         // <param name="m"></param>
 
     }, {
-        key: "_handleIncomingPing",
+        key: '_handleIncomingPing',
         value: function _handleIncomingPing(m) {
             var pong = PongHelper.GeneratePongRessponse(m);
             this._send(pong);
@@ -3793,7 +4116,7 @@ var Spi = function () {
         // </summary>
 
     }, {
-        key: "_callGetLastTransaction",
+        key: '_callGetLastTransaction',
         value: function _callGetLastTransaction() {
             var gltRequest = new GetLastTransactionRequest();
             this._send(gltRequest.ToMessage());
@@ -3805,7 +4128,7 @@ var Spi = function () {
         // <param name="messageJson"></param>
 
     }, {
-        key: "_onSpiMessageReceived",
+        key: '_onSpiMessageReceived',
         value: function _onSpiMessageReceived(messageJson) {
             // First we parse the incoming message
             var m = Message.FromJson(messageJson.Message, this._secrets);
@@ -3866,6 +4189,12 @@ var Spi = function () {
                 case Events.KeyRollRequest:
                     this._handleKeyRollingRequest(m);
                     break;
+                case Events.CancelTransactionResponse:
+                    this._handleCancelTransactionResponse(m);
+                    break;
+                case Events.SetPosInfoResponse:
+                    this._handleSetPosInfoResponse(m);
+                    break;
                 case Events.PayAtTableGetTableConfig:
                     if (this._spiPat == null) {
                         this._send(PayAtTableConfig.FeatureDisableMessage(RequestIdHelper.Id("patconf")));
@@ -3879,6 +4208,15 @@ var Spi = function () {
                 case Events.PayAtTableBillPayment:
                     this._spiPat._handleBillPaymentAdvice(m);
                     break;
+                case Events.PrintingResponse:
+                    this._handlePrintingResponse(m);
+                    break;
+                case Events.TerminalStatusResponse:
+                    this._handleTerminalStatusResponse(m);
+                    break;
+                case Events.BatteryLevelChanged:
+                    this._handleBatteryLevelChanged(m);
+                    break;
                 case Events.Error:
                     this._handleErrorEvent(m);
                     break;
@@ -3886,17 +4224,17 @@ var Spi = function () {
                     this._log.info("I could not verify message from Eftpos. You might have to Un-pair Eftpos and then reconnect.");
                     break;
                 default:
-                    this._log.info("I don't Understand Event: " + m.EventName + ", " + m.Data + ". Perhaps I have not implemented it yet.");
+                    this._log.info('I don\'t Understand Event: ' + m.EventName + ', ' + m.Data + '. Perhaps I have not implemented it yet.');
                     break;
             }
         }
     }, {
-        key: "_onWsErrorReceived",
+        key: '_onWsErrorReceived',
         value: function _onWsErrorReceived(error) {
             this._log.warn("Received WS Error: " + error.Message);
         }
     }, {
-        key: "_send",
+        key: '_send',
         value: function _send(message) {
             var json = message.ToJson(this._spiMessageStamp);
             if (this._conn.Connected) {
@@ -3909,9 +4247,9 @@ var Spi = function () {
             }
         }
     }], [{
-        key: "GetVersion",
+        key: 'GetVersion',
         value: function GetVersion() {
-            return '2.1.0';
+            return SPI_VERSION;
         }
     }]);
 
@@ -4187,6 +4525,12 @@ var TransactionFlowState = function () {
             this.DisplayMessage = msg;
         }
     }, {
+        key: 'CancelFailed',
+        value: function CancelFailed(msg) {
+            this.AttemptingToCancel = false;
+            this.DisplayMessage = msg;
+        }
+    }, {
         key: 'CallingGlt',
         value: function CallingGlt() {
             this.AwaitingGltResponse = true;
@@ -4282,6 +4626,7 @@ var SpiConfig = function () {
 
         this.PromptForCustomerCopyOnEftpos = false;
         this.SignatureFlowOnEftpos = false;
+        this.PrintMerchantCopy = false;
     }
 
     _createClass(SpiConfig, [{
@@ -4293,17 +4638,64 @@ var SpiConfig = function () {
             if (this.SignatureFlowOnEftpos) {
                 messageData.print_for_signature_required_transactions = this.SignatureFlowOnEftpos;
             }
-
+            if (this.PrintMerchantCopy) {
+                messageData.print_merchant_copy = this.PrintMerchantCopy;
+            }
             return messageData;
         }
     }, {
         key: 'ToString',
         value: function ToString() {
-            return 'PromptForCustomerCopyOnEftpos:' + this.PromptForCustomerCopyOnEftpos + ' SignatureFlowOnEftpos:' + this.SignatureFlowOnEftpos;
+            return 'PromptForCustomerCopyOnEftpos:' + this.PromptForCustomerCopyOnEftpos + ' SignatureFlowOnEftpos:' + this.SignatureFlowOnEftpos + ' PrintMerchantCopy: ' + this.PrintMerchantCopy;
         }
     }]);
 
     return SpiConfig;
+}();
+
+var TransactionOptions = function () {
+    function TransactionOptions() {
+        _classCallCheck(this, TransactionOptions);
+
+        this._customerReceiptHeader = null;
+        this._customerReceiptFooter = null;
+        this._merchantReceiptHeader = null;
+        this._merchantReceiptFooter = null;
+    }
+
+    _createClass(TransactionOptions, [{
+        key: 'SetCustomerReceiptHeader',
+        value: function SetCustomerReceiptHeader(customerReceiptHeader) {
+            this._customerReceiptHeader = customerReceiptHeader;
+        }
+    }, {
+        key: 'SetCustomerReceiptFooter',
+        value: function SetCustomerReceiptFooter(customerReceiptFooter) {
+            this._customerReceiptFooter = customerReceiptFooter;
+        }
+    }, {
+        key: 'SetMerchantReceiptHeader',
+        value: function SetMerchantReceiptHeader(merchantReceiptHeader) {
+            this._merchantReceiptHeader = merchantReceiptHeader;
+        }
+    }, {
+        key: 'SetMerchantReceiptFooter',
+        value: function SetMerchantReceiptFooter(merchantReceiptFooter) {
+            this._merchantReceiptFooter = merchantReceiptFooter;
+        }
+    }, {
+        key: 'AddOptions',
+        value: function AddOptions(messageData) {
+            messageData.customer_receipt_header = this._customerReceiptHeader;
+            messageData.customer_receipt_footer = this._customerReceiptFooter;
+            messageData.merchant_receipt_header = this._merchantReceiptHeader;
+            messageData.merchant_receipt_footer = this._merchantReceiptFooter;
+
+            return messageData;
+        }
+    }]);
+
+    return TransactionOptions;
 }();
 "use strict";
 
@@ -4319,6 +4711,7 @@ var SpiPayAtTable = function () {
         this._log = console;
 
         this.Config = Object.assign(new PayAtTableConfig(), {
+            PayAtTabledEnabled: true,
             OperatorIdEnabled: true,
             AllowedOperatorIds: [],
             EqualSplitEnabled: true,
@@ -4582,3 +4975,58 @@ var SpiPreauth = function () {
 
     return SpiPreauth;
 }();
+"use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var TerminalStatusRequest = function () {
+    function TerminalStatusRequest() {
+        _classCallCheck(this, TerminalStatusRequest);
+    }
+
+    _createClass(TerminalStatusRequest, [{
+        key: "ToMessage",
+        value: function ToMessage() {
+            var data = {};
+
+            return new Message(RequestIdHelper.Id("trmnl"), Events.TerminalStatusRequest, data, true);
+        }
+    }]);
+
+    return TerminalStatusRequest;
+}();
+
+var TerminalStatusResponse = function () {
+    function TerminalStatusResponse(m) {
+        _classCallCheck(this, TerminalStatusResponse);
+
+        this._m = m;
+    }
+
+    _createClass(TerminalStatusResponse, [{
+        key: "GetStatus",
+        value: function GetStatus() {
+            return this._m.Data.status;
+        }
+    }, {
+        key: "GetBatteryLevel",
+        value: function GetBatteryLevel() {
+            return this._m.Data.battery_level;
+        }
+    }, {
+        key: "IsCharging",
+        value: function IsCharging() {
+            return !!this._m.Data.charging;
+        }
+    }]);
+
+    return TerminalStatusResponse;
+}();
+
+var TerminalBattery = function TerminalBattery(m) {
+    _classCallCheck(this, TerminalBattery);
+
+    this.BatteryLevel = m.Data.battery_level;
+};
