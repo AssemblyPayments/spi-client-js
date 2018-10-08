@@ -150,11 +150,12 @@ class PreauthCancelRequest
 
 class PreauthCompletionRequest
 {
-    constructor(preauthId, completionAmountCents, posRefId)
+    constructor(preauthId, completionAmountCents, posRefId, surchargeAmount)
     {
         this.PreauthId = preauthId;
         this.CompletionAmount = completionAmountCents;
         this.PosRefId = posRefId;
+        this.SurchargeAmount = surchargeAmount;
     }
 
     ToMessage()
@@ -162,7 +163,8 @@ class PreauthCompletionRequest
         var data = {
             "pos_ref_id": this.PosRefId,
             "preauth_id": this.PreauthId,
-            "completion_amount": this.CompletionAmount
+            "completion_amount": this.CompletionAmount,
+            "surcharge_amount": this.SurchargeAmount
         };
 
         return new Message(RequestIdHelper.Id("prac"), PreauthEvents.PreauthCompleteRequest, data, true);
@@ -237,5 +239,17 @@ class PreauthResponse
                 return 0;
         }
 
+    }
+
+    GetSurchargeAmount()
+    {
+        var txType = this._m.Data["transaction_type"];
+        switch (txType)
+        {
+            case "PCOMP":
+                return this._m.Data["surcharge_amount"];
+            default:
+                return 0;
+        }
     }
 }
