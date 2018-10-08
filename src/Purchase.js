@@ -5,6 +5,7 @@ class PurchaseRequest {
         this.TipAmount = 0;
         this.CashoutAmount = 0;
         this.PromptForCashout = false;
+        this.SurchargeAmount = 0;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
 
@@ -26,7 +27,8 @@ class PurchaseRequest {
             purchase_amount: this.PurchaseAmount,
             tip_amount: this.TipAmount,
             cash_amount: this.CashoutAmount,
-            prompt_for_cashout: this.PromptForCashout
+            prompt_for_cashout: this.PromptForCashout, 
+            surcharge_amount: this.SurchargeAmount
         };
 
         this.Config.addReceiptConfig(data);
@@ -521,10 +523,11 @@ class SignatureAccept
 
 class MotoPurchaseRequest
 {
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, surchargeAmount)
     {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
+        this.SurchargeAmount = surchargeAmount;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -533,7 +536,8 @@ class MotoPurchaseRequest
     {
         var data = {
             pos_ref_id: this.PosRefId,
-            purchase_amount: this.PurchaseAmount
+            purchase_amount: this.PurchaseAmount,
+            surcharge_amount: this.SurchargeAmount
         };
         this.Config.addReceiptConfig(data);
         this.Options.AddOptions(data);

@@ -1,9 +1,10 @@
 class CashoutOnlyRequest
 {  
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, surchargeAmount)
     {
         this.PosRefId = posRefId;
         this.CashoutAmount = amountCents;
+        this.SurchargeAmount = surchargeAmount;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -12,7 +13,8 @@ class CashoutOnlyRequest
     {
         var data = {
             "pos_ref_id": this.PosRefId,
-            "cash_amount": this.CashoutAmount
+            "cash_amount": this.CashoutAmount,
+            "surcharge_amount": this.SurchargeAmount
         };
 
         this.Config.addReceiptConfig(data);
@@ -117,6 +119,11 @@ class CashoutOnlyResponse
         return this._m.Data["customer_receipt_printed"];
     }
     
+    GetSurchargeAmount()
+    {
+        return this._m.Data["surcharge_amount"];
+    }
+
     GetResponseValue(attribute)
     {
         return this._m.Data[attribute];

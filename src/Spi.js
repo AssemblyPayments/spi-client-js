@@ -315,9 +315,10 @@ class Spi {
     // <param name="purchaseAmount">The Purchase Amount in Cents.</param>
     // <param name="tipAmount">The Tip Amount in Cents</param>
     // <param name="cashoutAmount">The Cashout Amount in Cents</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, surchargeAmount, promptForCashout, options)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -326,7 +327,7 @@ class Spi {
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         this.CurrentFlow = SpiFlow.Transaction;
         
-        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout);
+        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, surchargeAmount);
         purchase.Config = this.Config;
         purchase.Options = options;
         var purchaseMsg = purchase.ToMessage();
@@ -347,8 +348,9 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your refund.</param>
     // <param name="amountCents">Amount in Cents to charge</param>
+    // <param name="isSuppressMerchantPassword">Merchant Password control in VAA</param>
     // <returns>InitiateTxResult</returns>
-    InitiateRefundTx(posRefId, amountCents)
+    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -358,7 +360,7 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId);
+        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, isSuppressMerchantPassword);
         refundRequest.Config = this.Config;
         var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
@@ -460,13 +462,14 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents to cash out</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateCashoutOnlyTx(posRefId, amountCents)
+    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId);
+        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId, surchargeAmount);
         cashoutOnlyRequest.Config = this.Config;
         var cashoutMsg = cashoutOnlyRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
@@ -487,13 +490,14 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId);
+        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount);
         motoPurchaseRequest.Config = this.Config;
         var cashoutMsg = motoPurchaseRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
