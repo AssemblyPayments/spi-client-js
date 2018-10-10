@@ -1528,3 +1528,5 @@ class Spi {
         }
     }
 }
+
+export default Spi;
