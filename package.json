@@ -2,11 +2,11 @@
   "name": "@assemblypayments/spi-client-js",
   "version": "2.1.0",
   "description": "JavaScript Client Library for Assembly Payments' In-Store Integration.",
-  "main": "karma.conf.js",
+  "main": "dist/spi-client-js.js",
   "scripts": {
     "test": "karma start",
     "transpile": "babel src --out-file ./dist/spi-client-js.js",
-    "build": "babel src --out-file ./dist/spi-client-js.js"
+    "build": "babel index.js --out-file ./dist/spi-client-js.js"
   },
   "repository": {
     "type": "git",
