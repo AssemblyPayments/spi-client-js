@@ -1,4 +1,4 @@
-const SPI_VERSION = '2.4.0';
+const SPI_VERSION = '2.4.5';
 
 class Spi {
 
@@ -1529,5 +1529,3 @@ class Spi {
         }
     }
 }
-
-export default Spi;
