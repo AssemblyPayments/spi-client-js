@@ -315,10 +315,11 @@ class Spi {
     // <param name="purchaseAmount">The Purchase Amount in Cents.</param>
     // <param name="tipAmount">The Tip Amount in Cents</param>
     // <param name="cashoutAmount">The Cashout Amount in Cents</param>
-    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, surchargeAmount, promptForCashout, options)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = {}, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -350,7 +351,7 @@ class Spi {
     // <param name="amountCents">Amount in Cents to charge</param>
     // <param name="isSuppressMerchantPassword">Merchant Password control in VAA</param>
     // <returns>InitiateTxResult</returns>
-    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword)
+    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword = false)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -464,7 +465,7 @@ class Spi {
     // <param name="amountCents">Amount in Cents to cash out</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount)
+    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -492,7 +493,7 @@ class Spi {
     // <param name="amountCents">Amount in Cents</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
