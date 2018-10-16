@@ -15,13 +15,22 @@ class Spi {
         document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
     }
 
-    constructor(posId, eftposAddress, secrets) 
+    constructor(posId, eftposAddress, secrets, deviceIpAddressRequest) 
     {
         this._posId = posId;
         this._secrets = secrets;
         this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
+
+        if (deviceIpAddressRequest)
+        {
+            this._serialNumber = deviceIpAddressRequest.SerialNumber;
+            this._deviceApiKey = deviceIpAddressRequest.ApiKey;
+        }
+
+        this.CurrentDeviceStatus = null;
+        this.AutoIpResolutionEnable = false;
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
@@ -34,6 +43,7 @@ class Spi {
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
         this._missedPongsCount = 0;
+        this._retrySinceLastDeviceIpAddressResolution = 0;
         this._mostRecentLoginResponse = null;
 
         this._pongTimeout = 5000;
@@ -46,6 +56,7 @@ class Spi {
         this._checkOnTxFrequency = 20000;
         this._maxWaitForCancelTx = 10000;
         this._missedPongsToDisconnect = 2;
+        this._retryBeforeResolvingDeviceIpAddress = 5;
 
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
@@ -987,6 +998,7 @@ class Spi {
         this._log.info(`Got Last Transaction..`);
         txState.GotGltResponse();
         var gtlResponse = new GetLastTransactionResponse(m);
+        txState.GLTResponsePosRefId = gtlResponse.GetPosRefId();
         if (!gtlResponse.WasRetrievedSuccessfully())
         {
             if (gtlResponse.IsStillInProgress(txState.PosRefId))
@@ -1181,6 +1193,8 @@ class Spi {
                 break;
 
             case ConnectionState.Connected:
+                this._retrySinceLastDeviceIpAddressResolution = 0;
+
                 if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
                     this.CurrentPairingFlowState.Message = "Requesting to Pair...";
@@ -1216,14 +1230,24 @@ class Spi {
                     }
                     
                     if (this._conn == null) return; // This means the instance has been disposed. Aborting.
-                    this._log.info(`Will try to reconnect in 5s...`);
-                    setTimeout(() => {
-                        if (this.CurrentStatus != SpiStatus.Unpaired)
-                        {
-                            // This is non-blocking
-                            this._conn.Connect();
-                        }
-                    }, 5000);
+                    
+                    if (this._retrySinceLastDeviceIpAddressResolution >= this._retryBeforeResolvingDeviceIpAddress)
+                    {
+                        this.ResolveDeviceIpAddress();
+                        this._retrySinceLastDeviceIpAddressResolution = 0;
+                    }
+                    else
+                    {
+                        this._retrySinceLastDeviceIpAddressResolution += 1;
+                        this._log.info(`Will try to reconnect in 5s...`);
+                        setTimeout(() => {
+                            if (this.CurrentStatus != SpiStatus.Unpaired)
+                            {
+                                // This is non-blocking
+                                this._conn.Connect();
+                            }
+                        }, 5000);
+                    }
                 }
                 else if (this.CurrentFlow == SpiFlow.Pairing)
                 {
@@ -1527,5 +1551,22 @@ class Spi {
             this._log.info("Asked to send, but not connected: " + message.DecryptedJson);
             return false;
         }
+    }
+
+    ResolveDeviceIpAddress()
+    {
+        if (!this.AutoIpResolutionEnable)
+            return;
+
+        var service = new DeviceIpAddressService();
+
+        service.RetrieveService(this._serialNumber, this._deviceApiKey).then((ip) => 
+        {
+            if (ip && ip.Ip)
+            {
+                this.CurrentDeviceStatus = new DeviceIpAddressStatus(ip.Ip, ip.Last_updated);
+            }
+            document.dispatchEvent(new CustomEvent('DeviceIpChanged', {detail: this.CurrentDeviceStatus}));
+        });
     }
 }

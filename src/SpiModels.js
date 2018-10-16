@@ -245,6 +245,8 @@ class TransactionFlowState
         // Whether we're currently waiting for a Get Last Transaction Response to get an update. 
         // </summary>
         this.AwaitingGltResponse = null;
+
+        this.GLTResponsePosRefId = null;
     }
 
     Sent(msg)
