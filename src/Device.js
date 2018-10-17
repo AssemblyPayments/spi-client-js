@@ -1,6 +1,10 @@
 
 class DeviceIpAddressRequest
 {
-    ApiKey = null;
-    SerialNumber = null;
+    constructor()
+    {
+        this.ApiKey = null;
+        this.SerialNumber = null;
+    }
+
 }
