@@ -131,6 +131,22 @@ class Spi {
         return true;
     }
 
+    /// <summary>
+    /// Invoke ResolveDeviceIpAddress(). Once invoked, if Ip address changes it will trigger
+    /// _deviceIpChanged event.
+    /// </summary>
+    GetDeviceIpAddress(deviceIpAddressRequest)
+    {
+        if (this.CurrentStatus == SpiStatus.PairedConnected)
+            return;
+
+        // overwrite existing values with new request
+        this._serialNumber = deviceIpAddressRequest.SerialNumber;
+        this._deviceApiKey = deviceIpAddressRequest.ApiKey;
+
+        this.ResolveDeviceIpAddress();
+    }
+
     /**
      * Sets values used to identify the POS software to the EFTPOS terminal.
      * Must be set before starting!
