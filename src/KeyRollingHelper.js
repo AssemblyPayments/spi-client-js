@@ -1,4 +1,6 @@
-class KeyRollingHelper {
+import {Events} from './Messages';
+
+export class KeyRollingHelper {
     static PerformKeyRolling(krRequest, currentSecrets)
     {
         let m = new Message(krRequest.Id, Events.KeyRollResponse, {"status": "confirmed"}, true);
@@ -7,7 +9,7 @@ class KeyRollingHelper {
     }
 }
 
-class KeyRollingResult {
+export class KeyRollingResult {
     constructor(keyRollingConfirmation, newSecrets) {
         this.KeyRollingConfirmation = keyRollingConfirmation;
         this.NewSecrets = newSecrets;

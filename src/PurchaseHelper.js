@@ -1,4 +1,6 @@
-class PurchaseHelper
+import {PurchaseRequest, RefundRequest} from './Purchase';
+
+export class PurchaseHelper
 {
     static CreatePurchaseRequest(amountCents, purchaseId)
     {

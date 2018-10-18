@@ -1,4 +1,6 @@
-class SettleRequest {
+import {Events, SuccessState} from './Messages';
+
+export class SettleRequest {
     constructor(id) {
         this.Id = id;
     }
@@ -8,7 +10,7 @@ class SettleRequest {
     }
 }
 
-class Settlement {
+export class Settlement {
     constructor(m) {
         this.RequestId = m.Id;
         this._m = m;
@@ -87,7 +89,7 @@ class Settlement {
     }
 }
 
-class SchemeSettlementEntry
+export class SchemeSettlementEntry
 {
     // SchemeSettlementEntry(string schemeName, bool settleByAcquirer, int totalCount, int totalValue)
     // SchemeSettlementEntry(Object schemeObj)
@@ -112,7 +114,7 @@ class SchemeSettlementEntry
     }
 }
 
-class SettlementEnquiryRequest
+export class SettlementEnquiryRequest
 {
     constructor(id)
     {

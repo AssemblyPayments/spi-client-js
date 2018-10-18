@@ -1,4 +1,3 @@
-
 class DeviceIpAddressStatus
 {
     constructor(ip, last_updated) 
@@ -27,3 +26,5 @@ class DeviceIpAddressService
         })
     }
 }
+
+export {DeviceIpAddressStatus, DeviceIpAddressService};

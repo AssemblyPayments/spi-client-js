@@ -8,7 +8,7 @@ const GROUP14_2048_BIT_MODP = 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD12
 // This static class helps you with the pairing process as documented here:
 // http://www.simplepaymentapi.com/#/api/pairing-process
 // </summary>
-class PairingHelper {
+export class PairingHelper {
     // <summary>
     // Generates a pairing Request.
     // </summary>
@@ -79,7 +79,7 @@ class PairingHelper {
 // <summary>
 // Internal Holder class for Public and Secret, so that we can use them together in method signatures. 
 // </summary>
-class PublicKeyAndSecret {
+export class PublicKeyAndSecret {
     constructor(myPublicKey, sharedSecretKey) {
         this.MyPublicKey = myPublicKey;
         this.SharedSecretKey = sharedSecretKey;

@@ -1,4 +1,4 @@
-class Logger {
+export default class Logger {
     constructor(element) {
         this.buffer     = [];
         this.element    = element;

@@ -1,4 +1,7 @@
-class TerminalStatusRequest
+import {Events} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+
+export class TerminalStatusRequest
 {
     ToMessage()
     {
@@ -8,7 +11,7 @@ class TerminalStatusRequest
     }
 }
 
-class TerminalStatusResponse
+export class TerminalStatusResponse
 {
     constructor(m)
     {
@@ -28,7 +31,7 @@ class TerminalStatusResponse
     }
 }
 
-class TerminalBattery
+export class TerminalBattery
 {
     constructor(m)
     {

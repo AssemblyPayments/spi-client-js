@@ -1,6 +1,16 @@
+import {Message, MessageStamp, Events, SuccessState} from './Messages';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult} from './SpiModels';
+import {RequestIdHelper} from './RequestIdHelper';
+import {SpiPayAtTable} from './SpiPayAtTable';
+import {SpiPreauth} from './SpiPreauth';
+import {DropKeysRequest} from './Pairing';
+import {SetPosInfoRequest} from './PosInfo';
+import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
+import {DeviceIpAddressService, DeviceIpAddressStatus} from './Service/DeviceService';
+
 const SPI_VERSION = '2.4.5';
 
-class Spi {
+export default class Spi {
 
     get CurrentStatus() {
         return this._currentStatus;
@@ -1586,3 +1596,5 @@ class Spi {
         });
     }
 }
+
+export {Spi};

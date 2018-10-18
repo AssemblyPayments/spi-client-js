@@ -1,4 +1,7 @@
-class PrintingRequest
+import {Events, SuccessState} from './Messages';
+
+
+export class PrintingRequest
 {
     constructor(key, payload)
     {
@@ -17,7 +20,7 @@ class PrintingRequest
     }
 }
 
-class PrintingResponse
+export class PrintingResponse
 {
     constructor(m)
     {
@@ -46,7 +49,7 @@ class PrintingResponse
 /**
  * This class is a mock printer for the terminal to print Receipts
  */
-class Printer {
+export class Printer {
     constructor(element) {
         this.buffer     = [];
         this.element    = element;

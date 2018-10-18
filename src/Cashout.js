@@ -1,4 +1,6 @@
-class CashoutOnlyRequest
+import {Events, SuccessState} from './Messages';
+
+export class CashoutOnlyRequest
 {  
     constructor(amountCents, posRefId, surchargeAmount)
     {
@@ -23,7 +25,7 @@ class CashoutOnlyRequest
     }
 }
 
-class CashoutOnlyResponse
+export class CashoutOnlyResponse
 {
     constructor(m)
     {

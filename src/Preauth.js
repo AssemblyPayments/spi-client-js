@@ -1,4 +1,6 @@
-const PreauthEvents = 
+import {RequestIdHelper} from './RequestIdHelper';
+
+export const PreauthEvents = 
 {
     AccountVerifyRequest: "account_verify",
     AccountVerifyResponse: "account_verify_response",
@@ -22,7 +24,7 @@ const PreauthEvents =
     PreauthCompleteResponse : "completion_response"
 };
 
-class AccountVerifyRequest
+export class AccountVerifyRequest
 {
     constructor(posRefId)
     {
@@ -39,7 +41,7 @@ class AccountVerifyRequest
     }
 }
 
-class AccountVerifyResponse
+export class AccountVerifyResponse
 {
     constructor(m)
     {
@@ -49,7 +51,7 @@ class AccountVerifyResponse
     }
 }
 
-class PreauthOpenRequest
+export class PreauthOpenRequest
 {
     constructor(amountCents, posRefId)
     {
@@ -68,7 +70,7 @@ class PreauthOpenRequest
     }
 }
 
-class PreauthTopupRequest
+export class PreauthTopupRequest
 {
     constructor(preauthId, topupAmountCents, posRefId)
     {
@@ -89,7 +91,7 @@ class PreauthTopupRequest
     }
 }
 
-class PreauthPartialCancellationRequest
+export class PreauthPartialCancellationRequest
 {
     constructor(preauthId, partialCancellationAmountCents, posRefId)
     {
@@ -110,7 +112,7 @@ class PreauthPartialCancellationRequest
     }
 }
 
-class PreauthExtendRequest
+export class PreauthExtendRequest
 {
     constructor(preauthId, posRefId)
     {
@@ -129,7 +131,7 @@ class PreauthExtendRequest
     }
 }
 
-class PreauthCancelRequest
+export class PreauthCancelRequest
 {
     constructor(preauthId, posRefId)
     {
@@ -148,7 +150,7 @@ class PreauthCancelRequest
     }
 }
 
-class PreauthCompletionRequest
+export class PreauthCompletionRequest
 {
     constructor(preauthId, completionAmountCents, posRefId, surchargeAmount)
     {
@@ -171,7 +173,7 @@ class PreauthCompletionRequest
     }
 }
 
-class PreauthResponse
+export class PreauthResponse
 {
     constructor(m)
     {

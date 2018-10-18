@@ -1,5 +1,4 @@
-
-class DeviceIpAddressRequest
+export class DeviceIpAddressRequest
 {
     constructor()
     {

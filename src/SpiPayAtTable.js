@@ -1,4 +1,7 @@
-class SpiPayAtTable
+import {RequestIdHelper} from './RequestIdHelper';
+import {BillPayment} from './PayAtTable';
+
+export class SpiPayAtTable
 {  
     constructor(spi)
     {

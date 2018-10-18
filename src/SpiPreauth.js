@@ -1,4 +1,16 @@
-class SpiPreauth
+import {
+    PreauthEvents,
+    AccountVerifyRequest, 
+    PreauthOpenRequest, 
+    PreauthTopupRequest, 
+    PreauthPartialCancellationRequest, 
+    PreauthExtendRequest,
+    PreauthCompletionRequest,
+    PreauthCancelRequest} from './Preauth';
+
+import {TransactionFlowState, InitiateTxResult} from './SpiModels';
+
+export class SpiPreauth
 {
     constructor(spi)
     {

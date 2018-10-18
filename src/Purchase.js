@@ -1,4 +1,7 @@
-class PurchaseRequest {
+import {Events, SuccessState} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+
+export class PurchaseRequest {
     constructor(amountCents, posRefId) {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
@@ -37,7 +40,7 @@ class PurchaseRequest {
     }
 }
 
-class PurchaseResponse
+export class PurchaseResponse
 {
     constructor(m)
     {
@@ -188,7 +191,7 @@ class PurchaseResponse
     }
 }
 
-class CancelTransactionRequest
+export class CancelTransactionRequest
 {
     
     ToMessage()
@@ -197,7 +200,7 @@ class CancelTransactionRequest
     }
 }
 
-class CancelTransactionResponse
+export class CancelTransactionResponse
 {
     constructor(m)
     {
@@ -222,7 +225,7 @@ class CancelTransactionResponse
     }
 }
 
-class GetLastTransactionRequest
+export class GetLastTransactionRequest
 {
     ToMessage()
     {
@@ -230,7 +233,7 @@ class GetLastTransactionRequest
     }
 }
 
-class GetLastTransactionResponse
+export class GetLastTransactionResponse
 {
     constructor(m)
     {
@@ -350,7 +353,7 @@ class GetLastTransactionResponse
     }
 }
 
-class RefundRequest
+export class RefundRequest
 {
     constructor(amountCents, posRefId)
     {
@@ -370,7 +373,7 @@ class RefundRequest
     }
 }
 
-class RefundResponse
+export class RefundResponse
 {
     constructor(m)
     {
@@ -467,7 +470,7 @@ class RefundResponse
     }
 }
 
-class SignatureRequired
+export class SignatureRequired
 {
     constructor(m)
     {
@@ -489,7 +492,7 @@ class SignatureRequired
     }
 }
 
-class SignatureDecline
+export class SignatureDecline
 {
     constructor(posRefId)
     {
@@ -505,7 +508,7 @@ class SignatureDecline
     }
 }
 
-class SignatureAccept
+export class SignatureAccept
 {
     constructor(posRefId)
     {
@@ -521,7 +524,7 @@ class SignatureAccept
     }
 }
 
-class MotoPurchaseRequest
+export class MotoPurchaseRequest
 {
     constructor(amountCents, posRefId, surchargeAmount)
     {
@@ -545,7 +548,7 @@ class MotoPurchaseRequest
     }
 }
 
-class MotoPurchaseResponse
+export class MotoPurchaseResponse
 {
     constructor(m)
     {
@@ -554,7 +557,7 @@ class MotoPurchaseResponse
     }
 }
 
-class PhoneForAuthRequired
+export class PhoneForAuthRequired
 {
     constructor(...args)
     {
@@ -584,7 +587,7 @@ class PhoneForAuthRequired
     }
 }
 
-class AuthCodeAdvice
+export class AuthCodeAdvice
 {
     constructor(posRefId, authCode)
     {

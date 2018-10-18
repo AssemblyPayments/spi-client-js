@@ -1,7 +1,7 @@
 // <summary>
 // Events statically declares the various event names in messages.
 // </summary>
-const Events = {
+export const Events = {
      PairRequest : "pair_request",
      KeyRequest : "key_request",
      KeyResponse : "key_response",
@@ -66,7 +66,7 @@ const Events = {
     BatteryLevelChanged : "battery_level_changed"
 };
 
-const SuccessState = {
+export const SuccessState = {
     Unknown: 'Unknown', Success: 'Success', Failed: 'Failed'
 };
 
@@ -74,7 +74,7 @@ const SuccessState = {
 // MessageStamp represents what is required to turn an outgoing Message into Json
 // including encryption and date setting.
 // </summary>
-class MessageStamp {
+export class MessageStamp {
     constructor(posId, secrets, serverTimeDelta) {
         this.PosId = posId;
         this.Secrets = secrets;
@@ -87,7 +87,7 @@ class MessageStamp {
 // between the Pos and the PinPad and vice-versa.
 // See http://www.simplepaymentapi.com/#/api/message-encryption
 // </summary>
-class MessageEnvelope {
+export class MessageEnvelope {
     constructor(message, enc, hmac, posId) {
         // <summary>
         // The Message field is set only when in Un-encrypted form.
@@ -127,7 +127,7 @@ class MessageEnvelope {
 // Message represents the contents of a Message.
 // See http://www.simplepaymentapi.com/#/api/message-encryption
 // </summary>
-class Message {
+export class Message {
     constructor(id, eventName, data, needsEncryption) {
         this.Id = id;
         this.EventName = eventName;

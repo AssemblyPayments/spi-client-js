@@ -1,7 +1,9 @@
+import {Events} from './Messages';
+
 // <summary>
 // This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
 // </summary>
-class BillStatusResponse
+export class BillStatusResponse
 {
     constructor() {
         // <summary>
@@ -90,7 +92,7 @@ class BillStatusResponse
     }
 }
 
-const BillRetrievalResult = 
+export const BillRetrievalResult = 
 {
     SUCCESS: 'SUCCESS',
     INVALID_TABLE_ID: 'INVALID_TABLE_ID',
@@ -98,13 +100,13 @@ const BillRetrievalResult =
     INVALID_OPERATOR_ID: 'INVALID_OPERATOR_ID'
 };
 
-const PaymentType = 
+export const PaymentType = 
 {
     CARD: 'CARD',
     CASH: 'CASH' 
 };
 
-class BillPayment
+export class BillPayment
 {
     constructor(m)
     {
@@ -125,7 +127,7 @@ class BillPayment
     }
 }
 
-class PaymentHistoryEntry
+export class PaymentHistoryEntry
 {
     constructor(paymentType, paymentSummary)
     {
@@ -146,7 +148,7 @@ class PaymentHistoryEntry
     }
 }
 
-class PayAtTableConfig
+export class PayAtTableConfig
 {
     constructor() {
         this.PayAtTabledEnabled = false;
