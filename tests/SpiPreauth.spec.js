@@ -1,3 +1,7 @@
+import {Spi} from '../src/Spi';
+import {SpiPreauth} from '../src/SpiPreauth';
+import {PreauthEvents} from '../src/Preauth';
+
 describe('SpiPreauth', function() {
     'use strict';
   

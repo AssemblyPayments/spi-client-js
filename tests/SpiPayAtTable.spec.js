@@ -1,3 +1,8 @@
+import {Spi} from '../src/Spi';
+import {SpiPayAtTable} from '../src/SpiPayAtTable';
+import {BillStatusResponse, BillRetrievalResult} from '../src/PayAtTable';
+import {Message} from '../src/Messages';
+
 describe('SpiPayAtTable', function() {
     'use strict';
   

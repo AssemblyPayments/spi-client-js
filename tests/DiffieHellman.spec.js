@@ -1,3 +1,6 @@
+import {DiffieHellman} from '../src/DiffieHellman';
+import {GENERATOR, GROUP14_2048_BIT_MODP} from '../src/PairingHelper';
+
 describe('DiffieHellman', function() {
     'use strict';
 

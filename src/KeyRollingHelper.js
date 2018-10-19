@@ -1,5 +1,6 @@
 import {Events, Message} from './Messages';
 import {Crypto} from './Crypto';
+import {Secrets} from './Secrets';
 
 export class KeyRollingHelper {
     static PerformKeyRolling(krRequest, currentSecrets)

@@ -1,3 +1,6 @@
+import {Message} from '../src/Messages';
+import {BillRetrievalResult, PaymentType, BillPayment, PaymentHistoryEntry, PayAtTableConfig} from '../src/PayAtTable';
+
 describe('PayAtTable', function() {
     'use strict';  
 
