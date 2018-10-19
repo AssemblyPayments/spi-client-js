@@ -2,7 +2,7 @@
   "name": "@assemblypayments/spi-client-js",
   "version": "2.4.0",
   "description": "JavaScript Client Library for Assembly Payments' In-Store Integration.",
-  "main": "dist/spi-client-js.js",
+  "main": "index.js",
   "scripts": {
     "start": "webpack-dev-server --open --colors --public localhost:3000",
     "build": "webpack -p",
@@ -32,9 +32,10 @@
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^1.1.1",
     "karma-json-fixtures-preprocessor": "0.0.6",
-    "webpack-dev-server": "^3.1.9",
+    "karma-webpack": "^3.0.5",
     "webpack": "^4.21.0",
-    "webpack-cli": "^3.1.2"
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.9"
   },
   "bugs": {
     "url": "https://github.com/AssemblyPayments/spi-client-js/issues"
