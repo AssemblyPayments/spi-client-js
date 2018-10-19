@@ -41,6 +41,7 @@ export default class Spi {
         {
             this._serialNumber = deviceIpAddressRequest.SerialNumber;
             this._deviceApiKey = deviceIpAddressRequest.ApiKey;
+            this._deviceApiUrl = deviceIpAddressRequest.ApiUrl;
         }
 
         this.CurrentDeviceStatus = null;
@@ -157,6 +158,7 @@ export default class Spi {
         // overwrite existing values with new request
         this._serialNumber = deviceIpAddressRequest.SerialNumber;
         this._deviceApiKey = deviceIpAddressRequest.ApiKey;
+        this._deviceApiUrl = deviceIpAddressRequest.ApiUrl;
 
         this.ResolveDeviceIpAddress();
     }
@@ -1588,9 +1590,9 @@ export default class Spi {
         if (!this.AutoIpResolutionEnable)
             return;
 
-        var service = new DeviceIpAddressService();
+        var service = new DeviceIpAddressService(this._deviceApiUrl);
 
-        service.RetrieveService(this._serialNumber, this._deviceApiKey).then((ip) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey).then((ip) => 
         {
             if (ip && ip.Ip)
             {

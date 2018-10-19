@@ -9,10 +9,14 @@ export class DeviceIpAddressStatus
 
 export class DeviceIpAddressService
 {
+    constructor(apiUrl = null)
+    {
+        this.ApiUrl = apiUrl || 'https://device-address-api-dev.nonprod-wbc.msp.assemblypayments.com/v1/${serialNumber}/ip';
+    }
+
     RetrieveService(serialNumber, apiKey = 'spi-sample-pos1')
     {
-        var deviceIpUrl =
-            `https://device-address-api-dev.nonprod-wbc.msp.assemblypayments.com/v1/${serialNumber}/ip`;
+        var deviceIpUrl = this.ApiUrl.replace('${serialNumber}', serialNumber);
 
         return fetch(deviceIpUrl, {
             method: 'GET',
