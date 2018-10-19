@@ -1,4 +1,6 @@
-import {Events, SuccessState} from './Messages';
+import {Message, Events, SuccessState} from './Messages';
+import {SpiConfig, TransactionOptions} from './SpiModels';
+import {RequestIdHelper} from './RequestIdHelper';
 
 export class CashoutOnlyRequest
 {  

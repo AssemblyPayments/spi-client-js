@@ -1,5 +1,5 @@
 import {RequestIdHelper} from './RequestIdHelper';
-import {BillPayment} from './PayAtTable';
+import {BillPayment, PayAtTableConfig, PaymentHistoryEntry, BillRetrievalResult, BillStatusResponse} from './PayAtTable';
 
 export class SpiPayAtTable
 {  

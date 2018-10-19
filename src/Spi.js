@@ -2,9 +2,13 @@ import {Message, MessageStamp, Events, SuccessState} from './Messages';
 import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
 import {SpiPayAtTable} from './SpiPayAtTable';
+import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
 import {DropKeysRequest} from './Pairing';
 import {SetPosInfoRequest} from './PosInfo';
+import {PurchaseHelper} from './PurchaseHelper';
+import {KeyRollingHelper} from './KeyRollingHelper';
+import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
 import {DeviceIpAddressService, DeviceIpAddressStatus} from './Service/DeviceService';
 

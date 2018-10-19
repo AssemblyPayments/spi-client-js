@@ -1,4 +1,5 @@
-import {Events} from './Messages';
+import {Events, Message} from './Messages';
+import {PurchaseResponse} from './Purchase';
 
 // <summary>
 // This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.

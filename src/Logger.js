@@ -38,3 +38,5 @@ export default class Logger {
         this._render();
     }
 }
+
+export {Logger};

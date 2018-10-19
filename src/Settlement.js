@@ -1,4 +1,4 @@
-import {Events, SuccessState} from './Messages';
+import {Events, SuccessState, Message} from './Messages';
 
 export class SettleRequest {
     constructor(id) {

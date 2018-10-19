@@ -1,5 +1,6 @@
-import {Events, SuccessState} from './Messages';
+import {Events, SuccessState, Message} from './Messages';
 import {RequestIdHelper} from './RequestIdHelper';
+import {SpiConfig, TransactionOptions} from './SpiModels';
 
 export class PurchaseRequest {
     constructor(amountCents, posRefId) {

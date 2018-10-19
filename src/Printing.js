@@ -1,5 +1,5 @@
-import {Events, SuccessState} from './Messages';
-
+import {Events, SuccessState, Message} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
 
 export class PrintingRequest
 {

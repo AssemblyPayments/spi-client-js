@@ -1,4 +1,6 @@
 import {RequestIdHelper} from './RequestIdHelper';
+import {Message} from './Messages';
+import {PurchaseResponse} from './Purchase';
 
 export const PreauthEvents = 
 {

@@ -1,4 +1,4 @@
-import {Events} from './Messages';
+import {Events, Message} from './Messages';
 import {RequestIdHelper} from './RequestIdHelper';
 
 // <summary>

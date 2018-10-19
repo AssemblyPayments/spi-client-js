@@ -1,3 +1,5 @@
+import {Crypto} from './Crypto';
+
 // <summary>
 // Events statically declares the various event names in messages.
 // </summary>

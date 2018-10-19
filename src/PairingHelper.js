@@ -1,3 +1,8 @@
+import {PairRequest, KeyResponse, SecretsAndKeyResponse} from './Pairing';
+import {Secrets} from './Secrets';
+import {Crypto} from './Crypto';
+import {DiffieHellman} from './DiffieHellman';
+
 // This is the generator used for diffie-hellman in 2048-bit MODP Group 14 as per (https://tools.ietf.org/html/rfc3526#section-3)
 const GENERATOR = 2;
 

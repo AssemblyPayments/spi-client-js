@@ -1,4 +1,4 @@
-class DeviceIpAddressStatus
+export class DeviceIpAddressStatus
 {
     constructor(ip, last_updated) 
     {
@@ -7,7 +7,7 @@ class DeviceIpAddressStatus
     }
 }
 
-class DeviceIpAddressService
+export class DeviceIpAddressService
 {
     RetrieveService(serialNumber, apiKey = 'spi-sample-pos1')
     {
@@ -26,5 +26,3 @@ class DeviceIpAddressService
         })
     }
 }
-
-export {DeviceIpAddressStatus, DeviceIpAddressService};

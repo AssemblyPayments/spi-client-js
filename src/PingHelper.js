@@ -1,5 +1,5 @@
 import {RequestIdHelper} from './RequestIdHelper';
-import {Events} from './Messages';
+import {Events, Message} from './Messages';
 
 export class PongHelper
 {

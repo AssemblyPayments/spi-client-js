@@ -1,4 +1,5 @@
-import {Events} from './Messages';
+import {Events, Message} from './Messages';
+import {Crypto} from './Crypto';
 
 export class KeyRollingHelper {
     static PerformKeyRolling(krRequest, currentSecrets)
