@@ -6,6 +6,7 @@
   "scripts": {
     "start": "webpack-dev-server --open --colors --public localhost:3000",
     "build": "webpack -p",
+    "build:dev": "webpack",
     "test": "karma start",
     "transpile": "babel src --out-file ./dist/spi-client-js.js"
   },

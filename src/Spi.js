@@ -1,6 +1,7 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
 import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
+import {Connection, ConnectionState} from './Connection';
 import {SpiPayAtTable} from './SpiPayAtTable';
 import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
@@ -12,7 +13,7 @@ import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
 import {DeviceIpAddressService, DeviceIpAddressStatus} from './Service/DeviceService';
 
-const SPI_VERSION = '2.4.5';
+const SPI_VERSION = '2.4.0';
 
 export default class Spi {
 
@@ -148,7 +149,7 @@ export default class Spi {
 
     /// <summary>
     /// Invoke ResolveDeviceIpAddress(). Once invoked, if Ip address changes it will trigger
-    /// _deviceIpChanged event.
+    /// DeviceIpAddressChanged event.
     /// </summary>
     GetDeviceIpAddress(deviceIpAddressRequest)
     {
@@ -160,7 +161,7 @@ export default class Spi {
         this._deviceApiKey = deviceIpAddressRequest.ApiKey;
         this._deviceApiUrl = deviceIpAddressRequest.ApiUrl;
 
-        this.ResolveDeviceIpAddress();
+        return this.ResolveDeviceIpAddress();
     }
 
     /**
@@ -1598,7 +1599,9 @@ export default class Spi {
             {
                 this.CurrentDeviceStatus = new DeviceIpAddressStatus(ip.Ip, ip.Last_updated);
             }
-            document.dispatchEvent(new CustomEvent('DeviceIpChanged', {detail: this.CurrentDeviceStatus}));
+            document.dispatchEvent(new CustomEvent('DeviceIpAddressChanged', {detail: this.CurrentDeviceStatus}));
+            
+            return this.CurrentDeviceStatus;
         });
     }
 }

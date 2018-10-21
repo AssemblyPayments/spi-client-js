@@ -1,7 +1,8 @@
 export default class Logger {
-    constructor(element) {
+    constructor(element, lineSeperator = '\n') {
         this.buffer     = [];
         this.element    = element;
+        this.lineSeperator = lineSeperator;
     }
 
     Info(...args) {
@@ -29,7 +30,7 @@ export default class Logger {
     }
 
     _render() {
-        this.element.innerText = this.buffer.join('\n');
+        this.element.innerText = this.buffer.join(this.lineSeperator);
         this.element.scrollTop = this.element.scrollHeight;
     }
 
