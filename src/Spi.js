@@ -6,12 +6,11 @@ import {SpiPayAtTable} from './SpiPayAtTable';
 import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
 import {DropKeysRequest} from './Pairing';
-import {SetPosInfoRequest} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
-import {DeviceIpAddressService, DeviceIpAddressStatus} from './Service/DeviceService';
+import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
 
 const SPI_VERSION = '2.4.0';
 
@@ -30,23 +29,19 @@ export default class Spi {
         document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
     }
 
-    constructor(posId, eftposAddress, secrets, deviceIpAddressRequest) 
+    constructor(posId, serialNumber, eftposAddress, secrets) 
     {
         this._posId = posId;
+        this._serialNumber = serialNumber;
         this._secrets = secrets;
         this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
 
-        if (deviceIpAddressRequest)
-        {
-            this._serialNumber = deviceIpAddressRequest.SerialNumber;
-            this._deviceApiKey = deviceIpAddressRequest.ApiKey;
-            this._deviceApiUrl = deviceIpAddressRequest.ApiUrl;
-        }
-
         this.CurrentDeviceStatus = null;
-        this.AutoIpResolutionEnable = false;
+        this._deviceApiKey = null;
+        this._inTestMode = false;
+        this._autoAddressResolutionEnabled = false;
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
@@ -59,7 +54,7 @@ export default class Spi {
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
         this._missedPongsCount = 0;
-        this._retrySinceLastDeviceIpAddressResolution = 0;
+        this._retriesSinceLastDeviceAddressResolution = 0;
         this._mostRecentLoginResponse = null;
 
         this._pongTimeout = 5000;
@@ -71,8 +66,9 @@ export default class Spi {
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
         this._maxWaitForCancelTx = 10000;
+        this._sleepBeforeReconnectMs = 5000;
         this._missedPongsToDisconnect = 2;
-        this._retryBeforeResolvingDeviceIpAddress = 5;
+        this._retriesBeforeResolvingDeviceAddress = 5;
 
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
@@ -117,6 +113,71 @@ export default class Spi {
         } 
     }
 
+    /// <summary>
+    /// Set the api key used for auto address discovery feature
+    /// </summary>
+    /// <returns></returns>
+    SetDeviceApiKey(deviceApiKey)
+    {
+        this._deviceApiKey = deviceApiKey;
+        return true;
+    }
+
+    /// <summary>
+    /// Allows you to set the serial number of the Eftpos
+    /// </summary>
+    SetSerialNumber(serialNumber)
+    {
+        if (this.CurrentStatus != SpiStatus.Unpaired)
+            return false;
+
+        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(serialNumber))
+            this._autoResolveEftposAddress();
+        
+        this._serialNumber = serialNumber;
+        return true;
+    }
+
+    /// <summary>
+    /// Allows you to set the auto address discovery feature. 
+    /// </summary>
+    /// <returns></returns>
+    SetAutoAddressResolution(autoAddressResolution)
+    {
+        if (this.CurrentStatus == SpiStatus.PairedConnected)
+            return false;
+
+        if (autoAddressResolution && !this._autoAddressResolutionEnabled)
+        {
+            // we're turning it on
+            this._autoResolveEftposAddress();
+        }
+        this._autoAddressResolutionEnabled = autoAddressResolution;
+        return true;
+    }
+
+    /// <summary>
+    /// Call this method to set the client library test mode.
+    /// Set it to true only while you are developing the integration. 
+    /// It defaults to false. For a real merchant, always leave it set to false. 
+    /// </summary>
+    /// <param name="testMode"></param>
+    /// <returns></returns>
+    SetTestMode(testMode)
+    {
+        if (this.CurrentStatus != SpiStatus.Unpaired)
+            return false;
+
+        if (testMode != this._inTestMode)
+        {
+            // we're changing mode
+            this._autoResolveEftposAddress();
+        }
+        
+        this._inTestMode = testMode;
+        return true;
+    }
+
     // <summary>
     // Allows you to set the PosId which identifies this instance of your POS.
     // Can only be called in thge Unpaired state. 
@@ -138,7 +199,7 @@ export default class Spi {
     // </summary>
     SetEftposAddress(address)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected) {
+        if (this.CurrentStatus == SpiStatus.PairedConnected || this._autoAddressResolutionEnabled) {
             return false;
         }
 
@@ -147,34 +208,9 @@ export default class Spi {
         return true;
     }
 
-    /// <summary>
-    /// Invoke ResolveDeviceIpAddress(). Once invoked, if Ip address changes it will trigger
-    /// DeviceIpAddressChanged event.
-    /// </summary>
-    GetDeviceIpAddress(deviceIpAddressRequest)
+    static GetVersion()
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected)
-            return;
-
-        // overwrite existing values with new request
-        this._serialNumber = deviceIpAddressRequest.SerialNumber;
-        this._deviceApiKey = deviceIpAddressRequest.ApiKey;
-        this._deviceApiUrl = deviceIpAddressRequest.ApiUrl;
-
-        return this.ResolveDeviceIpAddress();
-    }
-
-    /**
-     * Sets values used to identify the POS software to the EFTPOS terminal.
-     * Must be set before starting!
-     *
-     * @param posVendorId Vendor identifier of the POS itself.
-     * @param posVersion  Version string of the POS itself.
-     */
-    SetPosInfo(posVendorId, posVersion)
-    {
-        this._posVendorId = posVendorId;
-        this._posVersion = posVersion;
+        return SPI_VERSION;
     }
 
     // <summary>
@@ -204,10 +240,6 @@ export default class Spi {
         return false;
     }
 
-    static GetVersion()
-    {
-        return SPI_VERSION;
-    }
     // endregion
 
     // <summary>
@@ -225,7 +257,7 @@ export default class Spi {
 
         if (!this._posId || !this._eftposAddress)
         {
-            this._log.warn("Tried to Pair but missing posId or eftposAddress");
+            this._log.warn("Tried to Pair but missing posId or updatedEftposAddress");
             return false;
         }
 
@@ -704,17 +736,6 @@ export default class Spi {
         return gltResponse.GetSuccessState();
     }
 
-    PrintReceipt(key, payload)
-    {
-        this._send(new PrintingRequest(key, payload).toMessage());
-    }
-
-    
-    GetTerminalStatus()
-    {
-        this._send(new TerminalStatusRequest().ToMessage());
-    }
-
     // endregion
         
     // region Internals for Pairing Flow
@@ -1124,20 +1145,6 @@ export default class Spi {
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
     }
 
-    _handleSetPosInfoResponse(m)
-    {
-        var response = new SetPosInfoResponse(m);
-        if (response.isSuccess())
-        {
-            this._hasSetInfo = true;
-            this._log.Info("Setting POS info successful");
-        }
-        else
-        {
-            this._log.Warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
-        }
-    }
-
     _startTransactionMonitoringThread()
     {
         var needsPublishing = false;
@@ -1167,33 +1174,6 @@ export default class Spi {
         }
 
         setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
-    }
-
-    PrintingResponse(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
-    }
-
-    TerminalStatusResponse(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
-    }
-
-    BatteryLevelChanged(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
-    }
-
-    _handlePrintingResponse(m)
-    {
-        this.PrintingResponse(m);
-    }
-
-    _handleTerminalStatusResponse(m)
-    {
-        this.TerminalStatusResponse(m);
-    }
-
-    _handleBatteryLevelChanged(m)
-    {
-        this.BatteryLevelChanged(m);
     }
 
     // endregion
@@ -1226,7 +1206,7 @@ export default class Spi {
                 break;
 
             case ConnectionState.Connected:
-                this._retrySinceLastDeviceIpAddressResolution = 0;
+                this._retriesSinceLastDeviceAddressResolution = 0;
 
                 if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
@@ -1264,23 +1244,30 @@ export default class Spi {
                     
                     if (this._conn == null) return; // This means the instance has been disposed. Aborting.
                     
-                    if (this._retrySinceLastDeviceIpAddressResolution >= this._retryBeforeResolvingDeviceIpAddress)
+                    if (this._autoAddressResolutionEnabled)
                     {
-                        this.ResolveDeviceIpAddress();
-                        this._retrySinceLastDeviceIpAddressResolution = 0;
+                        if (this._retriesSinceLastDeviceAddressResolution >= this._retriesBeforeResolvingDeviceAddress)
+                        {
+                            this._autoResolveEftposAddress();
+                            this._retriesSinceLastDeviceAddressResolution = 0;
+                        }
+                        else
+                        {
+                            this._retriesSinceLastDeviceAddressResolution += 1;
+                        }
                     }
-                    else
-                    {
-                        this._retrySinceLastDeviceIpAddressResolution += 1;
-                        this._log.info(`Will try to reconnect in 5s...`);
-                        setTimeout(() => {
-                            if (this.CurrentStatus != SpiStatus.Unpaired)
+
+                    this._log.info(`Will try to reconnect in ${this._sleepBeforeReconnectMs}ms...`);
+                    setTimeout(() => {
+                        if (this.CurrentStatus != SpiStatus.Unpaired)
+                        {
+                            // This is non-blocking
+                            if(this._conn) 
                             {
-                                // This is non-blocking
                                 this._conn.Connect();
                             }
-                        }, 5000);
-                    }
+                        }
+                    }, this._sleepBeforeReconnectMs);
                 }
                 else if (this.CurrentFlow == SpiFlow.Pairing)
                 {
@@ -1374,21 +1361,11 @@ export default class Spi {
         }
         else
         {
-            if (!this._hasSetInfo) { 
-                this._callSetPosInfo(); 
-            }
-
             // let's also tell the eftpos our latest table configuration.
             if(this._spiPat) {
                 this._spiPat.PushPayAtTableConfig();
             }
         }
-    }
-
-    _callSetPosInfo()
-    {
-        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
-        this._send(setPosInfoRequest.toMessage());
     }
 
     // <summary>
@@ -1524,12 +1501,6 @@ export default class Spi {
             case Events.KeyRollRequest:
                 this._handleKeyRollingRequest(m);
                 break;
-            case Events.CancelTransactionResponse:
-                this._handleCancelTransactionResponse(m);
-                break;
-            case Events.SetPosInfoResponse:
-                this._handleSetPosInfoResponse(m);
-                break;
             case Events.PayAtTableGetTableConfig:
                 if (this._spiPat == null)
                 {
@@ -1543,15 +1514,6 @@ export default class Spi {
                 break;
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
-                break;
-            case Events.PrintingResponse:
-                this._handlePrintingResponse(m);
-                break;
-            case Events.TerminalStatusResponse:
-                this._handleTerminalStatusResponse(m);
-                break;
-            case Events.BatteryLevelChanged:
-                this._handleBatteryLevelChanged(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);
@@ -1586,20 +1548,41 @@ export default class Spi {
         }
     }
 
-    ResolveDeviceIpAddress()
+    HasSerialNumberChanged(updatedSerialNumber)
     {
-        if (!this.AutoIpResolutionEnable)
+        return this._serialNumber != updatedSerialNumber;
+    }
+
+    HasEftposAddressChanged(updatedEftposAddress)
+    {
+        return this._eftposAddress != updatedEftposAddress;
+    }
+
+    _autoResolveEftposAddress()
+    {
+        if (!this._autoAddressResolutionEnabled)
+            return;
+    
+        if (!this._serialNumber)
             return;
 
-        var service = new DeviceIpAddressService(this._deviceApiUrl);
+        var service = new DeviceAddressService();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey).then((ip) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._inTestMode).then((addressResponse) => 
         {
-            if (ip && ip.Ip)
-            {
-                this.CurrentDeviceStatus = new DeviceIpAddressStatus(ip.Ip, ip.Last_updated);
-            }
-            document.dispatchEvent(new CustomEvent('DeviceIpAddressChanged', {detail: this.CurrentDeviceStatus}));
+            if(!addressResponse || !addressResponse.Address)
+                return;
+
+            if (!this.HasEftposAddressChanged(addressResponse.Address))
+                return;
+
+            // update device and connection address
+            this._eftposAddress = "ws://" + addressResponse.Address;
+            this._conn.Address = this._eftposAddress;
+
+            this.CurrentDeviceStatus = new DeviceAddressStatus(addressResponse.Address, addressResponse.LastUpdated);
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             
             return this.CurrentDeviceStatus;
         });

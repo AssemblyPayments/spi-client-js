@@ -1,24 +1,20 @@
-export class DeviceIpAddressStatus
+export class DeviceAddressStatus
 {
-    constructor(ip, last_updated) 
+    constructor(address, lastUpdated) 
     {
-        this.Ip = ip;
-        this.Last_updated = last_updated;
+        this.Address = address;
+        this.LastUpdated = lastUpdated;
     }
 }
 
-export class DeviceIpAddressService
+export class DeviceAddressService
 {
-    constructor(apiUrl = null)
+    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', isTestMode)
     {
-        this.ApiUrl = apiUrl || 'https://device-address-api-dev.nonprod-wbc.msp.assemblypayments.com/v1/${serialNumber}/ip';
-    }
+        // TODO: Replace with sandbox and prod urls
+        var deviceAddressUri = isTestMode ? `/api/v1/ip?serial=${serialNumber}` : `https://device-address-api-dev.nonprod-wbc.msp.assemblypayments.com/v1/${serialNumber}/ip`;
 
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1')
-    {
-        var deviceIpUrl = this.ApiUrl.replace('${serialNumber}', serialNumber);
-
-        return fetch(deviceIpUrl, {
+        return fetch(deviceAddressUri, {
             method: 'GET',
             headers: {
                 "ASM-MSP-DEVICE-ADDRESS-API-KEY": apiKey
@@ -26,7 +22,7 @@ export class DeviceIpAddressService
         })
         .then(response => response.json())
         .catch((response) => {
-            console.error(`Status code ${response.StatusCode} received from ${deviceIpUrl} - Exception ${response.ErrorException}`);
+            console.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.ErrorException}`);
         })
     }
 }
