@@ -46,10 +46,6 @@ export default class Spi {
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
 
-        this._posVendorId = null;
-        this._posVersion = null;
-        this._hasSetInfo = null;
-
         // We will maintain some state
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
@@ -88,13 +84,6 @@ export default class Spi {
     }
 
     Start() {
-
-        if (!this._posVendorId || !this._posVersion)
-        {
-            // POS information is now required to be set
-            this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
-            throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
-        }
 
         this._resetConn();
         this._startTransactionMonitoringThread();
@@ -806,7 +795,7 @@ export default class Spi {
 
     _handleDropKeysAdvice(m)
     {
-        this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
+        this._log.info("Eftpos was Unpaired. I shall unpair from my end as well.");
         this._doUnpair();
     }
 
@@ -885,7 +874,7 @@ export default class Spi {
         var incomingPosRefId = m.Data.pos_ref_id;
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            _log.Info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            _log.info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
         var phoneForAuthRequired = new PhoneForAuthRequired(m);
@@ -1129,7 +1118,7 @@ export default class Spi {
         var incomingPosRefId = m.Data.pos_ref_id;
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            this._log.Info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
 
@@ -1138,7 +1127,7 @@ export default class Spi {
 
         if (cancelResponse.Success) return;
 
-        this._log.Warn("Failed to cancel transaction: reason=" + cancelResponse.GetErrorReason() + ", detail=" + cancelResponse.GetErrorDetail());
+        this._log.warn("Failed to cancel transaction: reason=" + cancelResponse.GetErrorReason() + ", detail=" + cancelResponse.GetErrorDetail());
 
         txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
     
