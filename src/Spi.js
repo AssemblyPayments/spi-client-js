@@ -13,7 +13,7 @@ import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
-import {GetLastTransactionRequest, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
+import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
@@ -1194,11 +1194,11 @@ export default class Spi {
         if (response.isSuccess())
         {
             this._hasSetInfo = true;
-            this._log.Info("Setting POS info successful");
+            this._log.info("Setting POS info successful");
         }
         else
         {
-            this._log.Warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
+            this._log.warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
         }
     }
 
