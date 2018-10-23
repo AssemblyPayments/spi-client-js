@@ -41,6 +41,7 @@ export default class Spi {
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey = null;
+        this._acquirerCode = null;
         this._inTestMode = false;
         this._autoAddressResolutionEnabled = false;
 
@@ -115,6 +116,15 @@ export default class Spi {
     }
 
     /// <summary>
+    /// Set the acquirer code of your bank, please contact Assembly's Integration Engineers for acquirer code.
+    /// </summary>
+    SetAcquirerCode(acquirerCode)
+    {
+        this._acquirerCode = acquirerCode;
+        return true;
+    }
+
+    /// <summary>
     /// Set the api key used for auto address discovery feature
     /// </summary>
     /// <returns></returns>
@@ -132,10 +142,13 @@ export default class Spi {
         if (this.CurrentStatus != SpiStatus.Unpaired)
             return false;
 
-        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(serialNumber))
-            this._autoResolveEftposAddress();
-        
+        var was = this._serialNumber;
         this._serialNumber = serialNumber;
+        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(was))
+        {
+            this._autoResolveEftposAddress();
+        }
+
         return true;
     }
 
@@ -143,17 +156,19 @@ export default class Spi {
     /// Allows you to set the auto address discovery feature. 
     /// </summary>
     /// <returns></returns>
-    SetAutoAddressResolution(autoAddressResolution)
+    SetAutoAddressResolution(autoAddressResolutionEnable)
     {
         if (this.CurrentStatus == SpiStatus.PairedConnected)
             return false;
 
-        if (autoAddressResolution && !this._autoAddressResolutionEnabled)
+        var was = this._autoAddressResolutionEnabled;
+        this._autoAddressResolutionEnabled = autoAddressResolutionEnable;
+        if (autoAddressResolutionEnable && !was)
         {
             // we're turning it on
             this._autoResolveEftposAddress();
         }
-        this._autoAddressResolutionEnabled = autoAddressResolution;
+
         return true;
     }
 
@@ -169,13 +184,12 @@ export default class Spi {
         if (this.CurrentStatus != SpiStatus.Unpaired)
             return false;
 
-        if (testMode != this._inTestMode)
-        {
-            // we're changing mode
-            this._autoResolveEftposAddress();
-        }
-        
+        if (testMode == this._inTestMode)
+            return true;
+
+        // we're changing mode
         this._inTestMode = testMode;
+        this._autoResolveEftposAddress();
         return true;
     }
 
@@ -1658,7 +1672,7 @@ export default class Spi {
 
         var service = new DeviceAddressService();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._inTestMode).then((deviceAddressStatus) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._inTestMode).then((deviceAddressStatus) => 
         {
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
                 return;

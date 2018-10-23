@@ -6,11 +6,11 @@ export class DeviceAddressStatus
     {
         if(SPI_URI_SCHEME === 'wss') 
         {
-            return this.Fqdn;
+            return this.fqdn;
         } 
         else
         {
-            return this.Ip;
+            return this.ip;
         }
     }
 
@@ -26,19 +26,21 @@ export class DeviceAddressStatus
         }
     }
 
-    constructor(address, lastUpdated) 
+    constructor() 
     {
-        this.Address = address;
-        this.LastUpdated = lastUpdated;
+        this.ip = null;
+        this.fqdn = null;
+        this.last_updated = null;
     }
 }
 
 export class DeviceAddressService
 {
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', isTestMode)
+    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isTestMode)
     {
-        // TODO: Replace with sandbox and prod urls
-        var deviceAddressUri = isTestMode ? `/api/v1/ip?serial=${serialNumber}` : `https://device-address-api-dev.nonprod-wbc.msp.assemblypayments.com/v1/${serialNumber}/ip`;
+        var path = (SPI_URI_SCHEME === 'wss') ? 'fqdn' : 'ip';
+        // https://device-address-api-dev.nonprod-${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}
+        var deviceAddressUri = isTestMode ? `/api/v1/${path}?serial=${serialNumber}&acquirerCode=${acquirerCode}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
         return fetch(deviceAddressUri, {
             method: 'GET',
@@ -50,7 +52,7 @@ export class DeviceAddressService
             return Object.assign(new DeviceAddressStatus(),response.json());
         })
         .catch((response) => {
-            console.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.ErrorException}`);
+            console.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.error}`);
         })
     }
 }
