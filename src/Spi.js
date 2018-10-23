@@ -11,7 +11,7 @@ import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
-import {DeviceAddressService} from './Service/DeviceService';
+import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
 
 export const SPI_VERSION = '2.4.0';
 
@@ -1672,8 +1672,10 @@ export default class Spi {
 
         var service = new DeviceAddressService();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._inTestMode).then((deviceAddressStatus) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._inTestMode).then((response) => 
         {
+            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(), response);
+
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
                 return;
 

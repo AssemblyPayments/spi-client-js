@@ -48,9 +48,7 @@ export class DeviceAddressService
                 "ASM-MSP-DEVICE-ADDRESS-API-KEY": apiKey
             }
         })
-        .then(response => {
-            return Object.assign(new DeviceAddressStatus(),response.json());
-        })
+        .then(response => response.json())
         .catch((response) => {
             console.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.error}`);
         })
