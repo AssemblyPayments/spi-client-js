@@ -4,7 +4,8 @@ export const ConnectionState = {
     Connected: 'Connected'
 };
 
-export const SPI_PROTOCOL = 'spi.2.4.0';
+export const SPI_PROTOCOL   = 'spi.2.4.0';
+export const SPI_URI_SCHEME = 'wss'; // wss = secure (https / TLS), ws = non secure (http)
 
 export class ConnectionStateEventArgs
 {

@@ -1,18 +1,19 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
 import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
-import {Connection, ConnectionState} from './Connection';
+import {SPI_URI_SCHEME, Connection, ConnectionState} from './Connection';
 import {SpiPayAtTable} from './SpiPayAtTable';
 import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
 import {DropKeysRequest} from './Pairing';
+import {SetPosInfoRequest} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
-import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
+import {DeviceAddressService} from './Service/DeviceService';
 
-const SPI_VERSION = '2.4.0';
+export const SPI_VERSION = '2.4.0';
 
 export default class Spi {
 
@@ -34,7 +35,7 @@ export default class Spi {
         this._posId = posId;
         this._serialNumber = serialNumber;
         this._secrets = secrets;
-        this._eftposAddress = "ws://" + eftposAddress;
+        this._eftposAddress = `${SPI_URI_SCHEME}://${eftposAddress}`;
         this._log = console;
         this.Config = new SpiConfig();
 
@@ -203,7 +204,7 @@ export default class Spi {
             return false;
         }
 
-        this._eftposAddress = "ws://" + address;
+        this._eftposAddress = `${SPI_URI_SCHEME}://${address}`;
         this._conn.Address = this._eftposAddress;
         return true;
     }
@@ -1441,7 +1442,7 @@ export default class Spi {
         var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
         this._send(setPosInfoRequest.toMessage());
     }
-    
+
     // <summary>
     // When we disconnect, we should also stop the periodic ping.
     // </summary>
@@ -1657,19 +1658,19 @@ export default class Spi {
 
         var service = new DeviceAddressService();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._inTestMode).then((addressResponse) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._inTestMode).then((deviceAddressStatus) => 
         {
-            if(!addressResponse || !addressResponse.Address)
+            if(!deviceAddressStatus || !deviceAddressStatus.Address)
                 return;
 
-            if (!this.HasEftposAddressChanged(addressResponse.Address))
+            if (!this.HasEftposAddressChanged(deviceAddressStatus.Address))
                 return;
 
             // update device and connection address
-            this._eftposAddress = "ws://" + addressResponse.Address;
+            this._eftposAddress = `${SPI_URI_SCHEME}://${deviceAddressStatus.Address}`;
             this._conn.Address = this._eftposAddress;
 
-            this.CurrentDeviceStatus = new DeviceAddressStatus(addressResponse.Address, addressResponse.LastUpdated);
+            this.CurrentDeviceStatus = deviceAddressStatus;
 
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             
