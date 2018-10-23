@@ -1,17 +1,22 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
-import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult} from './SpiModels';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
+import {PairingHelper} from './PairingHelper';
 import {SPI_URI_SCHEME, Connection, ConnectionState} from './Connection';
 import {SpiPayAtTable} from './SpiPayAtTable';
 import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
-import {DropKeysRequest} from './Pairing';
-import {SetPosInfoRequest} from './PosInfo';
+import {CashoutOnlyRequest} from './Cashout';
+import {SettleRequest} from './Settlement';
+import {DropKeysRequest, KeyRequest, KeyCheck, PairResponse} from './Pairing';
+import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
-import {GetLastTransactionRequest, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse} from './Purchase';
+import {GetLastTransactionRequest, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
+import {PrintingRequest} from './Printing';
+import {TerminalStatusRequest} from './TerminalStatus';
 
 export const SPI_VERSION = '2.4.0';
 

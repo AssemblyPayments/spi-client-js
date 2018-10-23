@@ -1,4 +1,4 @@
-class SetPosInfoRequest
+export class SetPosInfoRequest
 {
     constructor(version, vendorId, libraryLanguage, libraryVersion, otherInfo)
     {
@@ -23,7 +23,7 @@ class SetPosInfoRequest
     }
 }
 
-class SetPosInfoResponse
+export class SetPosInfoResponse
 {
     constructor(m)
     {
@@ -48,7 +48,7 @@ class SetPosInfoResponse
     }
 }
 
-class DeviceInfo
+export class DeviceInfo
 {
     static GetAppDeviceInfo()
     {
