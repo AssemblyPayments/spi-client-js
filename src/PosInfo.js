@@ -1,3 +1,6 @@
+import {Message, Events, SuccessState} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+
 export class SetPosInfoRequest
 {
     constructor(version, vendorId, libraryLanguage, libraryVersion, otherInfo)

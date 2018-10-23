@@ -1,3 +1,6 @@
+import {Events, Message, SuccessState} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+
 export class PrintingRequest
 {
     constructor(key, payload)

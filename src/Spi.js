@@ -1,5 +1,5 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
-import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
 import {PairingHelper} from './PairingHelper';
 import {SPI_URI_SCHEME, Connection, ConnectionState} from './Connection';
@@ -1458,7 +1458,7 @@ export default class Spi {
 
     _callSetPosInfo()
     {
-        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
+        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
         this._send(setPosInfoRequest.toMessage());
     }
 

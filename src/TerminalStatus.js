@@ -1,3 +1,6 @@
+import {Events, Message} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+
 export class TerminalStatusRequest
 {
     ToMessage()
