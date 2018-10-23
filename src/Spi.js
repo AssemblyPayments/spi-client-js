@@ -46,6 +46,10 @@ export default class Spi {
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
 
+        this._posVendorId = null;
+        this._posVersion = null;
+        this._hasSetInfo = null;
+
         // We will maintain some state
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
@@ -84,6 +88,13 @@ export default class Spi {
     }
 
     Start() {
+
+        if (!this._posVendorId || !this._posVersion)
+        {
+            // POS information is now required to be set
+            this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+        }
 
         this._resetConn();
         this._startTransactionMonitoringThread();
@@ -200,6 +211,19 @@ export default class Spi {
     static GetVersion()
     {
         return SPI_VERSION;
+    }
+
+    /**
+     * Sets values used to identify the POS software to the EFTPOS terminal.
+     * Must be set before starting!
+     *
+     * @param posVendorId Vendor identifier of the POS itself.
+     * @param posVersion  Version string of the POS itself.
+     */
+    SetPosInfo(posVendorId, posVersion)
+    {
+        this._posVendorId = posVendorId;
+        this._posVersion = posVersion;
     }
 
     // <summary>
@@ -724,6 +748,16 @@ export default class Spi {
 
         return gltResponse.GetSuccessState();
     }
+    
+    PrintReceipt(key, payload)
+    {
+        this._send(new PrintingRequest(key, payload).toMessage());
+    }
+
+    GetTerminalStatus()
+    {
+        this._send(new TerminalStatusRequest().ToMessage());
+    }
 
     // endregion
         
@@ -1134,6 +1168,20 @@ export default class Spi {
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
     }
 
+    _handleSetPosInfoResponse(m)
+    {
+        var response = new SetPosInfoResponse(m);
+        if (response.isSuccess())
+        {
+            this._hasSetInfo = true;
+            this._log.Info("Setting POS info successful");
+        }
+        else
+        {
+            this._log.Warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
+        }
+    }
+
     _startTransactionMonitoringThread()
     {
         var needsPublishing = false;
@@ -1163,6 +1211,33 @@ export default class Spi {
         }
 
         setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
+    }
+
+    PrintingResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    TerminalStatusResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    BatteryLevelChanged(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    _handlePrintingResponse(m)
+    {
+        this.PrintingResponse(m);
+    }
+
+    _handleTerminalStatusResponse(m)
+    {
+        this.TerminalStatusResponse(m);
+    }
+
+    _handleBatteryLevelChanged(m)
+    {
+        this.BatteryLevelChanged(m);
     }
 
     // endregion
@@ -1350,6 +1425,10 @@ export default class Spi {
         }
         else
         {
+            if (!this._hasSetInfo) { 
+                this._callSetPosInfo(); 
+            }
+
             // let's also tell the eftpos our latest table configuration.
             if(this._spiPat) {
                 this._spiPat.PushPayAtTableConfig();
@@ -1357,6 +1436,12 @@ export default class Spi {
         }
     }
 
+    _callSetPosInfo()
+    {
+        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", this.GetVersion(), DeviceInfo.GetAppDeviceInfo());
+        this._send(setPosInfoRequest.toMessage());
+    }
+    
     // <summary>
     // When we disconnect, we should also stop the periodic ping.
     // </summary>
@@ -1490,6 +1575,12 @@ export default class Spi {
             case Events.KeyRollRequest:
                 this._handleKeyRollingRequest(m);
                 break;
+            case Events.CancelTransactionResponse:
+                this._handleCancelTransactionResponse(m);
+                break;
+            case Events.SetPosInfoResponse:
+                this._handleSetPosInfoResponse(m);
+                break;
             case Events.PayAtTableGetTableConfig:
                 if (this._spiPat == null)
                 {
@@ -1503,6 +1594,15 @@ export default class Spi {
                 break;
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
+                break;
+            case Events.PrintingResponse:
+                this._handlePrintingResponse(m);
+                break;
+            case Events.TerminalStatusResponse:
+                this._handleTerminalStatusResponse(m);
+                break;
+            case Events.BatteryLevelChanged:
+                this._handleBatteryLevelChanged(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);

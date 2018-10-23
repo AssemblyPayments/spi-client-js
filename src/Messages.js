@@ -20,6 +20,7 @@ export const Events = {
      PurchaseRequest : "purchase",
      PurchaseResponse : "purchase_response",
      CancelTransactionRequest : "cancel_transaction",
+     CancelTransactionResponse : "cancel_response",
      GetLastTransactionRequest : "get_last_transaction",
      GetLastTransactionResponse : "last_transaction",
      RefundRequest : "refund",
@@ -41,6 +42,9 @@ export const Events = {
      SettlementEnquiryRequest : "settlement_enquiry",
      SettlementEnquiryResponse : "settlement_enquiry_response",
 
+     SetPosInfoRequest : "set_pos_info",
+     SetPosInfoResponse : "set_pos_info_response",
+
      KeyRollRequest : "request_use_next_keys",
      KeyRollResponse : "response_use_next_keys",
 
@@ -53,7 +57,15 @@ export const Events = {
     PayAtTableSetTableConfig : "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
     PayAtTableGetBillDetails : "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
     PayAtTableBillDetails : "bill_details",        // outgoing. We reply with this when eftpos requests to us get_bill_details.
-    PayAtTableBillPayment : "bill_payment"        // incoming. When the eftpos advices 
+    PayAtTableBillPayment : "bill_payment",        // incoming. When the eftpos advices 
+
+    PrintingRequest : "print",
+    PrintingResponse : "print_response",
+
+    TerminalStatusRequest : "get_terminal_status",
+    TerminalStatusResponse : "terminal_status",
+
+    BatteryLevelChanged : "battery_level_changed"
 };
 
 export const SuccessState = {
