@@ -2,12 +2,12 @@ import {Message, MessageStamp, Events, SuccessState} from './Messages';
 import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
 import {PairingHelper} from './PairingHelper';
-import {SPI_URI_SCHEME, Connection, ConnectionState} from './Connection';
+import {Connection, ConnectionState} from './Connection';
 import {SpiPayAtTable} from './SpiPayAtTable';
 import {PayAtTableConfig} from './PayAtTable';
 import {SpiPreauth} from './SpiPreauth';
 import {CashoutOnlyRequest} from './Cashout';
-import {SettleRequest} from './Settlement';
+import {SettleRequest, SettlementEnquiryRequest} from './Settlement';
 import {DropKeysRequest, KeyRequest, KeyCheck, PairResponse} from './Pairing';
 import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
@@ -40,14 +40,15 @@ export default class Spi {
         this._posId = posId;
         this._serialNumber = serialNumber;
         this._secrets = secrets;
-        this._eftposAddress = `${SPI_URI_SCHEME}://${eftposAddress}`;
+        this._useSecureWebSockets = false;
+        this._eftposAddress = eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
 
         this.CurrentDeviceStatus = null;
-        this._deviceApiKey = null;
-        this._acquirerCode = null;
-        this._inTestMode = false;
+        this._deviceApiKey  = null;
+        this._acquirerCode  = null;
+        this._inTestMode    = false;
         this._autoAddressResolutionEnabled = false;
 
         // Our stamp for signing outgoing messages
@@ -198,6 +199,16 @@ export default class Spi {
         return true;
     }
 
+    /// <summary>
+    /// Set the client library to use secure web sockets TLS (wss protocol)
+    /// </summary>
+    /// <param name="isSecure"></param>
+    /// <returns></returns>
+    SetSecureWebSockets(useSecureWebSockets)
+    {
+        this._useSecureWebSockets = useSecureWebSockets;
+    }
+
     // <summary>
     // Allows you to set the PosId which identifies this instance of your POS.
     // Can only be called in thge Unpaired state. 
@@ -223,7 +234,7 @@ export default class Spi {
             return false;
         }
 
-        this._eftposAddress = `${SPI_URI_SCHEME}://${address}`;
+        this._eftposAddress = address;
         this._conn.Address = this._eftposAddress;
         return true;
     }
@@ -1267,7 +1278,7 @@ export default class Spi {
     _resetConn()
     {
         // Setup the Connection
-        this._conn = new Connection();
+        this._conn = new Connection(this._useSecureWebSockets);
         this._conn.Address = this._eftposAddress;
 
         // Register our Event Handlers
@@ -1677,9 +1688,9 @@ export default class Spi {
 
         var service = new DeviceAddressService();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._inTestMode).then((response) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
         {
-            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(), response);
+            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(this._useSecureWebSockets), response);
 
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
                 return;
@@ -1688,7 +1699,7 @@ export default class Spi {
                 return;
 
             // update device and connection address
-            this._eftposAddress = `${SPI_URI_SCHEME}://${deviceAddressStatus.Address}`;
+            this._eftposAddress = deviceAddressStatus.Address;
             this._conn.Address = this._eftposAddress;
 
             this.CurrentDeviceStatus = deviceAddressStatus;

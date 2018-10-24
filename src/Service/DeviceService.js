@@ -1,10 +1,8 @@
-import {SPI_URI_SCHEME} from '../Connection';
-
 export class DeviceAddressStatus
 {
     get Address()
     {
-        if(SPI_URI_SCHEME === 'wss') 
+        if(this.UseSecureWebSockets) 
         {
             return this.fqdn;
         } 
@@ -16,7 +14,7 @@ export class DeviceAddressStatus
 
     set Address(address)
     {
-        if(SPI_URI_SCHEME === 'wss') 
+        if(this.UseSecureWebSockets) 
         {
             this.fqdn = addreses;
         } 
@@ -26,8 +24,10 @@ export class DeviceAddressStatus
         }
     }
 
-    constructor() 
+    constructor(useSecureWebSockets) 
     {
+        this.UseSecureWebSockets = useSecureWebSockets;
+
         this.ip = null;
         this.fqdn = null;
         this.last_updated = null;
@@ -36,9 +36,9 @@ export class DeviceAddressStatus
 
 export class DeviceAddressService
 {
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isTestMode)
+    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
     {
-        var path = (SPI_URI_SCHEME === 'wss') ? 'fqdn' : 'ip';
+        var path = useSecureWebSockets ? 'fqdn' : 'ip';
         // https://device-address-api-dev.nonprod-${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}
         var deviceAddressUri = isTestMode ? `/api/v1/${path}?serial=${serialNumber}&acquirerCode=${acquirerCode}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 

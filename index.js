@@ -13,6 +13,7 @@ export {RefundResponse, PurchaseResponse, GetLastTransactionResponse, MotoPurcha
 export {TerminalStatusResponse, TerminalBattery} from './src/TerminalStatus';
 export {CashoutOnlyResponse} from './src/Cashout';
 export {Settlement} from './src/Settlement';
+export {RequestIdHelper} from './src/RequestIdHelper';
 
 window.Spi = Spi;
 window.Logger = Logger;
