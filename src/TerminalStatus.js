@@ -23,7 +23,7 @@ export class TerminalStatusResponse
     }
     GetBatteryLevel()
     {
-        return this._m.Data.battery_level;
+        return parseInt(this._m.Data.battery_level,10);
     }
     IsCharging()
     {
@@ -35,6 +35,6 @@ export class TerminalBattery
 {
     constructor(m)
     {
-        this.BatteryLevel = m.Data.battery_level;
+        this.BatteryLevel = parseInt(m.Data.battery_level,10);
     }
 }

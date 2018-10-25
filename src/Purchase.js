@@ -356,18 +356,24 @@ export class GetLastTransactionResponse
 
 export class RefundRequest
 {
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, isSuppressMerchantPassword)
     {
         this.AmountCents = amountCents;
         this.Id = RequestIdHelper.Id("refund");
         this.PosRefId = posRefId;
+        this.IsSuppressMerchantPassword = isSuppressMerchantPassword;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
     
     ToMessage()
     {
-        let data = {refund_amount: this.AmountCents, pos_ref_id: this.PosRefId};
+        let data = {
+            refund_amount: this.AmountCents, 
+            pos_ref_id: this.PosRefId,
+            suppress_merchant_password: this.IsSuppressMerchantPassword
+        };
+        
         this.Config.addReceiptConfig(data);
         this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
