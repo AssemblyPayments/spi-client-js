@@ -21,12 +21,11 @@ export class MessageEventArgs
 }
 
 export class Connection {
-    constructor(useSecureWebSockets) {
+    constructor() {
         this.Address    = null;
         this.Connected  = false;
         this.State      = ConnectionState.Disconnected;
         this.SpiProtocol = SPI_PROTOCOL;
-        this.UseSecureWebSockets = useSecureWebSockets;
         this._ws        = null;
 
         if(typeof WebSocket === 'undefined') {
@@ -34,7 +33,7 @@ export class Connection {
         }
     }
 
-    Connect() {
+    Connect(UseSecureWebSockets) {
         if(this.State === ConnectionState.Connected || this.State === ConnectionState.Connecting) {
             // already connected or connecting. disconnect first.
             return;
@@ -44,7 +43,7 @@ export class Connection {
 
         //Create a new socket instance specifying the url, SPI protocol and Websocket to use.
         //The will create a TCP/IP socket connection to the provided URL and perform HTTP websocket negotiation
-        this._ws           = new WebSocket(`${this.UseSecureWebSockets ? 'wss' : 'ws'}://${this.Address}`, this.SpiProtocol);
+        this._ws           = new WebSocket(`${UseSecureWebSockets ? 'wss' : 'ws'}://${this.Address}`, this.SpiProtocol);
         this._ws.onopen    = () => this.pollWebSocketConnection();
         this._ws.onmessage = (payload) => this.onMessageReceived(payload);
         this._ws.onclose   = () => this.onClosed();

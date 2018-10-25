@@ -317,7 +317,7 @@ export default class Spi {
         });
 
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
-        this._conn.Connect(); // Non-Blocking
+        this._conn.Connect(this._useSecureWebSockets); // Non-Blocking
         return true;
     }
 
@@ -1278,7 +1278,7 @@ export default class Spi {
     _resetConn()
     {
         // Setup the Connection
-        this._conn = new Connection(this._useSecureWebSockets);
+        this._conn = new Connection();
         this._conn.Address = this._eftposAddress;
 
         // Register our Event Handlers
