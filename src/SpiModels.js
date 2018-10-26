@@ -1,7 +1,9 @@
+import {SuccessState} from './Messages';
+
 // <summary>
 // Represents the 3 Pairing statuses that the Spi instanxce can be in.
 // </summary>
-const SpiStatus = 
+export const SpiStatus = 
 {
     // <summary>
     // Paired and Connected
@@ -22,7 +24,7 @@ const SpiStatus =
 // <summary>
 // The Spi instance can be in one of these flows at any point in time.
 // </summary>
-const SpiFlow = 
+export const SpiFlow = 
 {
     // <summary>
     // Currently going through the Pairing Process Flow.
@@ -45,7 +47,7 @@ const SpiFlow =
 // <summary>
 // Represents the Pairing Flow State during the pairing process 
 // </summary>
-class PairingFlowState
+export class PairingFlowState
 {
     constructor(state) {
         // <summary>
@@ -87,7 +89,7 @@ class PairingFlowState
     }   
 }
 
-const TransactionType = 
+export const TransactionType = 
 {
     Purchase: 'Purchase',
     Refund: 'Refund',
@@ -105,7 +107,7 @@ const TransactionType =
 // Used as a return in the InitiateTx methods to signify whether 
 // the transaction was initiated or not, and a reason to go with it.
 // </summary>
-class InitiateTxResult
+export class InitiateTxResult
 {
     constructor(initiated, message)
     {
@@ -128,7 +130,7 @@ class InitiateTxResult
 // whether the call was valid or not.
 // These attributes work for COM interop.
 // </summary>
-class MidTxResult
+export class MidTxResult
 {
     // <summary>
     // This default stucture works for COM interop.
@@ -143,7 +145,7 @@ class MidTxResult
 // <summary>
 // Represents the State during a TransactionFlow
 // </summary>
-class TransactionFlowState
+export class TransactionFlowState
 {
     constructor(posRefId, type, amountCents, message, msg)
     {
@@ -245,6 +247,8 @@ class TransactionFlowState
         // Whether we're currently waiting for a Get Last Transaction Response to get an update. 
         // </summary>
         this.AwaitingGltResponse = null;
+
+        this.GLTResponsePosRefId = null;
     }
 
     Sent(msg)
@@ -259,6 +263,12 @@ class TransactionFlowState
     {
         this.AttemptingToCancel = true;
         this.CancelAttemptTime = Date.now();
+        this.DisplayMessage = msg;
+    }
+
+    CancelFailed(msg)
+    {
+        this.AttemptingToCancel = false;
         this.DisplayMessage = msg;
     }
 
@@ -335,7 +345,7 @@ class TransactionFlowState
 // <summary>
 // Used as a return in the SubmitAuthCode method to signify whether Code is valid
 // </summary>
-class SubmitAuthCodeResult
+export class SubmitAuthCodeResult
 {
     constructor(validFormat, message)
     {
@@ -348,11 +358,12 @@ class SubmitAuthCodeResult
     }
 }
 
-class SpiConfig
+export class SpiConfig
 {
     constructor() {
         this.PromptForCustomerCopyOnEftpos  = false;
         this.SignatureFlowOnEftpos          = false;
+        this.PrintMerchantCopy              = false;
     }
 
     addReceiptConfig(messageData)
@@ -365,12 +376,52 @@ class SpiConfig
         {
             messageData.print_for_signature_required_transactions = this.SignatureFlowOnEftpos;
         }
-
+        if (this.PrintMerchantCopy)
+        {
+            messageData.print_merchant_copy = this.PrintMerchantCopy;
+        }
         return messageData;
     }
 
     ToString()
     {
-        return `PromptForCustomerCopyOnEftpos:${this.PromptForCustomerCopyOnEftpos} SignatureFlowOnEftpos:${this.SignatureFlowOnEftpos}`;
+        return `PromptForCustomerCopyOnEftpos:${this.PromptForCustomerCopyOnEftpos} SignatureFlowOnEftpos:${this.SignatureFlowOnEftpos} PrintMerchantCopy: ${this.PrintMerchantCopy}`;
+    }
+}
+
+export class TransactionOptions
+{
+    constructor() {
+        this._customerReceiptHeader = null;
+        this._customerReceiptFooter = null;
+        this._merchantReceiptHeader = null;
+        this._merchantReceiptFooter = null;
+    }
+
+    SetCustomerReceiptHeader(customerReceiptHeader)
+    {
+        this._customerReceiptHeader = customerReceiptHeader;
+    }
+
+    SetCustomerReceiptFooter(customerReceiptFooter)
+    {
+        this._customerReceiptFooter = customerReceiptFooter;
+    }
+    SetMerchantReceiptHeader(merchantReceiptHeader)
+    {
+        this._merchantReceiptHeader = merchantReceiptHeader;
+    }
+    SetMerchantReceiptFooter(merchantReceiptFooter)
+    {
+        this._merchantReceiptFooter = merchantReceiptFooter;
+    }
+    AddOptions(messageData)
+    {
+        messageData.customer_receipt_header = this._customerReceiptHeader;
+        messageData.customer_receipt_footer = this._customerReceiptFooter;
+        messageData.merchant_receipt_header = this._merchantReceiptHeader;
+        messageData.merchant_receipt_footer = this._merchantReceiptFooter;
+
+        return messageData;
     }
 }

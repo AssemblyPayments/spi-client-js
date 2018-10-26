@@ -1,6 +1,6 @@
 let __RequestIdHelperCounter = 1;
 
-class RequestIdHelper {
+export class RequestIdHelper {
     static Id(prefix) {
         return prefix + __RequestIdHelperCounter++;
     }

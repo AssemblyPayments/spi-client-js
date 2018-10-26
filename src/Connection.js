@@ -1,26 +1,26 @@
-const ConnectionState = {
+export const ConnectionState = {
     Disconnected: 'Disconnected',
     Connecting: 'Connecting',
     Connected: 'Connected'
 };
 
-const SPI_PROTOCOL = 'spi.2.1.0';
+export const SPI_PROTOCOL   = 'spi.2.4.0';
 
-class ConnectionStateEventArgs
+export class ConnectionStateEventArgs
 {
     constructor(connectionState) {
         this.ConnectionState = connectionState;
     }
 }
 
-class MessageEventArgs
+export class MessageEventArgs
 {
     constructor(message) {
         this.Message = message;
     }
 }
 
-class Connection {
+export class Connection {
     constructor() {
         this.Address    = null;
         this.Connected  = false;
@@ -33,7 +33,7 @@ class Connection {
         }
     }
 
-    Connect() {
+    Connect(UseSecureWebSockets) {
         if(this.State === ConnectionState.Connected || this.State === ConnectionState.Connecting) {
             // already connected or connecting. disconnect first.
             return;
@@ -43,7 +43,7 @@ class Connection {
 
         //Create a new socket instance specifying the url, SPI protocol and Websocket to use.
         //The will create a TCP/IP socket connection to the provided URL and perform HTTP websocket negotiation
-        this._ws           = new WebSocket(this.Address, this.SpiProtocol);
+        this._ws           = new WebSocket(`${UseSecureWebSockets ? 'wss' : 'ws'}://${this.Address}`, this.SpiProtocol);
         this._ws.onopen    = () => this.pollWebSocketConnection();
         this._ws.onmessage = (payload) => this.onMessageReceived(payload);
         this._ws.onclose   = () => this.onClosed();

@@ -1,3 +1,5 @@
+import {SpiConfig} from '../src/SpiModels';
+
 describe('SpiModels', function() {
     'use strict';
   

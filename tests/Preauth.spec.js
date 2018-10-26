@@ -1,3 +1,16 @@
+import {Message} from '../src/Messages';
+import {
+    PreauthEvents, 
+    AccountVerifyRequest, 
+    AccountVerifyResponse, 
+    PreauthOpenRequest, 
+    PreauthTopupRequest, 
+    PreauthPartialCancellationRequest, 
+    PreauthExtendRequest,
+    PreauthCancelRequest,
+    PreauthCompletionRequest,
+    PreauthResponse} from '../src/Preauth';
+
 describe('Preauth', function() {
     'use strict';  
 

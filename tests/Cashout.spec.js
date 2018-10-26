@@ -1,3 +1,6 @@
+import {CashoutOnlyRequest, CashoutOnlyResponse} from '../src/Cashout';
+import {Message} from '../src/Messages';
+
 describe('Cashout', function() {
     'use strict';  
 

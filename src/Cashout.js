@@ -1,25 +1,33 @@
-class CashoutOnlyRequest
+import {Message, Events, SuccessState} from './Messages';
+import {SpiConfig, TransactionOptions} from './SpiModels';
+import {RequestIdHelper} from './RequestIdHelper';
+
+export class CashoutOnlyRequest
 {  
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, surchargeAmount)
     {
         this.PosRefId = posRefId;
         this.CashoutAmount = amountCents;
+        this.SurchargeAmount = surchargeAmount;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
     
     ToMessage()
     {
         var data = {
             "pos_ref_id": this.PosRefId,
-            "cash_amount": this.CashoutAmount
+            "cash_amount": this.CashoutAmount,
+            "surcharge_amount": this.SurchargeAmount
         };
 
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("cshout"), Events.CashoutOnlyRequest, data, true);
     }
 }
 
-class CashoutOnlyResponse
+export class CashoutOnlyResponse
 {
     constructor(m)
     {
@@ -115,6 +123,11 @@ class CashoutOnlyResponse
         return this._m.Data["customer_receipt_printed"];
     }
     
+    GetSurchargeAmount()
+    {
+        return this._m.Data["surcharge_amount"];
+    }
+
     GetResponseValue(attribute)
     {
         return this._m.Data[attribute];

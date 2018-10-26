@@ -1,3 +1,8 @@
+import {Message, Events, MessageStamp} from '../src/Messages';
+import {Secrets} from '../src/Secrets';
+import {RequestIdHelper} from '../src/RequestIdHelper';
+import {PurchaseHelper} from '../src/PurchaseHelper';
+
 describe('Purchase', function() {
     'use strict';  
 

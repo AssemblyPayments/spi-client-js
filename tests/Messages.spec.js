@@ -1,3 +1,6 @@
+import {Message, MessageStamp, Events} from '../src/Messages';
+import {Secrets} from '../src/Secrets';
+
 describe('MessagesTest', function() {
     'use strict';
 

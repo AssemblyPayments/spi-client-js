@@ -1,3 +1,7 @@
+import {Message} from '../src/Messages';
+import {PairingHelper} from '../src/PairingHelper';
+import {KeyRequest} from '../src/Pairing';
+
 describe('PairingTests', function() {
     'use strict';
   

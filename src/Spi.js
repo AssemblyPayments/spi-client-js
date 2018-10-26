@@ -1,4 +1,26 @@
-class Spi {
+import {Message, MessageStamp, Events, SuccessState} from './Messages';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
+import {RequestIdHelper} from './RequestIdHelper';
+import {PairingHelper} from './PairingHelper';
+import {Connection, ConnectionState} from './Connection';
+import {SpiPayAtTable} from './SpiPayAtTable';
+import {PayAtTableConfig} from './PayAtTable';
+import {SpiPreauth} from './SpiPreauth';
+import {CashoutOnlyRequest} from './Cashout';
+import {SettleRequest, SettlementEnquiryRequest} from './Settlement';
+import {DropKeysRequest, KeyRequest, KeyCheck, PairResponse} from './Pairing';
+import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
+import {PurchaseHelper} from './PurchaseHelper';
+import {KeyRollingHelper} from './KeyRollingHelper';
+import {PingHelper, PongHelper} from './PingHelper';
+import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
+import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
+import {PrintingRequest} from './Printing';
+import {TerminalStatusRequest} from './TerminalStatus';
+
+export const SPI_VERSION = '2.4.0';
+
+export default class Spi {
 
     get CurrentStatus() {
         return this._currentStatus;
@@ -13,21 +35,34 @@ class Spi {
         document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
     }
 
-    constructor(posId, eftposAddress, secrets) 
+    constructor(posId, serialNumber, eftposAddress, secrets) 
     {
         this._posId = posId;
+        this._serialNumber = serialNumber;
         this._secrets = secrets;
-        this._eftposAddress = "ws://" + eftposAddress;
+        this._useSecureWebSockets = false;
+        this._eftposAddress = eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
 
+        this.CurrentDeviceStatus = null;
+        this._deviceApiKey  = null;
+        this._acquirerCode  = null;
+        this._inTestMode    = false;
+        this._autoAddressResolutionEnabled = false;
+
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
+
+        this._posVendorId = null;
+        this._posVersion = null;
+        this._hasSetInfo = null;
 
         // We will maintain some state
         this._mostRecentPingSent = null;
         this._mostRecentPongReceived = null;
         this._missedPongsCount = 0;
+        this._retriesSinceLastDeviceAddressResolution = 0;
         this._mostRecentLoginResponse = null;
 
         this._pongTimeout = 5000;
@@ -39,7 +74,9 @@ class Spi {
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
         this._maxWaitForCancelTx = 10000;
+        this._sleepBeforeReconnectMs = 5000;
         this._missedPongsToDisconnect = 2;
+        this._retriesBeforeResolvingDeviceAddress = 5;
 
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
@@ -59,6 +96,14 @@ class Spi {
     }
 
     Start() {
+
+        if (!this._posVendorId || !this._posVersion)
+        {
+            // POS information is now required to be set
+            this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+        }
+
         this._resetConn();
         this._startTransactionMonitoringThread();
 
@@ -74,6 +119,94 @@ class Spi {
             this._log.info("Starting in Unpaired State");
             this._currentStatus = SpiStatus.Unpaired;
         } 
+    }
+
+    /// <summary>
+    /// Set the acquirer code of your bank, please contact Assembly's Integration Engineers for acquirer code.
+    /// </summary>
+    SetAcquirerCode(acquirerCode)
+    {
+        this._acquirerCode = acquirerCode;
+        return true;
+    }
+
+    /// <summary>
+    /// Set the api key used for auto address discovery feature
+    /// </summary>
+    /// <returns></returns>
+    SetDeviceApiKey(deviceApiKey)
+    {
+        this._deviceApiKey = deviceApiKey;
+        return true;
+    }
+
+    /// <summary>
+    /// Allows you to set the serial number of the Eftpos
+    /// </summary>
+    SetSerialNumber(serialNumber)
+    {
+        if (this.CurrentStatus != SpiStatus.Unpaired)
+            return false;
+
+        var was = this._serialNumber;
+        this._serialNumber = serialNumber;
+        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(was))
+        {
+            this._autoResolveEftposAddress();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Allows you to set the auto address discovery feature. 
+    /// </summary>
+    /// <returns></returns>
+    SetAutoAddressResolution(autoAddressResolutionEnable)
+    {
+        if (this.CurrentStatus == SpiStatus.PairedConnected)
+            return false;
+
+        var was = this._autoAddressResolutionEnabled;
+        this._autoAddressResolutionEnabled = autoAddressResolutionEnable;
+        if (autoAddressResolutionEnable && !was)
+        {
+            // we're turning it on
+            this._autoResolveEftposAddress();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Call this method to set the client library test mode.
+    /// Set it to true only while you are developing the integration. 
+    /// It defaults to false. For a real merchant, always leave it set to false. 
+    /// </summary>
+    /// <param name="testMode"></param>
+    /// <returns></returns>
+    SetTestMode(testMode)
+    {
+        if (this.CurrentStatus != SpiStatus.Unpaired)
+            return false;
+
+        if (testMode == this._inTestMode)
+            return true;
+
+        // we're changing mode
+        this._inTestMode = testMode;
+        this._autoResolveEftposAddress();
+        return true;
+    }
+
+    /// <summary>
+    /// Set the client library to use secure web sockets TLS (wss protocol)
+    /// </summary>
+    /// <param name="isSecure"></param>
+    /// <returns></returns>
+    SetSecureWebSockets(useSecureWebSockets)
+    {
+        this._useSecureWebSockets = useSecureWebSockets;
     }
 
     // <summary>
@@ -97,13 +230,31 @@ class Spi {
     // </summary>
     SetEftposAddress(address)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected) {
+        if (this.CurrentStatus == SpiStatus.PairedConnected || this._autoAddressResolutionEnabled) {
             return false;
         }
 
-        this._eftposAddress = "ws://" + address;
+        this._eftposAddress = address;
         this._conn.Address = this._eftposAddress;
         return true;
+    }
+
+    static GetVersion()
+    {
+        return SPI_VERSION;
+    }
+
+    /**
+     * Sets values used to identify the POS software to the EFTPOS terminal.
+     * Must be set before starting!
+     *
+     * @param posVendorId Vendor identifier of the POS itself.
+     * @param posVersion  Version string of the POS itself.
+     */
+    SetPosInfo(posVendorId, posVersion)
+    {
+        this._posVendorId = posVendorId;
+        this._posVersion = posVersion;
     }
 
     // <summary>
@@ -133,10 +284,6 @@ class Spi {
         return false;
     }
 
-    static GetVersion()
-    {
-        return '2.1.0';
-    }
     // endregion
 
     // <summary>
@@ -154,7 +301,7 @@ class Spi {
 
         if (!this._posId || !this._eftposAddress)
         {
-            this._log.warn("Tried to Pair but missing posId or eftposAddress");
+            this._log.warn("Tried to Pair but missing posId or updatedEftposAddress");
             return false;
         }
 
@@ -170,7 +317,7 @@ class Spi {
         });
 
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
-        this._conn.Connect(); // Non-Blocking
+        this._conn.Connect(this._useSecureWebSockets); // Non-Blocking
         return true;
     }
 
@@ -289,8 +436,10 @@ class Spi {
     // <param name="tipAmount">The Tip Amount in Cents</param>
     // <param name="cashoutAmount">The Cashout Amount in Cents</param>
     // <param name="promptForCashout">Whether to prompt your customer for cashout on the Eftpos</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = {}, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -299,8 +448,9 @@ class Spi {
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         this.CurrentFlow = SpiFlow.Transaction;
         
-        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout);
+        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, surchargeAmount);
         purchase.Config = this.Config;
+        purchase.Options = options;
         var purchaseMsg = purchase.ToMessage();
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg,
@@ -319,8 +469,9 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your refund.</param>
     // <param name="amountCents">Amount in Cents to charge</param>
+    // <param name="isSuppressMerchantPassword">Merchant Password control in VAA</param>
     // <returns>InitiateTxResult</returns>
-    InitiateRefundTx(posRefId, amountCents)
+    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword = false)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -330,7 +481,7 @@ class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId);
+        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, isSuppressMerchantPassword);
         refundRequest.Config = this.Config;
         var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
@@ -343,7 +494,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Refund Initiated");
+        return new InitiateTxResult(true, "Refund Initiated");
     }
     
     // <summary>
@@ -432,13 +583,14 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents to cash out</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateCashoutOnlyTx(posRefId, amountCents)
+    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId);
+        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId, surchargeAmount);
         cashoutOnlyRequest.Config = this.Config;
         var cashoutMsg = cashoutOnlyRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
@@ -459,13 +611,14 @@ class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents</param>
+    // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId);
+        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount);
         motoPurchaseRequest.Config = this.Config;
         var cashoutMsg = motoPurchaseRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
@@ -507,7 +660,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Settle Initiated");   
+        return new InitiateTxResult(true, "Settle Initiated");   
     }
 
     // <summary>
@@ -528,7 +681,7 @@ class Spi {
         }
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
-        return new InitiateTxResult(true,"Settle Initiated");   
+        return new InitiateTxResult(true, "Settle Initiated");   
     }
 
     // <summary>
@@ -626,6 +779,17 @@ class Spi {
 
         return gltResponse.GetSuccessState();
     }
+    
+    PrintReceipt(key, payload)
+    {
+        this._send(new PrintingRequest(key, payload).toMessage());
+    }
+
+    GetTerminalStatus()
+    {
+        this._send(new TerminalStatusRequest().ToMessage());
+    }
+
     // endregion
         
     // region Internals for Pairing Flow
@@ -696,7 +860,7 @@ class Spi {
 
     _handleDropKeysAdvice(m)
     {
-        this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
+        this._log.info("Eftpos was Unpaired. I shall unpair from my end as well.");
         this._doUnpair();
     }
 
@@ -775,7 +939,7 @@ class Spi {
         var incomingPosRefId = m.Data.pos_ref_id;
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            _log.Info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            _log.info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
         var phoneForAuthRequired = new PhoneForAuthRequired(m);
@@ -942,6 +1106,7 @@ class Spi {
         this._log.info(`Got Last Transaction..`);
         txState.GotGltResponse();
         var gtlResponse = new GetLastTransactionResponse(m);
+        txState.GLTResponsePosRefId = gtlResponse.GetPosRefId();
         if (!gtlResponse.WasRetrievedSuccessfully())
         {
             if (gtlResponse.IsStillInProgress(txState.PosRefId))
@@ -966,6 +1131,14 @@ class Spi {
                     // No need to publish txFlowStateChanged. Can return;
                     return;
                 }
+            }
+            else if (gtlResponse.WasTimeOutOfSyncError())
+            {
+                // Let's not give up based on a TOOS error.
+                // Let's log it, and ignore it. 
+                this._log.info(`Time-Out-Of-Sync error in Get Last Transaction response. Let's ignore it and we'll try again.`);
+                // No need to publish txFlowStateChanged. Can return;
+                return;
             }
             else
             {
@@ -1004,6 +1177,42 @@ class Spi {
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
     }
 
+    //When the transaction cancel response is returned.
+    _handleCancelTransactionResponse(m)
+    {
+        var incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        {
+            this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+
+        var txState = this.CurrentTxFlowState;
+        var cancelResponse = new CancelTransactionResponse(m);
+
+        if (cancelResponse.Success) return;
+
+        this._log.warn("Failed to cancel transaction: reason=" + cancelResponse.GetErrorReason() + ", detail=" + cancelResponse.GetErrorDetail());
+
+        txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
+    
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
+    }
+
+    _handleSetPosInfoResponse(m)
+    {
+        var response = new SetPosInfoResponse(m);
+        if (response.isSuccess())
+        {
+            this._hasSetInfo = true;
+            this._log.info("Setting POS info successful");
+        }
+        else
+        {
+            this._log.warn("Setting POS info failed: reason=" + response.getErrorReason() + ", detail=" + response.getErrorDetail());
+        }
+    }
+
     _startTransactionMonitoringThread()
     {
         var needsPublishing = false;
@@ -1033,6 +1242,33 @@ class Spi {
         }
 
         setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
+    }
+
+    PrintingResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    TerminalStatusResponse(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    BatteryLevelChanged(m) {
+        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    _handlePrintingResponse(m)
+    {
+        this.PrintingResponse(m);
+    }
+
+    _handleTerminalStatusResponse(m)
+    {
+        this.TerminalStatusResponse(m);
+    }
+
+    _handleBatteryLevelChanged(m)
+    {
+        this.BatteryLevelChanged(m);
     }
 
     // endregion
@@ -1065,7 +1301,9 @@ class Spi {
                 break;
 
             case ConnectionState.Connected:
-                if (this.CurrentStatus == SpiStatus.Unpaired && this.CurrentFlow == SpiFlow.Pairing)
+                this._retriesSinceLastDeviceAddressResolution = 0;
+
+                if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
                     this.CurrentPairingFlowState.Message = "Requesting to Pair...";
                     document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
@@ -1100,14 +1338,31 @@ class Spi {
                     }
                     
                     if (this._conn == null) return; // This means the instance has been disposed. Aborting.
-                    this._log.info(`Will try to reconnect in 5s...`);
+                    
+                    if (this._autoAddressResolutionEnabled)
+                    {
+                        if (this._retriesSinceLastDeviceAddressResolution >= this._retriesBeforeResolvingDeviceAddress)
+                        {
+                            this._autoResolveEftposAddress();
+                            this._retriesSinceLastDeviceAddressResolution = 0;
+                        }
+                        else
+                        {
+                            this._retriesSinceLastDeviceAddressResolution += 1;
+                        }
+                    }
+
+                    this._log.info(`Will try to reconnect in ${this._sleepBeforeReconnectMs}ms...`);
                     setTimeout(() => {
                         if (this.CurrentStatus != SpiStatus.Unpaired)
                         {
                             // This is non-blocking
-                            this._conn.Connect();
+                            if(this._conn) 
+                            {
+                                this._conn.Connect();
+                            }
                         }
-                    }, 5000);
+                    }, this._sleepBeforeReconnectMs);
                 }
                 else if (this.CurrentFlow == SpiFlow.Pairing)
                 {
@@ -1201,11 +1456,21 @@ class Spi {
         }
         else
         {
+            if (!this._hasSetInfo) { 
+                this._callSetPosInfo(); 
+            }
+
             // let's also tell the eftpos our latest table configuration.
             if(this._spiPat) {
                 this._spiPat.PushPayAtTableConfig();
             }
         }
+    }
+
+    _callSetPosInfo()
+    {
+        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
+        this._send(setPosInfoRequest.toMessage());
     }
 
     // <summary>
@@ -1341,6 +1606,12 @@ class Spi {
             case Events.KeyRollRequest:
                 this._handleKeyRollingRequest(m);
                 break;
+            case Events.CancelTransactionResponse:
+                this._handleCancelTransactionResponse(m);
+                break;
+            case Events.SetPosInfoResponse:
+                this._handleSetPosInfoResponse(m);
+                break;
             case Events.PayAtTableGetTableConfig:
                 if (this._spiPat == null)
                 {
@@ -1354,6 +1625,15 @@ class Spi {
                 break;
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
+                break;
+            case Events.PrintingResponse:
+                this._handlePrintingResponse(m);
+                break;
+            case Events.TerminalStatusResponse:
+                this._handleTerminalStatusResponse(m);
+                break;
+            case Events.BatteryLevelChanged:
+                this._handleBatteryLevelChanged(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);
@@ -1387,4 +1667,48 @@ class Spi {
             return false;
         }
     }
+
+    HasSerialNumberChanged(updatedSerialNumber)
+    {
+        return this._serialNumber != updatedSerialNumber;
+    }
+
+    HasEftposAddressChanged(updatedEftposAddress)
+    {
+        return this._eftposAddress != updatedEftposAddress;
+    }
+
+    _autoResolveEftposAddress()
+    {
+        if (!this._autoAddressResolutionEnabled)
+            return;
+    
+        if (!this._serialNumber)
+            return;
+
+        var service = new DeviceAddressService();
+
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
+        {
+            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(this._useSecureWebSockets), response);
+
+            if(!deviceAddressStatus || !deviceAddressStatus.Address)
+                return;
+
+            if (!this.HasEftposAddressChanged(deviceAddressStatus.Address))
+                return;
+
+            // update device and connection address
+            this._eftposAddress = deviceAddressStatus.Address;
+            this._conn.Address = this._eftposAddress;
+
+            this.CurrentDeviceStatus = deviceAddressStatus;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            
+            return this.CurrentDeviceStatus;
+        });
+    }
 }
+
+export {Spi};

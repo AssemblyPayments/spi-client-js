@@ -1,9 +1,12 @@
 {
   "name": "@assemblypayments/spi-client-js",
-  "version": "2.1.1",
+  "version": "2.4.0",
   "description": "JavaScript Client Library for Assembly Payments' In-Store Integration.",
-  "main": "karma.conf.js",
+  "main": "index.js",
   "scripts": {
+    "start": "webpack-dev-server --open --colors --public localhost:3000",
+    "build": "webpack -p",
+    "build:dev": "webpack",
     "test": "karma start",
     "transpile": "babel src --out-file ./dist/spi-client-js.js",
     "build": "babel src --out-file ./dist/spi-client-js.js"
@@ -21,14 +24,20 @@
     "jssha": "^2.3.1"
   },
   "devDependencies": {
-    "babel": "^6.23.0",
-    "babel-cli": "^6.26.0",
-    "babel-preset-es2015": "^6.24.1",
+    "@babel/cli": "^7.1.2",
+    "@babel/core": "^7.1.2",
+    "@babel/preset-env": "^7.1.0",
+    "babel-loader": "^8.0.4",
+    "connect-api-mocker": "^1.3.6",
     "jasmine": "^2.8.0",
     "karma": "^2.0.2",
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^1.1.1",
-    "karma-json-fixtures-preprocessor": "0.0.6"
+    "karma-json-fixtures-preprocessor": "0.0.6",
+    "karma-webpack": "^3.0.5",
+    "webpack": "^4.21.0",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.9"
   },
   "bugs": {
     "url": "https://github.com/AssemblyPayments/spi-client-js/issues"
