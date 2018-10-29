@@ -39,8 +39,8 @@ export class DeviceAddressService
     RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
     {
         var path = useSecureWebSockets ? 'fqdn' : 'ip';
-        // https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/{serialNumber}/${path}
-        var deviceAddressUri = isTestMode ? `/api/v1/${path}?serial=${serialNumber}&acquirerCode=${acquirerCode}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
+        //var deviceAddressUri = isTestMode ? `/api/v1/${path}?serial=${serialNumber}&acquirerCode=${acquirerCode}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
+        var deviceAddressUri = isTestMode ? `https://device-address-api.sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
         return fetch(deviceAddressUri, {
             method: 'GET',
