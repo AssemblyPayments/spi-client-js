@@ -43,7 +43,7 @@ export class Connection {
 
         //Create a new socket instance specifying the url, SPI protocol and Websocket to use.
         //The will create a TCP/IP socket connection to the provided URL and perform HTTP websocket negotiation
-        this._ws           = new WebSocket(`${UseSecureWebSockets ? 'wss' : 'ws'}://${this.Address}`, this.SpiProtocol);
+        this._ws           = new WebSocket(this.Address, this.SpiProtocol);
         this._ws.onopen    = () => this.pollWebSocketConnection();
         this._ws.onmessage = (payload) => this.onMessageReceived(payload);
         this._ws.onclose   = () => this.onClosed();
