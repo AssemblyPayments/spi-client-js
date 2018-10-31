@@ -41,7 +41,7 @@ export default class Spi {
         this._serialNumber = serialNumber;
         this._secrets = secrets;
         this._useSecureWebSockets = false;
-        this._eftposAddress = eftposAddress;
+        this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
 
@@ -234,7 +234,7 @@ export default class Spi {
             return false;
         }
 
-        this._eftposAddress = address;
+        this._eftposAddress = "ws://" + address;
         this._conn.Address = this._eftposAddress;
         return true;
     }
@@ -317,7 +317,7 @@ export default class Spi {
         });
 
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
-        this._conn.Connect(this._useSecureWebSockets); // Non-Blocking
+        this._conn.Connect(); // Non-Blocking
         return true;
     }
 
