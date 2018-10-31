@@ -1699,7 +1699,8 @@ export default class Spi {
                 return;
 
             // update device and connection address
-            this._eftposAddress = deviceAddressStatus.Address;
+            var protocol = this._useSecureWebSockets ? "wss" : "ws";
+            this._eftposAddress = protocol + "://" + deviceAddressStatus.Address;
             this._conn.Address = this._eftposAddress;
 
             this.CurrentDeviceStatus = deviceAddressStatus;
