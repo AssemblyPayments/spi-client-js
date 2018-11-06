@@ -1687,8 +1687,20 @@ export default class Spi {
             return;
 
         var service = new DeviceAddressService();
+        var isSecureConnection = "false";
+         
+        // determine whether to use wss or not
+        if (!this._inTestMode && this._isUsingHttps())
+        {
+            isSecureConnection = "true";
+        }
+        else if (this._inTestMode && this._useSecureWebSockets)
+        {
+            isSecureConnection = "true";
+        }
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
+        // return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode).then((response) => 
         {
             var deviceAddressStatus = Object.assign(new DeviceAddressStatus(this._useSecureWebSockets), response);
 
@@ -1699,7 +1711,7 @@ export default class Spi {
                 return;
 
             // update device and connection address
-            var protocol = this._useSecureWebSockets ? "wss" : "ws";
+            var protocol = isSecureConnection ? "wss" : "ws";
             this._eftposAddress = protocol + "://" + deviceAddressStatus.Address;
             this._conn.Address = this._eftposAddress;
 
@@ -1709,6 +1721,11 @@ export default class Spi {
             
             return this.CurrentDeviceStatus;
         });
+    }
+
+    _isUsingHttps() 
+    {
+        return 'https:' == document.location.protocol ? true : false;
     }
 }
 
