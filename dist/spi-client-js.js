@@ -3515,7 +3515,7 @@
       this._posId = posId;
       this._serialNumber = serialNumber;
       this._secrets = secrets;
-      this._useSecureWebSockets = false;
+      this._forceSecureWebSockets = false;
       this._eftposAddress = "ws://" + eftposAddress;
       this._log = console;
       this.Config = new _SpiModels.SpiConfig();
@@ -3671,7 +3671,7 @@
     }, {
       key: "SetSecureWebSockets",
       value: function SetSecureWebSockets(useSecureWebSockets) {
-        this._useSecureWebSockets = useSecureWebSockets;
+        this._forceSecureWebSockets = useSecureWebSockets;
       } // <summary>
       // Allows you to set the PosId which identifies this instance of your POS.
       // Can only be called in thge Unpaired state. 
@@ -5258,17 +5258,15 @@
         if (!this._autoAddressResolutionEnabled) return;
         if (!this._serialNumber) return;
         var service = new _DeviceService.DeviceAddressService();
-        var isSecureConnection = "false"; // determine whether to use wss or not
+        var isSecureConnection = false; // determine whether to use wss or not
 
-        if (!this._inTestMode && this._isUsingHttps()) {
-          isSecureConnection = "true";
-        } else if (this._inTestMode && this._useSecureWebSockets) {
-          isSecureConnection = "true";
+        if (this._isUsingHttps() || this._forceSecureWebSockets) {
+          isSecureConnection = true;
         } // return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
 
 
         return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode).then(function (response) {
-          var deviceAddressStatus = Object.assign(new _DeviceService.DeviceAddressStatus(_this6._useSecureWebSockets), response);
+          var deviceAddressStatus = Object.assign(new _DeviceService.DeviceAddressStatus(isSecureConnection), response);
           if (!deviceAddressStatus || !deviceAddressStatus.Address) return;
           if (!_this6.HasEftposAddressChanged(deviceAddressStatus.Address)) return; // update device and connection address
 

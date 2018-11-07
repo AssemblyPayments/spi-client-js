@@ -40,7 +40,7 @@ export default class Spi {
         this._posId = posId;
         this._serialNumber = serialNumber;
         this._secrets = secrets;
-        this._useSecureWebSockets = false;
+        this._forceSecureWebSockets = false;
         this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
@@ -206,7 +206,7 @@ export default class Spi {
     /// <returns></returns>
     SetSecureWebSockets(useSecureWebSockets)
     {
-        this._useSecureWebSockets = useSecureWebSockets;
+        this._forceSecureWebSockets = useSecureWebSockets;
     }
 
     // <summary>
@@ -1687,22 +1687,18 @@ export default class Spi {
             return;
 
         var service = new DeviceAddressService();
-        var isSecureConnection = "false";
+        var isSecureConnection = false;
          
         // determine whether to use wss or not
-        if (!this._inTestMode && this._isUsingHttps())
+        if (this._isUsingHttps() || this._forceSecureWebSockets)
         {
-            isSecureConnection = "true";
-        }
-        else if (this._inTestMode && this._useSecureWebSockets)
-        {
-            isSecureConnection = "true";
+            isSecureConnection = true;
         }
 
         // return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
         return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode).then((response) => 
         {
-            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(this._useSecureWebSockets), response);
+            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), response);
 
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
                 return;
