@@ -36,9 +36,10 @@ export class DeviceAddressStatus
 
 export class DeviceAddressService
 {
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
+    // RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
+    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)    
     {
-        var path = useSecureWebSockets ? 'fqdn' : 'ip';
+        var path = isSecureConnection ? 'fqdn' : 'ip';
         var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
         return fetch(deviceAddressUri, {
