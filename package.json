@@ -1,6 +1,6 @@
 {
-  "name": "@assemblypayments/spi-client-js",
-  "version": "2.4.0",
+  "name": "@assemblypayments/spi-client-js-beta",
+  "version": "2.4.1",
   "description": "JavaScript Client Library for Assembly Payments' In-Store Integration.",
   "main": "index.js",
   "scripts": {
@@ -8,8 +8,7 @@
     "build": "webpack -p",
     "build:dev": "webpack",
     "test": "karma start",
-    "transpile": "babel src --out-file ./dist/spi-client-js.js",
-    "build": "babel src --out-file ./dist/spi-client-js.js"
+    "transpile": "babel src --out-file ./dist/spi-client-js.js"
   },
   "repository": {
     "type": "git",
