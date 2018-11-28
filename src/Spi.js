@@ -1279,8 +1279,13 @@ export default class Spi {
     {
         // Setup the Connection
         this._conn = new Connection();
-        this._conn.Address = this._eftposAddress;
 
+        if (this._isUsingHttps() || this._forceSecureWebSockets) {
+            this._log.info("Secure connection detected.");
+            var secureAddress = this._eftposAddress.replace("ws://", "wss://");
+          }
+          this._conn.Address = secureAddress;
+    
         // Register our Event Handlers
         document.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
         document.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
