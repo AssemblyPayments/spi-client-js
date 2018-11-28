@@ -1282,9 +1282,9 @@ export default class Spi {
 
         if (this._isUsingHttps() || this._forceSecureWebSockets) {
             this._log.info("Secure connection detected.");
-            var secureAddress = this._eftposAddress.replace("ws://", "wss://");
+            this._eftposAddress = this._eftposAddress.replace("ws://", "wss://");
           }
-          this._conn.Address = secureAddress;
+          this._conn.Address = this._eftposAddress;
     
         // Register our Event Handlers
         document.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
