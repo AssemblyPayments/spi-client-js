@@ -89,6 +89,13 @@ export default class Spi {
         return this._spiPat;
     }
 
+    DisablePayAtTable()
+    {
+        this._spiPat = new SpiPayAtTable(this);
+        this._spiPat.Config.PayAtTabledEnabled = false;
+        return this._spiPat;
+    }
+
     EnablePreauth()
     {
         this._spiPreauth = new SpiPreauth(this);
