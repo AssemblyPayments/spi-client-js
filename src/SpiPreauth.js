@@ -8,7 +8,8 @@ import {
     PreauthCompletionRequest,
     PreauthCancelRequest} from './Preauth';
 
-import {TransactionFlowState, TransactionType, InitiateTxResult} from './SpiModels';
+
+import {TransactionFlowState, TransactionType, InitiateTxResult, SpiStatus, SpiFlow} from './SpiModels';
 
 export class SpiPreauth
 {
