@@ -22,7 +22,6 @@ export class CashoutOnlyRequest
         };
 
         this.Config.addReceiptConfig(data);
-        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("cshout"), Events.CashoutOnlyRequest, data, true);
     }
 }

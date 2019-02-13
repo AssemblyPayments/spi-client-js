@@ -375,7 +375,7 @@ export class RefundRequest
         };
         
         this.Config.addReceiptConfig(data);
-        this.Options.AddOptions(data);
+        // this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
     }
 }
@@ -550,7 +550,6 @@ export class MotoPurchaseRequest
             surcharge_amount: this.SurchargeAmount
         };
         this.Config.addReceiptConfig(data);
-        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);
     }
 }
