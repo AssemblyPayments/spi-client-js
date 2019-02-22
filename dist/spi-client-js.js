@@ -3221,7 +3221,7 @@ var Spi = function () {
     }, {
         key: "_handleDropKeysAdvice",
         value: function _handleDropKeysAdvice(m) {
-            this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
+            this._log.info("Eftpos was Unpaired. I shall unpair from my end as well.");
             this._doUnpair();
         }
     }, {
@@ -3304,7 +3304,7 @@ var Spi = function () {
         value: function _handleAuthCodeRequired(m) {
             var incomingPosRefId = m.Data.pos_ref_id;
             if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId) {
-                _log.Info("Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
+                _log.info("Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: " + incomingPosRefId);
                 return;
             }
             var phoneForAuthRequired = new PhoneForAuthRequired(m);
@@ -3590,7 +3590,7 @@ var Spi = function () {
                     break;
 
                 case ConnectionState.Connected:
-                    if (this.CurrentFlow == SpiFlow.Pairing) {
+                    if (this.CurrentStatus == SpiStatus.Unpaired && this.CurrentFlow == SpiFlow.Pairing) {
                         this.CurrentPairingFlowState.Message = "Requesting to Pair...";
                         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                         var pr = PairingHelper.NewPairRequest();
@@ -4582,3 +4582,11 @@ var SpiPreauth = function () {
 
     return SpiPreauth;
 }();
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = Spi;
+var Secrets = exports.Secrets = Secrets;
+var SpiStatus = exports.SpiStatus = SpiStatus;

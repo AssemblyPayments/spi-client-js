@@ -696,7 +696,7 @@ class Spi {
 
     _handleDropKeysAdvice(m)
     {
-        this._log.Info("Eftpos was Unpaired. I shall unpair from my end as well.");
+        this._log.info("Eftpos was Unpaired. I shall unpair from my end as well.");
         this._doUnpair();
     }
 
@@ -775,7 +775,7 @@ class Spi {
         var incomingPosRefId = m.Data.pos_ref_id;
         if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
         {
-            _log.Info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            _log.info(`Received Auth Code Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
         }
         var phoneForAuthRequired = new PhoneForAuthRequired(m);
