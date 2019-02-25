@@ -1,4 +1,7 @@
-class PongHelper
+import {RequestIdHelper} from './RequestIdHelper';
+import {Events, Message} from './Messages';
+
+export class PongHelper
 {
     static GeneratePongRessponse(ping)
     {
@@ -6,7 +9,7 @@ class PongHelper
     }
 }
 
-class PingHelper
+export class PingHelper
 {
     static GeneratePingRequest()
     {

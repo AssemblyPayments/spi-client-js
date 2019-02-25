@@ -1,4 +1,17 @@
-class SpiPreauth
+import {
+    PreauthEvents,
+    AccountVerifyRequest, 
+    PreauthOpenRequest, 
+    PreauthTopupRequest, 
+    PreauthPartialCancellationRequest, 
+    PreauthExtendRequest,
+    PreauthCompletionRequest,
+    PreauthCancelRequest} from './Preauth';
+
+
+import {TransactionFlowState, TransactionType, InitiateTxResult, SpiStatus, SpiFlow} from './SpiModels';
+
+export class SpiPreauth
 {
     constructor(spi)
     {
@@ -56,9 +69,9 @@ class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiateCompletionTx(posRefId, preauthId, amountCents)
+    InitiateCompletionTx(posRefId, preauthId, amountCents, surchargeAmount)
     {
-        var msg = new PreauthCompletionRequest(preauthId, amountCents, posRefId).ToMessage();
+        var msg = new PreauthCompletionRequest(preauthId, amountCents, posRefId, surchargeAmount).ToMessage();
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, amountCents, msg,
             `Waiting for EFTPOS connection to make preauth completion request for ${(amountCents / 100.0).toFixed(2)}`);

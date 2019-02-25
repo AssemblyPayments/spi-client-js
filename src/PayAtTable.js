@@ -1,7 +1,10 @@
+import {Events, Message} from './Messages';
+import {PurchaseResponse} from './Purchase';
+
 // <summary>
 // This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
 // </summary>
-class BillStatusResponse
+export class BillStatusResponse
 {
     constructor() {
         // <summary>
@@ -90,7 +93,7 @@ class BillStatusResponse
     }
 }
 
-const BillRetrievalResult = 
+export const BillRetrievalResult = 
 {
     SUCCESS: 'SUCCESS',
     INVALID_TABLE_ID: 'INVALID_TABLE_ID',
@@ -98,13 +101,13 @@ const BillRetrievalResult =
     INVALID_OPERATOR_ID: 'INVALID_OPERATOR_ID'
 };
 
-const PaymentType = 
+export const PaymentType = 
 {
     CARD: 'CARD',
     CASH: 'CASH' 
 };
 
-class BillPayment
+export class BillPayment
 {
     constructor(m)
     {
@@ -125,7 +128,7 @@ class BillPayment
     }
 }
 
-class PaymentHistoryEntry
+export class PaymentHistoryEntry
 {
     constructor(paymentType, paymentSummary)
     {
@@ -146,9 +149,10 @@ class PaymentHistoryEntry
     }
 }
 
-class PayAtTableConfig
+export class PayAtTableConfig
 {
     constructor() {
+        this.PayAtTabledEnabled = false;
         this.OperatorIdEnabled = false;
         this.SplitByAmountEnabled = false;
         this.EqualSplitEnabled = false;
@@ -172,7 +176,7 @@ class PayAtTableConfig
     ToMessage(messageId)
     {
         var data = {
-            "pay_at_table_enabled": true,
+            "pay_at_table_enabled": this.PayAtTabledEnabled,
             "operator_id_enabled": this.OperatorIdEnabled,
             "split_by_amount_enabled": this.SplitByAmountEnabled,
             "equal_split_enabled": this.EqualSplitEnabled,

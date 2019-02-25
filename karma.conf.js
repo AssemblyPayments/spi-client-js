@@ -12,16 +12,13 @@ module.exports = function (config) {
 
         // list of files / patterns to load in the browser
         files: [
-            // Vendor libs
-            'node_modules/aes-js/index.js',
-            'node_modules/bn.js/lib/bn.js',
-            'node_modules/jssha/src/sha256.js',
-
             // Our code
-            'src/**/*.js',
+            // './src/**/*.js',
+
+            { pattern: 'test-context.js', watched: false },
 
             // Include the unit tests 
-            'tests/**/*.spec.js',
+            // './tests/**/*.spec.js',
 
             // Mock fixtures 
             './tests/fixtures/**/*.json'
@@ -38,7 +35,31 @@ module.exports = function (config) {
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
-            './tests/fixtures/**/*.json': ['json_fixtures']
+            './tests/fixtures/**/*.json': ['json_fixtures'],
+            'test-context.js': ['webpack']
+        },
+
+        webpack: {
+            mode: 'development',
+            module: {
+                rules: [
+                    {
+                        test: /\.m?js$/,
+                        exclude: /(node_modules|bower_components)/,
+                        use: {
+                            loader: 'babel-loader',
+                            options: {
+                                presets: ['@babel/preset-env']
+                            }
+                        }
+                    }
+                ]
+            },
+            watch: true
+        },
+        
+        webpackServer: {
+            noInfo: true
         },
 
         jsonFixturesPreprocessor: {

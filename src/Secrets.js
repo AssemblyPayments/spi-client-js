@@ -1,4 +1,4 @@
-class Secrets {
+export class Secrets {
     constructor(encKey, hmacKey) {
         this.EncKey     = encKey;
         this.HmacKey    = hmacKey;

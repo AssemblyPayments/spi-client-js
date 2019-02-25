@@ -1,11 +1,17 @@
-class PurchaseRequest {
+import {Events, SuccessState, Message} from './Messages';
+import {RequestIdHelper} from './RequestIdHelper';
+import {SpiConfig, TransactionOptions} from './SpiModels';
+
+export class PurchaseRequest {
     constructor(amountCents, posRefId) {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.TipAmount = 0;
         this.CashoutAmount = 0;
         this.PromptForCashout = false;
+        this.SurchargeAmount = 0;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
 
         // Library Backwards Compatibility
         this.Id = posRefId;
@@ -25,15 +31,17 @@ class PurchaseRequest {
             purchase_amount: this.PurchaseAmount,
             tip_amount: this.TipAmount,
             cash_amount: this.CashoutAmount,
-            prompt_for_cashout: this.PromptForCashout
+            prompt_for_cashout: this.PromptForCashout, 
+            surcharge_amount: this.SurchargeAmount
         };
 
         this.Config.addReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prchs"), Events.PurchaseRequest, data, true);
     }
 }
 
-class PurchaseResponse
+export class PurchaseResponse
 {
     constructor(m)
     {
@@ -58,6 +66,11 @@ class PurchaseResponse
     GetTipAmount()
     {
         return this._m.Data.tip_amount;
+    }
+
+    GetSurchargeAmount()
+    {
+        return this._m.Data.surcharge_amount;
     }
 
     GetCashoutAmount()
@@ -173,12 +186,13 @@ class PurchaseResponse
             scheme_name: this.SchemeName,
             terminal_id: this.GetTerminalId(),
             terminal_ref_id: this.GetTerminalReferenceId(),
-            tip_amount: this.GetTipAmount()           
+            tip_amount: this.GetTipAmount(),
+            surcharge_amount: this.GetSurchargeAmount()
         };
     }
 }
 
-class CancelTransactionRequest
+export class CancelTransactionRequest
 {
     
     ToMessage()
@@ -187,7 +201,32 @@ class CancelTransactionRequest
     }
 }
 
-class GetLastTransactionRequest
+export class CancelTransactionResponse
+{
+    constructor(m)
+    {
+        this._m = m;
+        this.PosRefId = this._m.Data.pos_ref_id;
+        this.Success = this._m.GetSuccessState() == SuccessState.Success;
+    }
+
+    GetErrorReason()
+    {
+        return this._m.Data.error_reason;
+    }
+
+    GetErrorDetail()
+    {
+        return this._m.Data.error_detail;
+    }
+
+    GetResponseValueWithAttribute(attribute)
+    {
+        return this._m.Data[attribute];
+    }
+}
+
+export class GetLastTransactionRequest
 {
     ToMessage()
     {
@@ -195,7 +234,7 @@ class GetLastTransactionRequest
     }
 }
 
-class GetLastTransactionResponse
+export class GetLastTransactionResponse
 {
     constructor(m)
     {
@@ -209,6 +248,11 @@ class GetLastTransactionResponse
         // So we check if we got back an ResponseCode.
         // (as opposed to say an operation_in_progress_error)
         return !!this.GetResponseCode();
+    }
+
+    WasTimeOutOfSyncError()
+    {
+        return this._m.GetError().startsWith("TIME_OUT_OF_SYNC");
     }
 
     WasOperationInProgressError()
@@ -310,25 +354,33 @@ class GetLastTransactionResponse
     }
 }
 
-class RefundRequest
+export class RefundRequest
 {
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, isSuppressMerchantPassword)
     {
         this.AmountCents = amountCents;
         this.Id = RequestIdHelper.Id("refund");
         this.PosRefId = posRefId;
+        this.IsSuppressMerchantPassword = isSuppressMerchantPassword;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
     
     ToMessage()
     {
-        let data = {refund_amount: this.AmountCents, pos_ref_id: this.PosRefId};
+        let data = {
+            refund_amount: this.AmountCents, 
+            pos_ref_id: this.PosRefId,
+            suppress_merchant_password: this.IsSuppressMerchantPassword
+        };
+        
         this.Config.addReceiptConfig(data);
+        // this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
     }
 }
 
-class RefundResponse
+export class RefundResponse
 {
     constructor(m)
     {
@@ -425,7 +477,7 @@ class RefundResponse
     }
 }
 
-class SignatureRequired
+export class SignatureRequired
 {
     constructor(m)
     {
@@ -447,7 +499,7 @@ class SignatureRequired
     }
 }
 
-class SignatureDecline
+export class SignatureDecline
 {
     constructor(posRefId)
     {
@@ -463,7 +515,7 @@ class SignatureDecline
     }
 }
 
-class SignatureAccept
+export class SignatureAccept
 {
     constructor(posRefId)
     {
@@ -479,27 +531,30 @@ class SignatureAccept
     }
 }
 
-class MotoPurchaseRequest
+export class MotoPurchaseRequest
 {
-    constructor(amountCents, posRefId)
+    constructor(amountCents, posRefId, surchargeAmount)
     {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
+        this.SurchargeAmount = surchargeAmount;
         this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
     {
         var data = {
             pos_ref_id: this.PosRefId,
-            purchase_amount: this.PurchaseAmount
+            purchase_amount: this.PurchaseAmount,
+            surcharge_amount: this.SurchargeAmount
         };
         this.Config.addReceiptConfig(data);
         return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);
     }
 }
 
-class MotoPurchaseResponse
+export class MotoPurchaseResponse
 {
     constructor(m)
     {
@@ -508,7 +563,7 @@ class MotoPurchaseResponse
     }
 }
 
-class PhoneForAuthRequired
+export class PhoneForAuthRequired
 {
     constructor(...args)
     {
@@ -538,7 +593,7 @@ class PhoneForAuthRequired
     }
 }
 
-class AuthCodeAdvice
+export class AuthCodeAdvice
 {
     constructor(posRefId, authCode)
     {

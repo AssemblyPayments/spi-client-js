@@ -1,5 +1,7 @@
+import BN from 'bn.js';
+
 // This creates the private and public keys for diffie-hellman (https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange#Cryptographic_explanation)
-// REQUIREMENTS: bn.js and jssha.js
+// REQUIREMENTS: bn.js
 // ASSUMPTIONS: Inputs to the functions are hexadecimal strings
 
 // <summary>
@@ -10,16 +12,10 @@
 // 3. Generate the Secret given their Public Key and your Private Key
 // p and g are the shared constants for the algorithm, aka primeP and primeG.
 // </summary>
-class DiffieHellman {
+export class DiffieHellman {
 
     constructor () {
-        if(typeof BN === 'undefined') {
-            throw new Error('Big Number lib required')
-        }
 
-        if(typeof jsSHA === 'undefined') {
-            throw new Error('jsSHA hash lib requried')
-        }
     }
 
     // <summary>

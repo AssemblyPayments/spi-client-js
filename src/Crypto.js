@@ -1,13 +1,10 @@
-class Crypto {
+import jsSHA from 'jssha';
+import aesjs from 'aes-js';
+
+export class Crypto {
     
     constructor() {
-        if(typeof jsSHA === 'undefined') {
-            throw new Error('jsSHA hash lib requried')
-        }
 
-        if(typeof aesjs === 'undefined') {
-            throw new Error('aes lib requried')
-        }
     }
 
     // <summary>

@@ -1,3 +1,7 @@
+import {Message, Events} from '../src/Messages';
+import {KeyRollingHelper} from '../src/KeyRollingHelper';
+import {Secrets} from '../src/Secrets';
+
 describe('KeyRollingTest', function() {
     'use strict';  
 

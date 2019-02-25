@@ -1,4 +1,7 @@
-class SpiPayAtTable
+import {RequestIdHelper} from './RequestIdHelper';
+import {BillPayment, PayAtTableConfig, PaymentHistoryEntry, BillRetrievalResult, BillStatusResponse} from './PayAtTable';
+
+export class SpiPayAtTable
 {  
     constructor(spi)
     {
@@ -6,6 +9,7 @@ class SpiPayAtTable
         this._log = console;
 
         this.Config = Object.assign(new PayAtTableConfig(), {
+            PayAtTabledEnabled: true,
             OperatorIdEnabled: true,
             AllowedOperatorIds: [],
             EqualSplitEnabled: true,
