@@ -4590,3 +4590,4 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = Spi;
 var Secrets = exports.Secrets = Secrets;
 var SpiStatus = exports.SpiStatus = SpiStatus;
+var SpiFlow = exports.SpiFlow = SpiFlow;
