@@ -34,12 +34,12 @@ export class SpiPayAtTable
     // You need to return the current state of the bill.
     // </summary>
     GetBillStatus(billId, tableId, operatorId) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     // Abstract method, must implement in POS system
     BillPaymentReceived(billPayment, updatedBillData) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     PushPayAtTableConfig()
