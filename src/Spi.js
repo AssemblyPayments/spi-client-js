@@ -107,8 +107,8 @@ export default class Spi {
         if (!this._posVendorId || !this._posVersion)
         {
             // POS information is now required to be set
-            this._log.Warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
-            throw new Exception("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            this._log.warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+            throw new Error("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
         }
 
         this._resetConn();
@@ -1252,15 +1252,15 @@ export default class Spi {
     }
 
     PrintingResponse(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     TerminalStatusResponse(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     BatteryLevelChanged(m) {
-        throw new Exception('Method not implemented. Please overwrite this method in your POS');
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     _handlePrintingResponse(m)
@@ -1385,7 +1385,7 @@ export default class Spi {
                 }
                 break;
             default:
-                throw new Exception('Unknown state: ' + state);
+                throw new Error('Unknown state: ' + state);
         }
     }
 
