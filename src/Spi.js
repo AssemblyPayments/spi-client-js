@@ -44,6 +44,7 @@ export default class Spi {
         this._eftposAddress = "ws://" + eftposAddress;
         this._log = console;
         this.Config = new SpiConfig();
+        this._conn = new Connection();
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
@@ -1661,7 +1662,7 @@ export default class Spi {
 
     _onWsErrorReceived(error)
     {
-        this._log.warn("Received WS Error: " + error.Message);
+        this._log.warn("Received WS Error", error.Message);
     }
 
     _send(message)
@@ -1710,14 +1711,13 @@ export default class Spi {
 
         this._log.info(`Resolving address for device ${this._serialNumber}.`);
 
-        // return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._useSecureWebSockets, this._inTestMode).then((response) => 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode).then((response) => 
+        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode, this._log).then((response) => 
         {
             var deviceAddressStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), response);
 
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
             {
-                this._log.info(`Could not resolve device address.`);
+                this._log.info(`Could not resolve device address.`, response);
                 return;
             }
                 

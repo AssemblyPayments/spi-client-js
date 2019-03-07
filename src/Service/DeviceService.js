@@ -37,11 +37,12 @@ export class DeviceAddressStatus
 export class DeviceAddressService
 {
     // RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)    
+    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode, log)    
     {
         var path = isSecureConnection ? 'fqdn' : 'ip';
         var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
+        log.info('device address uri', deviceAddressUri)
         return fetch(deviceAddressUri, {
             method: 'GET',
             headers: {
@@ -50,7 +51,7 @@ export class DeviceAddressService
         })
         .then(response => response.json())
         .catch((response) => {
-            console.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.error}`);
+            log.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.error}`);
         })
     }
 }
