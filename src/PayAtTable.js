@@ -156,7 +156,8 @@ export class PayAtTableConfig
         this.OperatorIdEnabled = false;
         this.SplitByAmountEnabled = false;
         this.EqualSplitEnabled = false;
-    
+        this.TableRetrievalEnabled = false;
+     
         this.TippingEnabled = false;
     
         this.SummaryReportEnabled = false;
@@ -185,7 +186,8 @@ export class PayAtTableConfig
             "pay_button_label": this.LabelPayButton,
             "operator_id_label": this.LabelOperatorId,
             "table_id_label": this.LabelTableId,
-            "operator_id_list": this.AllowedOperatorIds
+            "operator_id_list": this.AllowedOperatorIds,
+            "table_retrieval_enabled": this.TableRetrievalEnabled,
         };
 
         return new Message(messageId, Events.PayAtTableSetTableConfig, data, true);
