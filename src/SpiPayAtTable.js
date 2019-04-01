@@ -53,15 +53,16 @@ export class SpiPayAtTable
         var tableId = m.Data["table_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        var billStatus = this.GetBillStatus(null, tableId, operatorId);
-        billStatus.TableId = tableId;
-        if (billStatus.TotalAmount <= 0)
-        {
-            this._log.info("Table has 0 total amount. not sending it to eftpos.");
-            billStatus.Result = BillRetrievalResult.INVALID_TABLE_ID;
-        }
+        return Promise.resolve(this.GetBillStatus(null, tableId, operatorId)).then(billStatus => {
+            billStatus.TableId = tableId;
+            if (billStatus.TotalAmount <= 0)
+            {
+              this._log.info("Table has 0 total amount. not sending it to eftpos.");
+              billStatus.Result = BillRetrievalResult.INVALID_TABLE_ID;
+            }
         
-        this._spi._send(billStatus.ToMessage(m.Id));
+            this._spi._send(billStatus.ToMessage(m.Id));
+        })
     }
 
     _handleBillPaymentAdvice(m)
@@ -69,52 +70,54 @@ export class SpiPayAtTable
         var billPayment = new BillPayment(m);
         
         // Ask POS for Bill Details, inluding encoded PaymentData
-        var existingBillStatus = this.GetBillStatus(billPayment.BillId, billPayment.TableId, billPayment.OperatorId);
-        if (existingBillStatus.Result != BillRetrievalResult.SUCCESS)
-        {
-            this._log.warn("Could not retrieve Bill Status for Payment Advice. Sending Error to Eftpos.");
-            this._spi._send(existingBillStatus.ToMessage(m.Id));
-        }
-                    
-        var existingPaymentHistory = existingBillStatus.getBillPaymentHistory();
+        return Promise.resolve(this.GetBillStatus(billPayment.BillId, billPayment.TableId, billPayment.OperatorId)).then(existingBillStatus => {
+            if (existingBillStatus.Result != BillRetrievalResult.SUCCESS)
+            {
+                this._log.warn("Could not retrieve Bill Status for Payment Advice. Sending Error to Eftpos.");
+                this._spi._send(existingBillStatus.ToMessage(m.Id));
+            }
+                        
+            var existingPaymentHistory = existingBillStatus.getBillPaymentHistory();
    
-        var foundExistingEntry = existingPaymentHistory.find(phe => phe.GetTerminalRefId() == billPayment.PurchaseResponse.GetTerminalReferenceId());
-        if (foundExistingEntry)
-        {
-            // We have already processed this payment.
-            // perhaps Eftpos did get our acknowledgement.
-            // Let's update Eftpos.
-            this._log.warn("Had already received this bill_paymemnt advice from eftpos. Ignoring.");
-            this._spi._send(existingBillStatus.ToMessage(m.Id));
-            return;
-        }
+            var foundExistingEntry = existingPaymentHistory.find(phe => phe.GetTerminalRefId() == billPayment.PurchaseResponse.GetTerminalReferenceId());
+            if (foundExistingEntry)
+            {
+                // We have already processed this payment.
+                // perhaps Eftpos did get our acknowledgement.
+                // Let's update Eftpos.
+                this._log.warn("Had already received this bill_paymemnt advice from eftpos. Ignoring.");
+                this._spi._send(existingBillStatus.ToMessage(m.Id));
+                return;
+            }
 
-        // Let's add the new entry to the history
-        var updatedHistoryEntries = existingPaymentHistory;
-        updatedHistoryEntries.push(
-            new PaymentHistoryEntry(billPayment.PaymentType.toLowerCase(), billPayment.PurchaseResponse.ToPaymentSummary())
-        );
-        
-        var updatedBillData = BillStatusResponse.ToBillData(updatedHistoryEntries);
+            // Let's add the new entry to the history
+            var updatedHistoryEntries = existingPaymentHistory;
+            updatedHistoryEntries.push(
+                new PaymentHistoryEntry(billPayment.PaymentType.toLowerCase(), billPayment.PurchaseResponse.ToPaymentSummary())
+            );
+            
+            var updatedBillData = BillStatusResponse.ToBillData(updatedHistoryEntries);
 
-        // Advise POS of new payment against this bill, and the updated BillData to Save.
-        var updatedBillStatus = this.BillPaymentReceived(billPayment, updatedBillData);
+            // Advise POS of new payment against this bill, and the updated BillData to Save.
+            Promise.resolve(this.BillPaymentReceived(billPayment, updatedBillData)).then(updatedBillStatus => {
 
-        // Just in case client forgot to set these:
-        updatedBillStatus.BillId = billPayment.BillId;
-        updatedBillStatus.TableId = billPayment.TableId;
+                // Just in case client forgot to set these:
+                updatedBillStatus.BillId = billPayment.BillId;
+                updatedBillStatus.TableId = billPayment.TableId;
 
-        if (updatedBillStatus.Result != BillRetrievalResult.SUCCESS)
-        {
-            this._log.warn("POS Errored when being Advised of Payment. Letting EFTPOS know, and sending existing bill data.");
-            updatedBillStatus.BillData = existingBillStatus.BillData;
-        }
-        else
-        {
-            updatedBillStatus.BillData = updatedBillData;
-        }
+                if (updatedBillStatus.Result != BillRetrievalResult.SUCCESS)
+                {
+                  this._log.warn("POS Errored when being Advised of Payment. Letting EFTPOS know, and sending existing bill data.");
+                  updatedBillStatus.BillData = existingBillStatus.BillData;
+                }
+                else
+                {
+                  updatedBillStatus.BillData = updatedBillData;
+                }
     
-        this._spi._send(updatedBillStatus.ToMessage(m.Id));
+                this._spi._send(updatedBillStatus.ToMessage(m.Id));
+            })
+        })
     }
     
     _handleGetTableConfig(m)
