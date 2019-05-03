@@ -1718,6 +1718,7 @@ export default class Spi {
             if(!deviceAddressStatus || !deviceAddressStatus.Address)
             {
                 this._log.info(`Could not resolve device address.`, response);
+                document.dispatchEvent(new CustomEvent('AutoAddressResolutionFailed', {detail: response}));
                 return;
             }
                 
