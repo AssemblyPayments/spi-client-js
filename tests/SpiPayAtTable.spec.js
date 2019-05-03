@@ -45,9 +45,9 @@ describe('SpiPayAtTable', function() {
             });
         };
         
-        payAtTable._handleGetBillDetailsRequest(message);
-
-        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
+        payAtTable._handleGetBillDetailsRequest(message).then(() => {
+            expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
+        })
     });
 
     it('should handle bill payment advice', function() 
@@ -78,9 +78,9 @@ describe('SpiPayAtTable', function() {
             });
         };
 
-        payAtTable._handleBillPaymentAdvice(message);
-
-        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
+        payAtTable._handleBillPaymentAdvice(message).then(() => {
+          expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
+        })
     });
 
 });
