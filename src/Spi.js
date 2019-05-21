@@ -1,5 +1,5 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
-import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult, TransactionOptions} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
 import {PairingHelper} from './PairingHelper';
 import {Connection, ConnectionState} from './Connection';
@@ -477,9 +477,10 @@ export default class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your refund.</param>
     // <param name="amountCents">Amount in Cents to charge</param>
-    // <param name="isSuppressMerchantPassword">Merchant Password control in VAA</param>
+    // <param name="suppressMerchantPassword">Merchant Password control in VAA</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <returns>InitiateTxResult</returns>
-    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword = false)
+    InitiateRefundTx(posRefId, amountCents, suppressMerchantPassword = false, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -489,8 +490,9 @@ export default class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, isSuppressMerchantPassword);
+        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, suppressMerchantPassword);
         refundRequest.Config = this.Config;
+        refundRequest.Options = options;
         var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
@@ -593,14 +595,18 @@ export default class Spi {
     // <param name="amountCents">Amount in Cents to cash out</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0)
+    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId, surchargeAmount);
-        cashoutOnlyRequest.Config = this.Config;
-        var cashoutMsg = cashoutOnlyRequest.ToMessage();
+
+        var cashoutMsg = Object.assign(new CashoutOnlyRequest(amountCents, posRefId), {
+            SurchargeAmount: surchargeAmount,
+            Options: options,
+            Config: this.Config
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg,
@@ -620,20 +626,27 @@ export default class Spi {
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
+    // <param name="suppressMerchantPassword">>Merchant Password control in VAA</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0, suppressMerchantPassword = false, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount);
-        motoPurchaseRequest.Config = this.Config;
-        var cashoutMsg = motoPurchaseRequest.ToMessage();
+        var motoPurchaseMsg = Object.assign(new MotoPurchaseRequest(amountCents, posRefId),
+        {
+            SurchargeAmount: surchargeAmount,
+            SuppressMerchantPassword: suppressMerchantPassword,
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, TransactionType.MOTO, amountCents, cashoutMsg,
+            posRefId, TransactionType.MOTO, amountCents, motoPurchaseMsg,
             `Waiting for EFTPOS connection to send MOTO request for ${(amountCents / 100).toFixed(2)}`);
-        if (this._send(cashoutMsg))
+        if (this._send(motoPurchaseMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${(amountCents / 100).toFixed(2)}`);
         }
@@ -645,8 +658,9 @@ export default class Spi {
     // <summary>
     // Initiates a settlement transaction.
     // Be subscribed to TxFlowStateChanged event to get updates on the process.
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // </summary>
-    InitiateSettleTx(posRefId)
+    InitiateSettleTx(posRefId, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -656,13 +670,18 @@ export default class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var settleRequestMsg = new SettleRequest(RequestIdHelper.Id("settle")).ToMessage();
+        var settleMsg = Object.assign(new SettleRequest(RequestIdHelper.Id("settle")),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, TransactionType.Settle, 0, settleRequestMsg, 
+            posRefId, TransactionType.Settle, 0, settleMsg, 
             `Waiting for EFTPOS connection to make a settle request`);
 
-        if (this._send(settleRequestMsg))
+        if (this._send(settleMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to settle.`);
         }
@@ -672,13 +691,19 @@ export default class Spi {
     }
 
     // <summary>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // </summary>
-    InitiateSettlementEnquiry(posRefId)
+    InitiateSettlementEnquiry(posRefId, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var stlEnqMsg = new SettlementEnquiryRequest(RequestIdHelper.Id("stlenq")).ToMessage();
+        var stlEnqMsg = Object.assign(new SettlementEnquiryRequest(RequestIdHelper.Id("stlenq")),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.SettlementEnquiry, 0, stlEnqMsg,
@@ -1638,6 +1663,12 @@ export default class Spi {
                 break;
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
+                break;
+            case Events.PayAtTableGetOpenTables:
+                this._spiPat._handleGetOpenTablesRequest(m);
+                break;
+            case Events.PayAtTableBillPaymentFlowEnded:
+                this._spiPat._handleBillPaymentFlowEnded(m);
                 break;
             case Events.PrintingResponse:
                 this._handlePrintingResponse(m);
