@@ -24,6 +24,8 @@ export class BillStatusResponse
         // retrieve the bill using the table id. 
         // </summary>
         this.TableId = null;
+
+        this.OperatorId = null;
         
         // <summary>
         // The Total Amount on this bill, in cents.
@@ -115,6 +117,7 @@ export class BillPayment
         this.BillId = this._incomingAdvice.Data["bill_id"];
         this.TableId = this._incomingAdvice.Data["table_id"];
         this.OperatorId = this._incomingAdvice.Data["operator_id"];
+        this.PaymentFlowStarted = null;
         
         var pt = this._incomingAdvice.Data["payment_type"];
         this.PaymentType = pt;
@@ -201,4 +204,72 @@ export class PayAtTableConfig
     }
 }
 
-    
+// <summary>
+// These attributes work for COM interop.
+// </summary>
+export class GetOpenTablesResponse
+{
+    constructor() {
+        /// <summary>
+        /// Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
+        /// It is just a piece of string that you save against your operatorId.
+        /// Whenever you're asked for OpenTables, make sure you return this piece of data if you have it.
+        /// </summary>
+        this.TableData = null;
+    }
+
+    GetOpenTables()
+    {
+        if (!this.TableData)
+        {
+            return [];
+        }
+
+        return JSON.parse(this.TableData);
+    }
+
+    ToMessage(messageId)
+    {
+        var data = {
+            tables: this.GetOpenTables()
+        };
+
+        return new Message(messageId, Events.PayAtTableOpenTables, data, true);
+    }
+}
+
+// <summary>
+// These attributes work for COM interop.
+// </summary>
+export class OpenTablesEntry
+{
+    constructor() {
+        this.TableId = null;
+        this.Label = null;
+        this.BillOutstandingAmount = null;
+    }
+}
+
+/// <summary>
+/// These attributes work for COM interop.
+/// </summary>
+
+export class BillPaymentFlowEndedResponse
+{
+    constructor(m)
+    {
+        this.BillId = m.Data.bill_id;
+        this.BillOutstandingAmount = m.Data.bill_outstanding_amount;
+        this.BillTotalAmount = m.Data.bill_total_amount;
+        this.OperatorId = m.Data.operator_id;
+        this.TableId = m.Data.table_id;
+        this.CardTotalCount = m.Data.card_total_count;
+        this.CardTotalAmount = m.Data.card_total_amount;
+        this.CashTotalCount = m.Data.cash_total_count;
+        this.CashTotalAmount = m.Data.cash_total_amount;
+    }
+
+    BillPaymentFlowEndedResponse() {
+
+    }
+}

@@ -1,6 +1,7 @@
 import {RequestIdHelper} from './RequestIdHelper';
 import {Message} from './Messages';
 import {PurchaseResponse} from './Purchase';
+import {SpiConfig, TransactionOptions} from './SpiModels';
 
 export const PreauthEvents = 
 {
@@ -59,6 +60,8 @@ export class PreauthOpenRequest
     {
         this.PosRefId = posRefId;
         this.PreauthAmount = amountCents;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -68,6 +71,11 @@ export class PreauthOpenRequest
             "preauth_amount": this.PreauthAmount
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prac"), PreauthEvents.PreauthOpenRequest, data, true);
     }
 }
@@ -79,6 +87,8 @@ export class PreauthTopupRequest
         this.PreauthId = preauthId;
         this.TopupAmount = topupAmountCents;
         this.PosRefId = posRefId;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -89,6 +99,11 @@ export class PreauthTopupRequest
             "topup_amount": this.TopupAmount
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prtu"), PreauthEvents.PreauthTopupRequest, data, true);
     }
 }
@@ -100,6 +115,8 @@ export class PreauthPartialCancellationRequest
         this.PreauthId = preauthId;
         this.PartialCancellationAmount = partialCancellationAmountCents;
         this.PosRefId = posRefId;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -110,6 +127,11 @@ export class PreauthPartialCancellationRequest
             "preauth_cancel_amount": this.PartialCancellationAmount
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prpc"), PreauthEvents.PreauthPartialCancellationRequest, data, true);
     }
 }
@@ -120,6 +142,8 @@ export class PreauthExtendRequest
     {
         this.PreauthId = preauthId;
         this.PosRefId = posRefId;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -129,6 +153,11 @@ export class PreauthExtendRequest
             "preauth_id": this.PreauthId
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prext"), PreauthEvents.PreauthExtendRequest, data, true);
     }
 }
@@ -139,6 +168,8 @@ export class PreauthCancelRequest
     {
         this.PreauthId = preauthId;
         this.PosRefId = posRefId;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -148,6 +179,11 @@ export class PreauthCancelRequest
             "preauth_id": this.PreauthId
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prac"), PreauthEvents.PreauthCancellationRequest, data, true);
     }
 }
@@ -160,6 +196,8 @@ export class PreauthCompletionRequest
         this.CompletionAmount = completionAmountCents;
         this.PosRefId = posRefId;
         this.SurchargeAmount = surchargeAmount;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage()
@@ -171,6 +209,11 @@ export class PreauthCompletionRequest
             "surcharge_amount": this.SurchargeAmount
         };
 
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prac"), PreauthEvents.PreauthCompleteRequest, data, true);
     }
 }
@@ -255,5 +298,15 @@ export class PreauthResponse
             default:
                 return 0;
         }
+    }
+
+    WasMerchantReceiptPrinted()
+    {
+        return this._m.Data["merchant_receipt_printed"];
+    }
+
+    WasCustomerReceiptPrinted()
+    {
+        return this._m.Data["customer_receipt_printed"];
     }
 }
