@@ -298,6 +298,11 @@ export class GetLastTransactionResponse
         return this._m.Data.pos_ref_id;
     }
 
+    GetBankNonCashAmount()
+    {
+        return this._m.Data.bank_noncash_amount;
+    }
+
     GetSchemeApp()
     {
         return this._m.Data.scheme_name;

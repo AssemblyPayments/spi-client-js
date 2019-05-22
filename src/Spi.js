@@ -789,16 +789,17 @@ export default class Spi {
     // </summary>
     // <param name="gltResponse">The GetLastTransactionResponse message to check</param>
     // <param name="posRefId">The Reference Id that you passed in with the original request.</param>
-
+    // <param name="expectedAmount">The total amount in the original request</param>
+    // <param name="requestTime">The request time</param>
     // <returns></returns>
-    GltMatch(gltResponse, posRefId, ...deprecatedArgs) 
+    GltMatch(gltResponse, posRefId, expectedAmount, requestTime, ...deprecatedArgs) 
     {
         // Obsolete method call check
         // Old interface: GltMatch(GetLastTransactionResponse gltResponse, TransactionType expectedType, int expectedAmount, DateTime requestTime, string posRefId)
         if(deprecatedArgs.length) {
-            if(deprecatedArgs.length == 2) {
+            if(deprecatedArgs.length === 1) {
                 this._log.info("Obsolete method call detected: Use GltMatch(gltResponse, posRefId)");
-                return this.GltMatch(gltResponse, deprecatedArgs[2]);
+                return this.GltMatch(gltResponse, deprecatedArgs[0]);
             } else {
                 throw new Error("Obsolete method call with unknown args: Use GltMatch(GetLastTransactionResponse gltResponse, string posRefId)");
             }
@@ -806,9 +807,18 @@ export default class Spi {
 
         this._log.info(`GLT CHECK: PosRefId: ${posRefId}->${gltResponse.GetPosRefId()}`);
 
+        var gltBankDateTimeStr = gltResponse.GetBankDateTimeString(); // ddMMyyyyHHmmss
+        var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
+        var compare = requestTime.getTime() - gltBankDateTime.getTime();
+
         if (!posRefId == gltResponse.GetPosRefId())
         {
             return SuccessState.Unknown;
+        }
+
+        if (gltResponse.GetTxType().toUpperCase() == "PURCHASE" && gltResponse.GetBankNonCashAmount() != expectedAmount && compare > 0)
+        {
+            return Message.SuccessState.Unknown;
         }
 
         return gltResponse.GetSuccessState();
@@ -1205,7 +1215,7 @@ export default class Spi {
             else
             {
                 // TH-4A - Let's try to match the received last transaction against the current transaction
-                var successState = this.GltMatch(gtlResponse, txState.PosRefId);
+                var successState = this.GltMatch(gtlResponse, txState.PosRefId, txState.AmountCents, txState.RequestTime);
                 if (successState == SuccessState.Unknown)
                 {
                     // TH-4N: Didn't Match our transaction. Consider Unknown State.
