@@ -158,7 +158,7 @@ export default class Spi {
 
         var was = this._serialNumber;
         this._serialNumber = serialNumber;
-        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(was))
+        if (this.HasSerialNumberChanged(was))
         {
             this._autoResolveEftposAddress();
         }
@@ -204,6 +204,7 @@ export default class Spi {
         // we're changing mode
         this._inTestMode = testMode;
         this._autoResolveEftposAddress();
+
         return true;
     }
 
@@ -447,7 +448,7 @@ export default class Spi {
     // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = {}, surchargeAmount = 0)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = new TransactionOptions(), surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -738,7 +739,7 @@ export default class Spi {
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg, 
             "Waiting for EFTPOS connection to make a Get-Last-Transaction request.");
-        
+        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
         if (this._send(gltRequestMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS for last transaction.`);
@@ -1130,7 +1131,19 @@ export default class Spi {
         var txState = this.CurrentTxFlowState;
         if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished)
         {
-            // We were not in the middle of a transaction, who cares?
+            this._log.info("Received glt response but we were not in the middle of a tx. ignoring.");
+            return;
+        }
+
+        if (!txState.AwaitingGltResponse)
+        {
+            this._log.info("received a glt response but we had not asked for one within this transaction. Perhaps leftover from previous one. ignoring.");
+            return;
+        }
+
+        if (txState.LastGltRequestId != m.Id)
+        {
+            this._log.info("received a glt response but the message id does not match the glt request that we sent. strange. ignoring.");
             return;
         }
 
@@ -1265,7 +1278,6 @@ export default class Spi {
             {
                 // TH-1T, TH-4T - It's been a while since we received an update, let's call a GLT
                 this._log.info(`Checking on our transaction. Last we asked was at ${state.LastStateRequestTime}...`);
-                txState.CallingGlt();
                 this._callGetLastTransaction();
             }
         }
@@ -1481,7 +1493,6 @@ export default class Spi {
             {
                 // TH-3A - We've just reconnected and were in the middle of Tx.
                 // Let's get the last transaction to check what we might have missed out on.
-                this.CurrentTxFlowState.CallingGlt();
                 this._callGetLastTransaction();
             }
             else
@@ -1573,8 +1584,9 @@ export default class Spi {
     // </summary>
     _callGetLastTransaction()
     {
-        var gltRequest = new GetLastTransactionRequest();
-        this._send(gltRequest.ToMessage());
+        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
+        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
+        this._send(gltRequestMsg);
     }
 
     // <summary>
@@ -1727,8 +1739,10 @@ export default class Spi {
         if (!this._autoAddressResolutionEnabled)
             return;
     
-        if (!this._serialNumber)
+        if (!this._serialNumber || !this._deviceApiKey) {
+            this._log.warn("Missing serialNumber and/or deviceApiKey. Need to set them before for Auto Address to work.");    
             return;
+        }
 
         var service = new DeviceAddressService();
         var isSecureConnection = false;

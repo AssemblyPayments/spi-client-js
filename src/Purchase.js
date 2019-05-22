@@ -35,7 +35,10 @@ export class PurchaseRequest {
             surcharge_amount: this.SurchargeAmount
         };
 
-        this.Config.addReceiptConfig(data);
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
         this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("prchs"), Events.PurchaseRequest, data, true);
     }
@@ -356,12 +359,12 @@ export class GetLastTransactionResponse
 
 export class RefundRequest
 {
-    constructor(amountCents, posRefId, isSuppressMerchantPassword)
+    constructor(amountCents, posRefId, suppressMerchantPassword)
     {
         this.AmountCents = amountCents;
         this.Id = RequestIdHelper.Id("refund");
         this.PosRefId = posRefId;
-        this.IsSuppressMerchantPassword = isSuppressMerchantPassword;
+        this.SuppressMerchantPassword = suppressMerchantPassword;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -371,11 +374,14 @@ export class RefundRequest
         let data = {
             refund_amount: this.AmountCents, 
             pos_ref_id: this.PosRefId,
-            suppress_merchant_password: this.IsSuppressMerchantPassword
+            suppress_merchant_password: this.SuppressMerchantPassword
         };
         
-        this.Config.addReceiptConfig(data);
-        // this.Options.AddOptions(data);
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("refund"), Events.RefundRequest, data, true);
     }
 }
@@ -538,6 +544,7 @@ export class MotoPurchaseRequest
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.SurchargeAmount = surchargeAmount;
+        this.SuppressMerchantPassword = false;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -547,9 +554,15 @@ export class MotoPurchaseRequest
         var data = {
             pos_ref_id: this.PosRefId,
             purchase_amount: this.PurchaseAmount,
-            surcharge_amount: this.SurchargeAmount
+            surcharge_amount: this.SurchargeAmount,
+            suppress_merchant_password: this.SuppressMerchantPassword
         };
-        this.Config.addReceiptConfig(data);
+
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
         return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);
     }
 }

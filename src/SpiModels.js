@@ -98,7 +98,6 @@ export const TransactionType =
     Settle: 'Settle',
     SettlementEnquiry: 'SettlementEnquiry',
     GetLastTransaction: 'GetLastTransaction',
-    
     Preauth: 'Preauth',
     AccountVerify: 'AccountVerify'
 };
@@ -188,6 +187,11 @@ export class TransactionFlowState
         this.LastStateRequestTime = null;
         
         // <summary>
+        // The id of the last glt request message that was sent. used to match with the response.
+        // </summary>
+        this.LastGltRequestId = null;
+
+        // <summary>
         // Whether we're currently attempting to Cancel the transaction.
         // </summary>
         this.AttemptingToCancel = null;
@@ -272,10 +276,11 @@ export class TransactionFlowState
         this.DisplayMessage = msg;
     }
 
-    CallingGlt()
+    CallingGlt(gltRequestId)
     {
         this.AwaitingGltResponse = true;
         this.LastStateRequestTime = Date.now();
+        this.LastGltRequestId = gltRequestId;
     }
 
     GotGltResponse()
@@ -361,22 +366,22 @@ export class SubmitAuthCodeResult
 export class SpiConfig
 {
     constructor() {
-        this.PromptForCustomerCopyOnEftpos  = false;
-        this.SignatureFlowOnEftpos          = false;
-        this.PrintMerchantCopy              = false;
+        this.EnabledPrintMerchantCopy = false;
+        this.EnabledPromptForCustomerCopyOnEftpos = false;
+        this.EnabledSignatureFlowOnEftpos = false;
     }
 
-    addReceiptConfig(messageData)
+    AddReceiptConfig(messageData)
     {
-        if (this.PromptForCustomerCopyOnEftpos)
+        if (this.PromptForCustomerCopyOnEftpos && this.EnabledPromptForCustomerCopyOnEftpos)
         {
             messageData.prompt_for_customer_copy = this.PromptForCustomerCopyOnEftpos;
         }
-        if (this.SignatureFlowOnEftpos)
+        if (this.SignatureFlowOnEftpos && this.EnabledSignatureFlowOnEftpos)
         {
             messageData.print_for_signature_required_transactions = this.SignatureFlowOnEftpos;
         }
-        if (this.PrintMerchantCopy)
+        if (this.PrintMerchantCopy && this.EnabledPrintMerchantCopy)
         {
             messageData.print_merchant_copy = this.PrintMerchantCopy;
         }
@@ -392,10 +397,10 @@ export class SpiConfig
 export class TransactionOptions
 {
     constructor() {
-        this._customerReceiptHeader = null;
-        this._customerReceiptFooter = null;
-        this._merchantReceiptHeader = null;
-        this._merchantReceiptFooter = null;
+        this._customerReceiptHeader = "";
+        this._customerReceiptFooter = "";
+        this._merchantReceiptHeader = "";
+        this._merchantReceiptFooter = "";
     }
 
     SetCustomerReceiptHeader(customerReceiptHeader)

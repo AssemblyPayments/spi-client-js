@@ -1,12 +1,22 @@
 import {Events, SuccessState, Message} from './Messages';
+import {SpiConfig, TransactionOptions} from './SpiModels';
 
 export class SettleRequest {
     constructor(id) {
         this.Id = id;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
 
     ToMessage() {
-        return new Message(this.Id, Events.SettleRequest, null, true);
+        var data = {};
+
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = false;
+        this.Config.EnabledSignatureFlowOnEftpos = false;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
+        return new Message(this.Id, Events.SettleRequest, data, true);
     }
 }
 
@@ -78,6 +88,11 @@ export class Settlement {
         return this._m.Data.terminal_id;
     }
 
+    WasMerchantReceiptPrinted()
+    {
+        return this._m.Data.merchant_receipt_printed;
+    }
+
     GetSchemeSettlementEntries()
     {
         var schemes = this._m.Data.schemes;
@@ -119,10 +134,19 @@ export class SettlementEnquiryRequest
     constructor(id)
     {
         this.Id = id;
+        this.Config = new SpiConfig();
+        this.Options = new TransactionOptions();
     }
     
     ToMessage()
     {
-        return new Message(this.Id, Events.SettlementEnquiryRequest, null, true);
+        var data = {};
+
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = false;
+        this.Config.EnabledSignatureFlowOnEftpos = false;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
+        return new Message(this.Id, Events.SettlementEnquiryRequest, data, true);
     }
 }

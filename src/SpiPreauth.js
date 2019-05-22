@@ -9,7 +9,7 @@ import {
     PreauthCancelRequest} from './Preauth';
 
 
-import {TransactionFlowState, TransactionType, InitiateTxResult, SpiStatus, SpiFlow} from './SpiModels';
+import {TransactionFlowState, TransactionType, InitiateTxResult, SpiStatus, SpiFlow, SpiConfig, TransactionOptions} from './SpiModels';
 
 export class SpiPreauth
 {
@@ -17,11 +17,14 @@ export class SpiPreauth
     {
         this._spi = spi;
         this._log = console;
+
+        this.Config = new SpiConfig();
     }
 
     InitiateAccountVerifyTx(posRefId)
     {
         var verifyMsg = new AccountVerifyRequest(posRefId).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.AccountVerify, 0, verifyMsg,
             "Waiting for EFTPOS connection to make account verify request");
@@ -29,9 +32,14 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
     
-    InitiateOpenTx(posRefId, amountCents)
+    InitiateOpenTx(posRefId, amountCents, options = new TransactionOptions())
     {
-        var msg = new PreauthOpenRequest(amountCents, posRefId).ToMessage();
+        var msg = Object.assign(new PreauthOpenRequest(amountCents, posRefId),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, amountCents, msg,
             `Waiting for EFTPOS connection to make preauth request for ${(amountCents / 100.0).toFixed(2)}`);
@@ -39,9 +47,14 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiateTopupTx(posRefId, preauthId, amountCents)
+    InitiateTopupTx(posRefId, preauthId, amountCents, options = new TransactionOptions())
     {
-        var msg = new PreauthTopupRequest(preauthId, amountCents, posRefId).ToMessage();
+        var msg = Object.assign(new PreauthTopupRequest(preauthId, amountCents, posRefId),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, amountCents, msg,
             `Waiting for EFTPOS connection to make preauth topup request for ${(amountCents / 100.0).toFixed(2)}`);
@@ -49,9 +62,14 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiatePartialCancellationTx(posRefId, preauthId, amountCents)
+    InitiatePartialCancellationTx(posRefId, preauthId, amountCents, options = new TransactionOptions())
     {
-        var msg = new PreauthPartialCancellationRequest(preauthId, amountCents, posRefId).ToMessage();
+        var msg = Object.assign(new PreauthPartialCancellationRequest(preauthId, amountCents, posRefId),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, amountCents, msg,
             `Waiting for EFTPOS connection to make preauth partial cancellation request for ${(amountCents / 100.0).toFixed(2)}`);
@@ -59,9 +77,14 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiateExtendTx(posRefId, preauthId)
+    InitiateExtendTx(posRefId, preauthId, options = new TransactionOptions())
     {
-        var msg = new PreauthExtendRequest(preauthId, posRefId).ToMessage();
+        var msg = Object.assign(new PreauthExtendRequest(preauthId, posRefId),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, 0, msg,
             "Waiting for EFTPOS connection to make preauth Extend request");
@@ -69,9 +92,15 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiateCompletionTx(posRefId, preauthId, amountCents, surchargeAmount)
+    InitiateCompletionTx(posRefId, preauthId, amountCents, surchargeAmount = 0, options = new TransactionOptions())
     {
-        var msg = new PreauthCompletionRequest(preauthId, amountCents, posRefId, surchargeAmount).ToMessage();
+        var msg = Object.assign(new PreauthCompletionRequest(preauthId, amountCents, posRefId),
+        {
+            Config: this.Config,
+            SurchargeAmount: surchargeAmount,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, amountCents, msg,
             `Waiting for EFTPOS connection to make preauth completion request for ${(amountCents / 100.0).toFixed(2)}`);
@@ -79,9 +108,14 @@ export class SpiPreauth
         return this._initiatePreauthTx(tfs, sentMsg);
     }
 
-    InitiateCancelTx(posRefId, preauthId)
+    InitiateCancelTx(posRefId, preauthId, options = new TransactionOptions())
     {
-        var msg = new PreauthCancelRequest(preauthId, posRefId).ToMessage();
+        var msg = Object.assign(new PreauthCancelRequest(preauthId, posRefId),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         var tfs = new TransactionFlowState(
             posRefId, TransactionType.Preauth, 0, msg,
             "Waiting for EFTPOS connection to make preauth cancellation request");
