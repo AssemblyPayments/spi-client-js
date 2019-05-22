@@ -275,7 +275,7 @@ export class GetLastTransactionResponse
     
     IsStillInProgress(posRefId)
     {
-        return this.WasOperationInProgressError() && this.GetPosRefId() == posRefId;
+        return this.WasOperationInProgressError() && (this.GetPosRefId() == posRefId || this.GetPosRefId() == null);
     }
 
     GetSuccessState()
