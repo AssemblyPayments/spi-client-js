@@ -75,7 +75,7 @@ export default class Spi {
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
         this._maxWaitForCancelTx = 10000;
-        this._sleepBeforeReconnectMs = 5000;
+        this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
         this._retriesBeforeResolvingDeviceAddress = 5;
 
@@ -1199,8 +1199,8 @@ export default class Spi {
             else
             {
                 // TH-4X - Unexpected Response when recovering
-                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}`);
-                txState.UnknownCompleted("Unexpected Error when recovering Transaction Status. Check EFTPOS. ");
+                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}. Ignoring.`);
+                return;
             }
         }
         else
