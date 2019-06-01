@@ -366,6 +366,10 @@ export class SubmitAuthCodeResult
 export class SpiConfig
 {
     constructor() {
+        this.PrintMerchantCopy = false;
+        this.PromptForCustomerCopyOnEftpos = false;
+        this.SignatureFlowOnEftpos = false;
+
         this.EnabledPrintMerchantCopy = false;
         this.EnabledPromptForCustomerCopyOnEftpos = false;
         this.EnabledSignatureFlowOnEftpos = false;
