@@ -268,8 +268,4 @@ export class BillPaymentFlowEndedResponse
         this.CashTotalCount = m.Data.cash_total_count;
         this.CashTotalAmount = m.Data.cash_total_amount;
     }
-
-    BillPaymentFlowEndedResponse() {
-
-    }
 }
