@@ -140,7 +140,7 @@ export class SpiPayAtTable
         var operatorId = m.Data["operator_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        var openTablesResponse = this.GetOpenTables(operatorId);
+        var openTablesResponse = this.GetOpenTables(operatorId); // JSON or string?
         if (openTablesResponse.TableData.length <= 0)
         {
             this._log.info("There is no open table.");

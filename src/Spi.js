@@ -14,11 +14,11 @@ import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
-import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
+import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-export const SPI_VERSION = '2.4.0';
+export const SPI_VERSION = '2.5.0';
 
 export default class Spi {
 
@@ -161,6 +161,16 @@ export default class Spi {
         if (this.HasSerialNumberChanged(was))
         {
             this._autoResolveEftposAddress();
+        }
+        else
+        {
+            if (this.CurrentDeviceStatus == null)
+            {
+                this.CurrentDeviceStatus = new DeviceAddressStatus();
+            }
+
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SERIAL_NUMBER_NOT_CHANGED;
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
         }
 
         return true;

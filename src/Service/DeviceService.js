@@ -31,7 +31,20 @@ export class DeviceAddressStatus
         this.ip = null;
         this.fqdn = null;
         this.last_updated = null;
+
+        this.DeviceAddressResponseCode = null;
+        this.ResponseStatusDescription = null;
+        this.ResponseMessage = null;
     }
+}
+
+export const DeviceAddressResponseCode =
+{
+    SUCCESS: 'SUCCESS',
+    INVALID_SERIAL_NUMBER: 'INVALID_SERIAL_NUMBER',
+    ADDRESS_NOT_CHANGED: 'ADDRESS_NOT_CHANGED',
+    SERIAL_NUMBER_NOT_CHANGED: 'SERIAL_NUMBER_NOT_CHANGED',
+    DEVICE_SERVICE_ERROR: 'DEVICE_SERVICE_ERROR'
 }
 
 export class DeviceAddressService
