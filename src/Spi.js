@@ -14,7 +14,7 @@ import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
-import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode} from './Service/DeviceService';
+import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
@@ -1754,7 +1754,7 @@ export default class Spi {
         return this._eftposAddress != updatedEftposAddress;
     }
 
-    _autoResolveEftposAddress()
+    async _autoResolveEftposAddress()
     {
         if (!this._autoAddressResolutionEnabled)
             return;
@@ -1764,49 +1764,75 @@ export default class Spi {
             return;
         }
 
+        var isSecureConnection = this._isSecureConnection();
+
         var service = new DeviceAddressService();
-        var isSecureConnection = false;
-         
-        // determine whether to use wss or not
-        if (this._isUsingHttps() || this._forceSecureWebSockets)
+        var addressResponse = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+        
+        this.CurrentDeviceStatus = new DeviceAddressStatus(isSecureConnection);
+
+        if (addressResponse.status == HttpStatusCode.NotFound)
         {
-            this._log.info(`Secure connection detected.`);    
-            isSecureConnection = true;
-        }
-
-        this._log.info(`Resolving address for device ${this._serialNumber}.`);
-
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode, this._log).then((response) => 
-        {
-            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), response);
-
-            if(!deviceAddressStatus || !deviceAddressStatus.Address)
-            {
-                this._log.info(`Could not resolve device address.`, response);
-                document.dispatchEvent(new CustomEvent('AutoAddressResolutionFailed', {detail: response}));
-                return;
-            }
-                
-            this._log.info(`Address for device resolved to ${deviceAddressStatus.Address}`);
-            if (!this.HasEftposAddressChanged(deviceAddressStatus.Address))
-                return;
-
-            // update device and connection address
-            var protocol = isSecureConnection ? "wss" : "ws";
-            this._eftposAddress = protocol + "://" + deviceAddressStatus.Address;
-            this._conn.Address = this._eftposAddress;
-
-            this.CurrentDeviceStatus = deviceAddressStatus;
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
+            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
+            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
 
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
-            
-            return this.CurrentDeviceStatus;
+            return;
+        }
+
+        if(!addressResponse.ok) {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
+            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
+            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        var addressResponseJson = await addressResponse.json();
+
+        if(!addressResponseJson || !addressResponseJson.Address) {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
+            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
+            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        if (!this.HasEftposAddressChanged(addressResponseJson.Address))
+        {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        // update device and connection address
+        var protocol = isSecureConnection ? "wss" : "ws";
+        this._eftposAddress = protocol + "://" + addressResponseJson.Address;
+        this._conn.Address = this._eftposAddress;
+
+        this.CurrentDeviceStatus = Object.assign(new DeviceAddressStatus(isSecureConnection),
+        {
+            Address: addressResponseJson.Address,
+            LastUpdated: addressResponseJson.LastUpdated,
+            DeviceAddressResponseCode: DeviceAddressResponseCode.SUCCESS
         });
+
+        document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
     }
 
     _isUsingHttps() 
     {
         return 'https:' == document.location.protocol ? true : false;
+    }
+
+    // determine whether to use wss or not
+    _isSecureConnection() 
+    {
+        return this._isUsingHttps() || this._forceSecureWebSockets;
     }
 }
 

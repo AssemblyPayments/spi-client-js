@@ -30,7 +30,7 @@ export class DeviceAddressStatus
 
         this.ip = null;
         this.fqdn = null;
-        this.last_updated = null;
+        this.LastUpdated = null;
 
         this.DeviceAddressResponseCode = null;
         this.ResponseStatusDescription = null;
@@ -45,26 +45,28 @@ export const DeviceAddressResponseCode =
     ADDRESS_NOT_CHANGED: 'ADDRESS_NOT_CHANGED',
     SERIAL_NUMBER_NOT_CHANGED: 'SERIAL_NUMBER_NOT_CHANGED',
     DEVICE_SERVICE_ERROR: 'DEVICE_SERVICE_ERROR'
-}
+};
+
+export const HttpStatusCode = 
+{
+    NotFound: 404
+};
 
 export class DeviceAddressService
 {
     // RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
-    RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode, log)    
+    async RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)    
     {
         var path = isSecureConnection ? 'fqdn' : 'ip';
         var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
-        log.info('device address uri', deviceAddressUri)
-        return fetch(deviceAddressUri, {
+        var response = await fetch(deviceAddressUri, {
             method: 'GET',
             headers: {
                 "ASM-MSP-DEVICE-ADDRESS-API-KEY": apiKey
             }
-        })
-        .then(response => response.json())
-        .catch((response) => {
-            log.error(`Status code ${response.StatusCode} received from ${deviceAddressUri} - Exception ${response.error}`);
-        })
+        });
+
+        return response;
     }
 }
