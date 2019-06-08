@@ -1767,8 +1767,22 @@ export default class Spi {
         var isSecureConnection = this._isSecureConnection();
 
         var service = new DeviceAddressService();
-        var addressResponse = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
-        
+
+        try
+        {
+            var addressResponse     = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+            var addressResponseJson = await addressResponse.json();
+        }
+        catch (err) 
+        {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
+            this.CurrentDeviceStatus.ResponseStatusDescription = err;
+            this.CurrentDeviceStatus.ResponseMessage = err;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return; 
+        }
+
         this.CurrentDeviceStatus = new DeviceAddressStatus(isSecureConnection);
 
         if (addressResponse.status == HttpStatusCode.NotFound)
@@ -1781,18 +1795,7 @@ export default class Spi {
             return;
         }
 
-        if(!addressResponse.ok) {
-            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
-            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
-            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
-
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
-            return;
-        }
-
-        var addressResponseJson = await addressResponse.json();
-
-        if(!addressResponseJson || !addressResponseJson.Address) {
+        if(!addressResponse.ok || !addressResponseJson || !addressResponseJson.Address) {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
             this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
             this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
