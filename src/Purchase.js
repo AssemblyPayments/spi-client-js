@@ -533,11 +533,12 @@ export class SignatureAccept
 
 export class MotoPurchaseRequest
 {
-    constructor(amountCents, posRefId, surchargeAmount)
+    constructor(amountCents, posRefId, surchargeAmount, isSuppressMerchantPassword)
     {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.SurchargeAmount = surchargeAmount;
+        this.IsSuppressMerchantPassword = isSuppressMerchantPassword;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -547,7 +548,8 @@ export class MotoPurchaseRequest
         var data = {
             pos_ref_id: this.PosRefId,
             purchase_amount: this.PurchaseAmount,
-            surcharge_amount: this.SurchargeAmount
+            surcharge_amount: this.SurchargeAmount,
+            suppress_merchant_password: this.IsSuppressMerchantPassword
         };
         this.Config.addReceiptConfig(data);
         return new Message(RequestIdHelper.Id("moto"), Events.MotoPurchaseRequest, data, true);

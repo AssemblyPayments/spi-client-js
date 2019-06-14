@@ -622,12 +622,12 @@ export default class Spi {
     // <param name="amountCents">Amount in Cents</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0, isSuppressMerchantPassword = false)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount);
+        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount, isSuppressMerchantPassword);
         motoPurchaseRequest.Config = this.Config;
         var cashoutMsg = motoPurchaseRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
