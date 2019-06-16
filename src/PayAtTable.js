@@ -248,6 +248,14 @@ export class OpenTablesEntry
         this.Label = null;
         this.BillOutstandingAmount = null;
     }
+
+    toJSON() {
+        return {
+            table_id: this.TableId,
+            label: this.Label,
+            bill_outstanding_amount: this.BillOutstandingAmount
+        }
+    }
 }
 
 /// <summary>
