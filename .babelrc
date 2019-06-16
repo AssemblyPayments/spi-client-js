@@ -10,7 +10,7 @@
 	        "safari": "12",
 	        "ie": 11
 	      },
-	      "modules": "umd"
+          "modules": "umd"
 	    }
 	]]
 }
