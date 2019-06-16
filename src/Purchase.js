@@ -68,12 +68,12 @@ export class PurchaseResponse
 
     GetTipAmount()
     {
-        return this._m.Data.tip_amount;
+        return this._m.Data.tip_amount || 0;
     }
 
     GetSurchargeAmount()
     {
-        return this._m.Data.surcharge_amount;
+        return this._m.Data.surcharge_amount || 0;
     }
 
     GetCashoutAmount()

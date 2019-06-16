@@ -128,6 +128,7 @@ export class BillPayment
 
         this.PurchaseAmount = this.PurchaseResponse.GetPurchaseAmount();
         this.TipAmount = this.PurchaseResponse.GetTipAmount();
+        this.SurchargeAmount = this.PurchaseResponse.GetSurchargeAmount();
     }
 }
 
