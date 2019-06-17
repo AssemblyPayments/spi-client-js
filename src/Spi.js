@@ -205,7 +205,7 @@ export default class Spi {
     /// <returns></returns>
     SetTestMode(testMode)
     {
-        if (this.CurrentStatus != SpiStatus.Unpaired)
+        if (this.CurrentStatus && this.CurrentStatus != SpiStatus.Unpaired)
             return false;
 
         if (testMode == this._inTestMode)
@@ -1772,6 +1772,16 @@ export default class Spi {
         {
             var addressResponse     = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
             var addressResponseJson = await addressResponse.json();
+
+            this.CurrentDeviceStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), 
+            {
+                ip: addressResponseJson.ip,
+                fqdn: addressResponseJson.fqdn,
+                DeviceAddressResponseCode: addressResponse.status,
+                ResponseStatusDescription: addressResponse.statusText,
+                ResponseMessage: addressResponse.statusText,
+                LastUpdated: addressResponseJson.last_updated
+            });
         }
         catch (err) 
         {
@@ -1783,28 +1793,22 @@ export default class Spi {
             return; 
         }
 
-        this.CurrentDeviceStatus = new DeviceAddressStatus(isSecureConnection);
-
         if (addressResponse.status == HttpStatusCode.NotFound)
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
-            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
-            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
 
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             return;
         }
 
-        if(!addressResponse.ok || !addressResponseJson || !addressResponseJson.Address) {
+        if(!addressResponse.ok || !addressResponseJson || !this.CurrentDeviceStatus.Address) {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
-            this.CurrentDeviceStatus.ResponseStatusDescription = addressResponse.statusText;
-            this.CurrentDeviceStatus.ResponseMessage = addressResponse.statusText;
 
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             return;
         }
 
-        if (!this.HasEftposAddressChanged(addressResponseJson.Address))
+        if (!this.HasEftposAddressChanged(this.CurrentDeviceStatus.Address))
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
 
@@ -1814,15 +1818,9 @@ export default class Spi {
 
         // update device and connection address
         var protocol = isSecureConnection ? "wss" : "ws";
-        this._eftposAddress = protocol + "://" + addressResponseJson.Address;
+        this._eftposAddress = protocol + "://" + this.CurrentDeviceStatus.Address;
         this._conn.Address = this._eftposAddress;
-
-        this.CurrentDeviceStatus = Object.assign(new DeviceAddressStatus(isSecureConnection),
-        {
-            Address: addressResponseJson.Address,
-            LastUpdated: addressResponseJson.LastUpdated,
-            DeviceAddressResponseCode: DeviceAddressResponseCode.SUCCESS
-        });
+        this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SUCCESS;
 
         document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
     }
