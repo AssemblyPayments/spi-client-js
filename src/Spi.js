@@ -18,7 +18,7 @@ import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, Ht
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-export const SPI_VERSION = '2.5.0';
+export const SPI_VERSION = '2.6.0';
 
 export default class Spi {
 
