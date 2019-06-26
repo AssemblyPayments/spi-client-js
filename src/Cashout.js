@@ -4,11 +4,12 @@ import {RequestIdHelper} from './RequestIdHelper';
 
 export class CashoutOnlyRequest
 {  
-    constructor(amountCents, posRefId, surchargeAmount)
+    constructor(amountCents, posRefId)
     {
         this.PosRefId = posRefId;
         this.CashoutAmount = amountCents;
-        this.SurchargeAmount = surchargeAmount;
+
+        this.SurchargeAmount = null;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
@@ -21,7 +22,12 @@ export class CashoutOnlyRequest
             "surcharge_amount": this.SurchargeAmount
         };
 
-        this.Config.addReceiptConfig(data);
+        this.Config.EnabledPrintMerchantCopy = true;
+        this.Config.EnabledPromptForCustomerCopyOnEftpos = true;
+        this.Config.EnabledSignatureFlowOnEftpos = true;
+        this.Config.AddReceiptConfig(data);
+        this.Options.AddOptions(data);
+
         return new Message(RequestIdHelper.Id("cshout"), Events.CashoutOnlyRequest, data, true);
     }
 }

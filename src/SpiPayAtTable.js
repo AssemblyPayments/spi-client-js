@@ -18,7 +18,8 @@ export class SpiPayAtTable
             TippingEnabled: true,
             LabelOperatorId: "Operator ID",
             LabelPayButton: "Pay at Table",
-            LabelTableId: "Table Number"
+            LabelTableId: "Table Number",
+            TableRetrievalEnabled: true
         });
     }
 
@@ -33,12 +34,20 @@ export class SpiPayAtTable
     // Return:<para />
     // You need to return the current state of the bill.
     // </summary>
-    GetBillStatus(billId, tableId, operatorId) {
+    GetBillStatus(billId, tableId, operatorId, paymentFlowStarted) {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     // Abstract method, must implement in POS system
     BillPaymentReceived(billPayment, updatedBillData) {
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    GetOpenTables(operatorId) {
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    BillPaymentFlowEnded(message) {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
@@ -51,9 +60,10 @@ export class SpiPayAtTable
     {
         var operatorId = m.Data["operator_id"];
         var tableId = m.Data["table_id"];
+        var paymentFlowStarted = m.Data["payment_flow_started"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        return Promise.resolve(this.GetBillStatus(null, tableId, operatorId)).then(billStatus => {
+        return Promise.resolve(this.GetBillStatus("", tableId, operatorId, paymentFlowStarted)).then(billStatus => {
             billStatus.TableId = tableId;
             if (billStatus.TotalAmount <= 0)
             {
@@ -70,7 +80,7 @@ export class SpiPayAtTable
         var billPayment = new BillPayment(m);
         
         // Ask POS for Bill Details, inluding encoded PaymentData
-        return Promise.resolve(this.GetBillStatus(billPayment.BillId, billPayment.TableId, billPayment.OperatorId)).then(existingBillStatus => {
+        return Promise.resolve(this.GetBillStatus(billPayment.BillId, billPayment.TableId, billPayment.OperatorId, billPayment.PaymentFlowStarted)).then(existingBillStatus => {
             if (existingBillStatus.Result != BillRetrievalResult.SUCCESS)
             {
                 this._log.warn("Could not retrieve Bill Status for Payment Advice. Sending Error to Eftpos.");
@@ -123,5 +133,24 @@ export class SpiPayAtTable
     _handleGetTableConfig(m)
     {
         this._spi._send(this.Config.ToMessage(m.Id));
+    }
+
+    _handleGetOpenTablesRequest(m)
+    {
+        var operatorId = m.Data["operator_id"];
+
+        // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
+        var openTablesResponse = this.GetOpenTables(operatorId); // JSON or string?
+        if (openTablesResponse.TableData.length <= 0)
+        {
+            this._log.info("There is no open table.");
+        }
+
+        this._spi._send(openTablesResponse.ToMessage(m.Id));
+    }
+
+    _handleBillPaymentFlowEnded(m)
+    {
+        this.BillPaymentFlowEnded(m);
     }
 }

@@ -20,9 +20,9 @@ export class PurchaseHelper
         return pr;
     }
 
-    static CreateRefundRequest(amountCents, purchaseId, isSuppressMerchantPassword)
+    static CreateRefundRequest(amountCents, purchaseId, suppressMerchantPassword)
     {
-        return new RefundRequest(amountCents, purchaseId, isSuppressMerchantPassword);
+        return new RefundRequest(amountCents, purchaseId, suppressMerchantPassword);
     }
 
 }
