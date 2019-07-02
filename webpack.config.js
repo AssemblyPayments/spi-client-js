@@ -17,7 +17,9 @@ const config = {
     
     output: {
         filename: 'spi-client-js.js',
-        path: outputPath
+        path: outputPath,
+        library: "spi-client-js",
+        libraryTarget: "umd"
     },
 
     devServer: {
