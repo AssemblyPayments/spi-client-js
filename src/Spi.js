@@ -1546,6 +1546,7 @@ export default class Spi {
         }
 
         this._mostRecentPongReceived = m;
+        document.dispatchEvent(new CustomEvent('SpiPong', {detail: m}))
         this._log.debug(`PongLatency:${Date.now() - this._mostRecentPingSentTime}`);
     }
 
