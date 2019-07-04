@@ -1,7 +1,3 @@
-import {Spi} from "./src/Spi";
-import {Logger} from './src/Logger';
-import {Printer} from './src/Printing';
-
 // Re-exported modules required for POS vendors
 export {Spi} from './src/Spi';
 export {Logger} from './src/Logger';
@@ -17,6 +13,3 @@ export {RequestIdHelper} from './src/RequestIdHelper';
 export {DeviceAddressResponseCode} from './src/Service/DeviceService';
 export {BillStatusResponse, BillRetrievalResult, GetOpenTablesResponse, OpenTablesEntry, BillPaymentFlowEndedResponse} from './src/PayAtTable';
 export {PreauthResponse} from './src/Preauth';
-window.Spi = Spi;
-window.Logger = Logger;
-window.Printer = Printer;

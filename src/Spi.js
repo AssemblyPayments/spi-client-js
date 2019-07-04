@@ -18,9 +18,9 @@ import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, Ht
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-export const SPI_VERSION = '2.6.0';
+const SPI_VERSION = '2.6.0';
 
-export default class Spi {
+class Spi {
 
     get CurrentStatus() {
         return this._currentStatus;
@@ -1837,4 +1837,4 @@ export default class Spi {
     }
 }
 
-export {Spi};
+export {Spi, SPI_VERSION};

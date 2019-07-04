@@ -1,4 +1,4 @@
-export default class Logger {
+export class Logger {
     constructor(element, lineSeperator = '\n') {
         this.buffer     = [];
         this.element    = element;
@@ -39,5 +39,3 @@ export default class Logger {
         this._render();
     }
 }
-
-export {Logger};
