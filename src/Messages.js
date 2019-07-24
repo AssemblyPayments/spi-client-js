@@ -65,7 +65,12 @@ export const Events = {
     TerminalStatusRequest : "get_terminal_status",
     TerminalStatusResponse : "terminal_status",
 
-    BatteryLevelChanged : "battery_level_changed"
+    BatteryLevelChanged : "battery_level_changed",
+
+    PayAtTableGetOpenTables: "get_open_tables",
+    PayAtTableOpenTables: "open_tables",
+
+    PayAtTableBillPaymentFlowEnded: "bill_payment_flow_ended"
 };
 
 export const SuccessState = {

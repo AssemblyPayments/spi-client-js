@@ -18,7 +18,9 @@ const config = {
     output: {
         filename: 'spi-client-js.js',
         path: outputPath,
-        libraryTarget: 'umd'
+        path: outputPath,
+        library: "spi-client-js",
+        libraryTarget: "umd"        
     },
 
     devServer: {
@@ -42,15 +44,15 @@ const config = {
     module: {
       rules: [
         {
-          test: /\.m?js$/,
-          exclude: /(node_modules|bower_components)/,
-          use: {
-            loader: 'babel-loader',
-            options: {
-              presets: ['@babel/preset-env']
+            test: /\.m?js$/,
+            exclude: /(node_modules|bower_components)/,
+            use: {
+              loader: 'babel-loader',
+              options: {
+                presets: ['@babel/preset-env']
+              }
             }
           }
-        }
       ]
     },
     plugins: []

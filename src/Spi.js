@@ -1,5 +1,5 @@
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
-import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult} from './SpiModels';
+import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult, TransactionOptions} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
 import {PairingHelper} from './PairingHelper';
 import {Connection, ConnectionState} from './Connection';
@@ -14,13 +14,13 @@ import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
-import {DeviceAddressService, DeviceAddressStatus} from './Service/DeviceService';
+import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-export const SPI_VERSION = '2.4.0';
+const SPI_VERSION = '2.6.0';
 
-export default class Spi {
+class Spi {
 
     get CurrentStatus() {
         return this._currentStatus;
@@ -75,7 +75,7 @@ export default class Spi {
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
         this._maxWaitForCancelTx = 10000;
-        this._sleepBeforeReconnectMs = 5000;
+        this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
         this._retriesBeforeResolvingDeviceAddress = 5;
 
@@ -158,9 +158,19 @@ export default class Spi {
 
         var was = this._serialNumber;
         this._serialNumber = serialNumber;
-        if (this._autoAddressResolutionEnabled && this.HasSerialNumberChanged(was))
+        if (this.HasSerialNumberChanged(was))
         {
             this._autoResolveEftposAddress();
+        }
+        else
+        {
+            if (this.CurrentDeviceStatus == null)
+            {
+                this.CurrentDeviceStatus = new DeviceAddressStatus();
+            }
+
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SERIAL_NUMBER_NOT_CHANGED;
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
         }
 
         return true;
@@ -195,7 +205,7 @@ export default class Spi {
     /// <returns></returns>
     SetTestMode(testMode)
     {
-        if (this.CurrentStatus != SpiStatus.Unpaired)
+        if (this.CurrentStatus && this.CurrentStatus != SpiStatus.Unpaired)
             return false;
 
         if (testMode == this._inTestMode)
@@ -204,6 +214,7 @@ export default class Spi {
         // we're changing mode
         this._inTestMode = testMode;
         this._autoResolveEftposAddress();
+
         return true;
     }
 
@@ -447,7 +458,7 @@ export default class Spi {
     // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = {}, surchargeAmount = 0)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = new TransactionOptions(), surchargeAmount = 0)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -477,9 +488,10 @@ export default class Spi {
     // </summary>
     // <param name="posRefId">Alphanumeric Identifier for your refund.</param>
     // <param name="amountCents">Amount in Cents to charge</param>
-    // <param name="isSuppressMerchantPassword">Merchant Password control in VAA</param>
+    // <param name="suppressMerchantPassword">Merchant Password control in VAA</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <returns>InitiateTxResult</returns>
-    InitiateRefundTx(posRefId, amountCents, isSuppressMerchantPassword = false)
+    InitiateRefundTx(posRefId, amountCents, suppressMerchantPassword = false, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -489,8 +501,9 @@ export default class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, isSuppressMerchantPassword);
+        var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, suppressMerchantPassword);
         refundRequest.Config = this.Config;
+        refundRequest.Options = options;
         var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
@@ -593,14 +606,18 @@ export default class Spi {
     // <param name="amountCents">Amount in Cents to cash out</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0)
+    InitiateCashoutOnlyTx(posRefId, amountCents, surchargeAmount = 0, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var cashoutOnlyRequest = new CashoutOnlyRequest(amountCents, posRefId, surchargeAmount);
-        cashoutOnlyRequest.Config = this.Config;
-        var cashoutMsg = cashoutOnlyRequest.ToMessage();
+
+        var cashoutMsg = Object.assign(new CashoutOnlyRequest(amountCents, posRefId), {
+            SurchargeAmount: surchargeAmount,
+            Options: options,
+            Config: this.Config
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.CashoutOnly, amountCents, cashoutMsg,
@@ -620,20 +637,27 @@ export default class Spi {
     // <param name="posRefId">Alphanumeric Identifier for your transaction.</param>
     // <param name="amountCents">Amount in Cents</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
+    // <param name="suppressMerchantPassword">>Merchant Password control in VAA</param>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <returns>InitiateTxResult</returns>
-    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0)
+    InitiateMotoPurchaseTx(posRefId, amountCents, surchargeAmount = 0, suppressMerchantPassword = false, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var motoPurchaseRequest = new MotoPurchaseRequest(amountCents, posRefId, surchargeAmount);
-        motoPurchaseRequest.Config = this.Config;
-        var cashoutMsg = motoPurchaseRequest.ToMessage();
+        var motoPurchaseMsg = Object.assign(new MotoPurchaseRequest(amountCents, posRefId),
+        {
+            SurchargeAmount: surchargeAmount,
+            SuppressMerchantPassword: suppressMerchantPassword,
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, TransactionType.MOTO, amountCents, cashoutMsg,
+            posRefId, TransactionType.MOTO, amountCents, motoPurchaseMsg,
             `Waiting for EFTPOS connection to send MOTO request for ${(amountCents / 100).toFixed(2)}`);
-        if (this._send(cashoutMsg))
+        if (this._send(motoPurchaseMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${(amountCents / 100).toFixed(2)}`);
         }
@@ -645,8 +669,9 @@ export default class Spi {
     // <summary>
     // Initiates a settlement transaction.
     // Be subscribed to TxFlowStateChanged event to get updates on the process.
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // </summary>
-    InitiateSettleTx(posRefId)
+    InitiateSettleTx(posRefId, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
@@ -656,13 +681,18 @@ export default class Spi {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var settleRequestMsg = new SettleRequest(RequestIdHelper.Id("settle")).ToMessage();
+        var settleMsg = Object.assign(new SettleRequest(RequestIdHelper.Id("settle")),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, TransactionType.Settle, 0, settleRequestMsg, 
+            posRefId, TransactionType.Settle, 0, settleMsg, 
             `Waiting for EFTPOS connection to make a settle request`);
 
-        if (this._send(settleRequestMsg))
+        if (this._send(settleMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to settle.`);
         }
@@ -672,13 +702,19 @@ export default class Spi {
     }
 
     // <summary>
+    // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // </summary>
-    InitiateSettlementEnquiry(posRefId)
+    InitiateSettlementEnquiry(posRefId, options = new TransactionOptions())
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
-        var stlEnqMsg = new SettlementEnquiryRequest(RequestIdHelper.Id("stlenq")).ToMessage();
+        var stlEnqMsg = Object.assign(new SettlementEnquiryRequest(RequestIdHelper.Id("stlenq")),
+        {
+            Config: this.Config,
+            Options: options
+        }).ToMessage();
+
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.SettlementEnquiry, 0, stlEnqMsg,
@@ -713,7 +749,7 @@ export default class Spi {
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg, 
             "Waiting for EFTPOS connection to make a Get-Last-Transaction request.");
-        
+        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
         if (this._send(gltRequestMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS for last transaction.`);
@@ -763,16 +799,17 @@ export default class Spi {
     // </summary>
     // <param name="gltResponse">The GetLastTransactionResponse message to check</param>
     // <param name="posRefId">The Reference Id that you passed in with the original request.</param>
-
+    // <param name="expectedAmount">The total amount in the original request</param>
+    // <param name="requestTime">The request time</param>
     // <returns></returns>
-    GltMatch(gltResponse, posRefId, ...deprecatedArgs) 
+    GltMatch(gltResponse, posRefId, expectedAmount, requestTime, ...deprecatedArgs) 
     {
         // Obsolete method call check
         // Old interface: GltMatch(GetLastTransactionResponse gltResponse, TransactionType expectedType, int expectedAmount, DateTime requestTime, string posRefId)
         if(deprecatedArgs.length) {
-            if(deprecatedArgs.length == 2) {
+            if(deprecatedArgs.length === 1) {
                 this._log.info("Obsolete method call detected: Use GltMatch(gltResponse, posRefId)");
-                return this.GltMatch(gltResponse, deprecatedArgs[2]);
+                return this.GltMatch(gltResponse, deprecatedArgs[0]);
             } else {
                 throw new Error("Obsolete method call with unknown args: Use GltMatch(GetLastTransactionResponse gltResponse, string posRefId)");
             }
@@ -780,9 +817,18 @@ export default class Spi {
 
         this._log.info(`GLT CHECK: PosRefId: ${posRefId}->${gltResponse.GetPosRefId()}`);
 
+        var gltBankDateTimeStr = gltResponse.GetBankDateTimeString(); // ddMMyyyyHHmmss
+        var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
+        var compare = requestTime.getTime() - gltBankDateTime.getTime();
+
         if (!posRefId == gltResponse.GetPosRefId())
         {
             return SuccessState.Unknown;
+        }
+
+        if (gltResponse.GetTxType().toUpperCase() == "PURCHASE" && gltResponse.GetBankNonCashAmount() != expectedAmount && compare > 0)
+        {
+            return Message.SuccessState.Unknown;
         }
 
         return gltResponse.GetSuccessState();
@@ -1105,7 +1151,19 @@ export default class Spi {
         var txState = this.CurrentTxFlowState;
         if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished)
         {
-            // We were not in the middle of a transaction, who cares?
+            this._log.info("Received glt response but we were not in the middle of a tx. ignoring.");
+            return;
+        }
+
+        if (!txState.AwaitingGltResponse)
+        {
+            this._log.info("received a glt response but we had not asked for one within this transaction. Perhaps leftover from previous one. ignoring.");
+            return;
+        }
+
+        if (txState.LastGltRequestId != m.Id)
+        {
+            this._log.info("received a glt response but the message id does not match the glt request that we sent. strange. ignoring.");
             return;
         }
 
@@ -1151,8 +1209,8 @@ export default class Spi {
             else
             {
                 // TH-4X - Unexpected Response when recovering
-                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}`);
-                txState.UnknownCompleted("Unexpected Error when recovering Transaction Status. Check EFTPOS. ");
+                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}. Ignoring.`);
+                return;
             }
         }
         else
@@ -1167,7 +1225,7 @@ export default class Spi {
             else
             {
                 // TH-4A - Let's try to match the received last transaction against the current transaction
-                var successState = this.GltMatch(gtlResponse, txState.PosRefId);
+                var successState = this.GltMatch(gtlResponse, txState.PosRefId, txState.AmountCents, txState.RequestTime);
                 if (successState == SuccessState.Unknown)
                 {
                     // TH-4N: Didn't Match our transaction. Consider Unknown State.
@@ -1240,7 +1298,6 @@ export default class Spi {
             {
                 // TH-1T, TH-4T - It's been a while since we received an update, let's call a GLT
                 this._log.info(`Checking on our transaction. Last we asked was at ${state.LastStateRequestTime}...`);
-                txState.CallingGlt();
                 this._callGetLastTransaction();
             }
         }
@@ -1456,7 +1513,6 @@ export default class Spi {
             {
                 // TH-3A - We've just reconnected and were in the middle of Tx.
                 // Let's get the last transaction to check what we might have missed out on.
-                this.CurrentTxFlowState.CallingGlt();
                 this._callGetLastTransaction();
             }
             else
@@ -1548,8 +1604,9 @@ export default class Spi {
     // </summary>
     _callGetLastTransaction()
     {
-        var gltRequest = new GetLastTransactionRequest();
-        this._send(gltRequest.ToMessage());
+        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
+        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
+        this._send(gltRequestMsg);
     }
 
     // <summary>
@@ -1639,6 +1696,12 @@ export default class Spi {
             case Events.PayAtTableBillPayment:
                 this._spiPat._handleBillPaymentAdvice(m);
                 break;
+            case Events.PayAtTableGetOpenTables:
+                this._spiPat._handleGetOpenTablesRequest(m);
+                break;
+            case Events.PayAtTableBillPaymentFlowEnded:
+                this._spiPat._handleBillPaymentFlowEnded(m);
+                break;
             case Events.PrintingResponse:
                 this._handlePrintingResponse(m);
                 break;
@@ -1691,58 +1754,87 @@ export default class Spi {
         return this._eftposAddress != updatedEftposAddress;
     }
 
-    _autoResolveEftposAddress()
+    async _autoResolveEftposAddress()
     {
         if (!this._autoAddressResolutionEnabled)
             return;
     
-        if (!this._serialNumber)
+        if (!this._serialNumber || !this._deviceApiKey) {
+            this._log.warn("Missing serialNumber and/or deviceApiKey. Need to set them before for Auto Address to work.");    
             return;
-
-        var service = new DeviceAddressService();
-        var isSecureConnection = false;
-         
-        // determine whether to use wss or not
-        if (this._isUsingHttps() || this._forceSecureWebSockets)
-        {
-            this._log.info(`Secure connection detected.`);    
-            isSecureConnection = true;
         }
 
-        this._log.info(`Resolving address for device ${this._serialNumber}.`);
+        var isSecureConnection = this._isSecureConnection();
 
-        return service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode, this._log).then((response) => 
+        var service = new DeviceAddressService();
+
+        try
         {
-            var deviceAddressStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), response);
+            var addressResponse     = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+            var addressResponseJson = await addressResponse.json();
 
-            if(!deviceAddressStatus || !deviceAddressStatus.Address)
+            this.CurrentDeviceStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), 
             {
-                this._log.info(`Could not resolve device address.`, response);
-                document.dispatchEvent(new CustomEvent('AutoAddressResolutionFailed', {detail: response}));
-                return;
-            }
-                
-            this._log.info(`Address for device resolved to ${deviceAddressStatus.Address}`);
-            if (!this.HasEftposAddressChanged(deviceAddressStatus.Address))
-                return;
-
-            // update device and connection address
-            var protocol = isSecureConnection ? "wss" : "ws";
-            this._eftposAddress = protocol + "://" + deviceAddressStatus.Address;
-            this._conn.Address = this._eftposAddress;
-
-            this.CurrentDeviceStatus = deviceAddressStatus;
+                ip: addressResponseJson.ip,
+                fqdn: addressResponseJson.fqdn,
+                DeviceAddressResponseCode: addressResponse.status,
+                ResponseStatusDescription: addressResponse.statusText,
+                ResponseMessage: addressResponse.statusText,
+                LastUpdated: addressResponseJson.last_updated
+            });
+        }
+        catch (err) 
+        {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
+            this.CurrentDeviceStatus.ResponseStatusDescription = err;
+            this.CurrentDeviceStatus.ResponseMessage = err;
 
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
-            
-            return this.CurrentDeviceStatus;
-        });
+            return; 
+        }
+
+        if (addressResponse.status == HttpStatusCode.NotFound)
+        {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        if(!addressResponse.ok || !addressResponseJson || !this.CurrentDeviceStatus.Address) {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        if (!this.HasEftposAddressChanged(this.CurrentDeviceStatus.Address))
+        {
+            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
+
+            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            return;
+        }
+
+        // update device and connection address
+        var protocol = isSecureConnection ? "wss" : "ws";
+        this._eftposAddress = protocol + "://" + this.CurrentDeviceStatus.Address;
+        this._conn.Address = this._eftposAddress;
+        this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SUCCESS;
+
+        document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
     }
 
     _isUsingHttps() 
     {
         return 'https:' == document.location.protocol ? true : false;
     }
+
+    // determine whether to use wss or not
+    _isSecureConnection() 
+    {
+        return this._isUsingHttps() || this._forceSecureWebSockets;
+    }
 }
 
-export {Spi};
+export {Spi, SPI_VERSION};
