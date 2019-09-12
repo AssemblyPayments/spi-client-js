@@ -8,19 +8,7 @@ export class SpiPayAtTable
         this._spi = spi;
         this._log = console;
 
-        this.Config = Object.assign(new PayAtTableConfig(), {
-            PayAtTabledEnabled: true,
-            OperatorIdEnabled: true,
-            AllowedOperatorIds: [],
-            EqualSplitEnabled: true,
-            SplitByAmountEnabled: true,
-            SummaryReportEnabled: true,
-            TippingEnabled: true,
-            LabelOperatorId: "Operator ID",
-            LabelPayButton: "Pay at Table",
-            LabelTableId: "Table Number",
-            TableRetrievalEnabled: true
-        });
+        this.Config = new PayAtTableConfig();
     }
 
     // <summary>
