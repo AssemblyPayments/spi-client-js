@@ -1246,15 +1246,18 @@ class Spi {
     //When the transaction cancel response is returned.
     _handleCancelTransactionResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
-        {
-            this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
-            return;
-        }
+        const incomingPosRefId = m.Data.pos_ref_id;
+        const txState = this.CurrentTxFlowState;
 
-        var txState = this.CurrentTxFlowState;
-        var cancelResponse = new CancelTransactionResponse(m);
+        if (this.CurrentFlow != SpiFlow.Transaction || this.txState.Finished || !this.txState.PosRefId == incomingPosRefId)
+        {
+            const cancelResponse = new CancelTransactionResponse(m);
+
+            if (!cancelResponse.WasTxnPastPointOfNoReturn()) {
+                this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+                return;
+            }
+        }
 
         if (cancelResponse.Success) return;
 
