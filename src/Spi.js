@@ -1785,10 +1785,12 @@ class Spi {
         }
         catch (err) 
         {
+            this.CurrentDeviceStatus = this.CurrentDeviceStatus || new DeviceAddressStatus(isSecureConnection);
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
             this.CurrentDeviceStatus.ResponseStatusDescription = err;
             this.CurrentDeviceStatus.ResponseMessage = err;
 
+            this._log.warn(err.message);
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             return; 
         }
