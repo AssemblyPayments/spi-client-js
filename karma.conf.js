@@ -1,6 +1,28 @@
 module.exports = function (config) {
     'use strict';
 
+    function getWebackConfig({ test, plugins }) {
+        return {
+            test,
+            exclude: [/(node_modules|bower_components)/],
+            use: {
+                loader: 'babel-loader',
+                options: {
+                    presets: ['@babel/preset-env'],
+                    plugins: [
+                        [
+                            '@babel/transform-runtime',
+                            {
+                                'regenerator': true,
+                            }
+                        ],
+                        ...(Array.isArray(plugins) ? plugins : []),
+                    ]
+                }
+            },
+        };
+    }
+
     config.set({
 
         // base path that will be used to resolve all patterns (eg. files, exclude)
@@ -35,6 +57,7 @@ module.exports = function (config) {
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
+            'src/**/*.js': ['coverage'],
             './tests/fixtures/**/*.json': ['json_fixtures'],
             'test-context.js': ['webpack']
         },
@@ -43,16 +66,10 @@ module.exports = function (config) {
             mode: 'development',
             module: {
                 rules: [
-                    {
-                        test: /\.m?js$/,
-                        exclude: /(node_modules|bower_components)/,
-                        use: {
-                            loader: 'babel-loader',
-                            options: {
-                                presets: ['@babel/preset-env']
-                            }
-                        }
-                    }
+                    // two seperate rules are required so that spec files are not instrumented
+                    // and included in coverage reporting
+                    getWebackConfig({ test: /(?<!\.spec)\.m?js$/, plugins: [ 'istanbul' ] }),
+                    getWebackConfig({ test: /\.spec\.m?js$/ }),
                 ]
             },
             watch: true
@@ -70,7 +87,13 @@ module.exports = function (config) {
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ['progress'],
+        reporters: ['progress', 'coverage'],
+
+        // code coverage reporter
+        coverageReporter: {
+            type: 'text',
+            dir: 'coverage/',
+        },
 
         // web server port
         port: 9876,
