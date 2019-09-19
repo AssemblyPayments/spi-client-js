@@ -77,7 +77,7 @@ class Spi {
         this._maxWaitForCancelTx = 10000;
         this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
-        this._retriesBeforeResolvingDeviceAddress = 5;
+        this._retriesBeforeResolvingDeviceAddress = 3;
 
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
