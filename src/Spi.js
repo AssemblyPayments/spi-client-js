@@ -1361,17 +1361,17 @@ class Spi {
 
     _handlePrintingResponse(m)
     {
-        this.PrintingResponse(m);
+        if (typeof this.PrintingResponse === 'function') this.PrintingResponse(m);
     }
 
     _handleTerminalStatusResponse(m)
     {
-        this.TerminalStatusResponse(m);
+        if (typeof this.TerminalStatusResponse === 'function') this.TerminalStatusResponse(m);
     }
 
     _handleBatteryLevelChanged(m)
     {
-        this.BatteryLevelChanged(m);
+        if (typeof this.BatteryLevelChanged === 'function') this.BatteryLevelChanged(m);
     }
 
     // endregion
