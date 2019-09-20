@@ -78,6 +78,8 @@ class Spi {
         this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
         this._retriesBeforeResolvingDeviceAddress = 3;
+        this._retriesSinceLastPairing = 0;
+        this._retriesBeforePairing = 3;
 
         this._regexItemsForEftposAddress = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
@@ -1474,10 +1476,29 @@ class Spi {
                 }
                 else if (this.CurrentFlow == SpiFlow.Pairing)
                 {
-                    this._log.info("Lost Connection during pairing.");
-                    this.CurrentPairingFlowState.Message = "Could not Connect to Pair. Check Network and Try Again...";
-                    this._onPairingFailed();
-                    document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                    if (this.CurrentPairingFlowState.Finished) return;
+
+                    if (this._retriesSinceLastPairing >= this._retriesBeforePairing)
+                    {
+                        this._retriesSinceLastPairing = 0;
+                        this._log.warn("Lost Connection during pairing.");
+                        this._onPairingFailed();
+                        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                        return;
+                    }
+                    else
+                    {
+                        this._log.info(`Will try to re-pair in ${this._sleepBeforeReconnectMs}ms ...`);
+                        setTimeout(() => {
+                            if (this.CurrentStatus != SpiStatus.PairedConnected)
+                            {
+                                // This is non-blocking
+                                if (this._conn) this._conn.Connect();
+                            }
+
+                            this._retriesSinceLastPairing += 1;
+                        }, this._sleepBeforeReconnectMs);
+                    }
                 }
                 break;
             default:
