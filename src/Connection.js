@@ -87,11 +87,12 @@ export class Connection {
     }
 
     pollWebSocketConnection(count = 0) {
+        // Timeout trying to connect after 20 * 200ms = 4000 ms
         
         if(this._ws.readyState === this._ws.OPEN) {
             this.onOpened();
             return true;
-        } else if(count < 25) {
+        } else if(count < 20) {
             count++;
             setTimeout(() => this.pollWebSocketConnection(count), 200);
         } else {
