@@ -13,6 +13,7 @@ describe('SpiPayAtTable', function() {
 
         expect(payAtTable._spi).toBeDefined();
         expect(payAtTable.Config).toBeDefined();
+        expect(payAtTable.Config.TableRetrievalEnabled).toBeFalsy();
     });
   
     it('should push pay at table config', function() 

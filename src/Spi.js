@@ -93,7 +93,7 @@ class Spi {
     DisablePayAtTable()
     {
         this._spiPat = new SpiPayAtTable(this);
-        this._spiPat.Config.PayAtTabledEnabled = false;
+        this._spiPat.Config.PayAtTableEnabled = false;
         return this._spiPat;
     }
 
