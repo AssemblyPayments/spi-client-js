@@ -1,7 +1,9 @@
 import {Message, Events, MessageStamp} from '../src/Messages';
 import {Secrets} from '../src/Secrets';
 import {RequestIdHelper} from '../src/RequestIdHelper';
+import {CancelTransactionResponse} from '../src/Purchase';
 import {PurchaseHelper} from '../src/PurchaseHelper';
+import {SpiClientUtils} from './utils/SpiClientUtils';
 
 describe('Purchase', function() {
     'use strict';  
@@ -30,4 +32,35 @@ describe('Purchase', function() {
 
     });
 
+    it('should correctly identify and handle trying to cancel a transaction past the point of no return', () => {
+        // arrange
+        var secrets = SpiClientUtils.SetTestSecrets();
+
+        const terminalResponse = {
+            message: {
+              event: 'cancel_response',
+              id: '0',
+              datetime: '2018-02-06T15:16:44.094',
+              data: {
+                pos_ref_id: '123456abc',
+                success: false,
+                error_reason: 'TXN_PAST_POINT_OF_NO_RETURN',
+                error_detail: 'Txn has passed the point of no return'
+              }
+            }
+          };
+
+        // act
+        var msg = Message.FromJson(JSON.stringify(terminalResponse), secrets);
+        var response = new CancelTransactionResponse(msg);
+
+        // assert
+        expect(msg.EventName).toBe(terminalResponse.message.event);
+        expect(response.Success).toBeFalsy();
+        expect(response.PosRefId).toBe(terminalResponse.message.data.pos_ref_id);
+        expect(response.GetErrorReason()).toBe(terminalResponse.message.data.error_reason);
+        expect(response.WasTxnPastPointOfNoReturn()).tobeTruthy;
+        expect(response.GetErrorDetail()).not.toBeNull();
+        expect(response.PosRefId).toBe(response.GetResponseValueWithAttribute('pos_ref_id'));
+    });
 });

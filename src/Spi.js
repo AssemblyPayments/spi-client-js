@@ -77,7 +77,7 @@ class Spi {
         this._maxWaitForCancelTx = 10000;
         this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
-        this._retriesBeforeResolvingDeviceAddress = 5;
+        this._retriesBeforeResolvingDeviceAddress = 3;
 
         this._regexItemsForEftposAddress = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
@@ -1281,15 +1281,18 @@ class Spi {
     //When the transaction cancel response is returned.
     _handleCancelTransactionResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
-        {
-            this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
-            return;
-        }
+        const incomingPosRefId = m.Data.pos_ref_id;
+        const txState = this.CurrentTxFlowState;
 
-        var txState = this.CurrentTxFlowState;
-        var cancelResponse = new CancelTransactionResponse(m);
+        if (this.CurrentFlow != SpiFlow.Transaction || this.txState.Finished || !this.txState.PosRefId == incomingPosRefId)
+        {
+            const cancelResponse = new CancelTransactionResponse(m);
+
+            if (!cancelResponse.WasTxnPastPointOfNoReturn()) {
+                this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+                return;
+            }
+        }
 
         if (cancelResponse.Success) return;
 
@@ -1860,10 +1863,12 @@ class Spi {
         }
         catch (err) 
         {
+            this.CurrentDeviceStatus = this.CurrentDeviceStatus || new DeviceAddressStatus(isSecureConnection);
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
             this.CurrentDeviceStatus.ResponseStatusDescription = err;
             this.CurrentDeviceStatus.ResponseMessage = err;
 
+            this._log.warn(err.message);
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             return; 
         }
