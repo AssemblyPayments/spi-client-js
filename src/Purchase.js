@@ -223,6 +223,11 @@ export class CancelTransactionResponse
         return this._m.Data.error_detail;
     }
 
+    WasTxnPastPointOfNoReturn()
+    {
+        return this._m.GetError().startsWith("TXN_PAST_POINT_OF_NO_RETURN");
+    }
+
     GetResponseValueWithAttribute(attribute)
     {
         return this._m.Data[attribute];
