@@ -82,6 +82,7 @@ class Spi {
         this._retriesBeforePairing = 3;
 
         this._regexItemsForEftposAddress = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        this._regexItemsForFqdnEftposAddress = /^[a-zA-Z0-9\.-]+$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
 
         this.CurrentFlow                = null;
@@ -1833,7 +1834,13 @@ class Spi {
             return false;
         }
 
-        if (!eftposAddress.replace("ws://", "").match(this._regexItemsForEftposAddress))
+        const sanitisedEftposAddress = eftposAddress.replace(/^w[s]?s:\/\//, "");
+
+        // The eftposAddress may be an IP address or if autoAddressResolutionEnabled is true, a FQDN
+        if (
+            (!this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForEftposAddress)) ||
+            (this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForFqdnEftposAddress))
+        )
         {
             this._log.warn("The Eftpos address is not in the right format");
             return false;
