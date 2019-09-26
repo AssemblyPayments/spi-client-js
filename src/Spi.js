@@ -857,7 +857,7 @@ class Spi {
 
         var gltBankDateTimeStr = gltResponse.GetBankDateTimeString(); // ddMMyyyyHHmmss
         var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
-        var compare = requestTime.getTime() - gltBankDateTime.getTime();
+        var compare = parseInt(requestTime) - gltBankDateTime.getTime();
 
         if (!posRefId == gltResponse.GetPosRefId())
         {
