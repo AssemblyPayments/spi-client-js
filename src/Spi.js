@@ -17,8 +17,9 @@ import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, 
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
+import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.6.7';
+const SPI_VERSION = '2.6.8';
 
 class Spi {
 
@@ -349,7 +350,7 @@ class Spi {
     // <returns>Whether pairing has initiated or not</returns>
     Pair()
     {
-        this._log.log("Trying to pair ....");
+        this._log.info("Trying to pair ....");
 
         if (this.CurrentStatus != SpiStatus.Unpaired) {
             this._log.warn("Tried to Pair, but we're already paired. Stop pairing.");
@@ -827,6 +828,82 @@ class Spi {
     
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
         return new InitiateTxResult(true, "Recovery Initiated");
+    }
+
+    /// <summary>
+    /// Initiates a Zip refund transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+    /// </summary>
+    /// <param name="posRefId">Alphanumeric Identifier for your refund.</param>
+    /// <param name="refundAmount">Amount in Cents to charge</param>
+    /// <param name="originalReceiptNumber">Zip transaction identifier to refun</param>
+    /// <param name="options">The Setting to set Header and Footer for the Receipt</param>
+    /// <returns>InitiateTxResult</returns>
+    InitiateZipRefundTx(posRefId, refundAmount, originalReceiptNumber, options = new TransactionOptions())
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, 'Not Paired');
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, 'Not Idle');
+
+        const zipRefundRequest = Object.assign(
+            new ZipRefundRequest(refundAmount, posRefId),
+            {
+                Config: this.Config,
+                Options: options,
+                OriginalReceiptNumber: originalReceiptNumber,
+            }
+        );
+        const zipRefundMsg = zipRefundRequest.ToMessage();
+
+        this.CurrentFlow = SpiFlow.Transaction;
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.ZipRefund, refundAmount, zipRefundMsg,
+            `Waiting for EFTPOS connection to make Zip refund request for ${refundAmount / 100}`
+        );
+        if (this._send(zipRefundMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${refundAmount / 100}`);
+        }
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        return new InitiateTxResult(true, 'Zip Refund Initiated');
+    }
+
+    /// <summary>
+    /// Initiates a Zip purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
+    /// <para>Tip and cashout are not allowed simultaneously.</para>
+    /// </summary>
+    /// <param name="posRefId">An Unique Identifier for your Order/Purchase</param>
+    /// <param name="purchaseAmount">The Purchase Amount in Cents.</param>
+    /// <param name="description">Description of the item to purchase</param>
+    /// <param name="storeCode">Zip store code used for this transaction</param>
+    /// <param name="options">The Setting to set Header and Footer for the Receipt</param>
+    /// <returns>InitiateTxResult</returns>
+    InitiateZipPurchaseTx(posRefId, purchaseAmount, description, storeCode, options = new TransactionOptions())
+    {
+        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, 'Not Paired');
+        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, 'Not Idle');
+
+        this.CurrentFlow = SpiFlow.Transaction;
+        const zipPurchase = Object.assign(
+            new ZipPurchaseRequest(purchaseAmount, posRefId),
+            {
+                Config: this.Config,
+                Options: options,
+                Description: description,
+                StoreCode: storeCode,
+            }
+        );
+        const zipPurchaseMsg = zipPurchase.ToMessage();
+
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.ZipPurchase, purchaseAmount, zipPurchaseMsg,
+            `Waiting for EFTPOS connection to make Zip payment request. ${zipPurchase.AmountSummary()}`);
+        if (this._send(zipPurchaseMsg))
+        {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept Zip payment for ${zipPurchase.AmountSummary()}`);
+        }
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        return new InitiateTxResult(true, 'Zip Purchase Initiated');
     }
 
     // <summary>
@@ -1376,6 +1453,38 @@ class Spi {
         if (typeof this.BatteryLevelChanged === 'function') this.BatteryLevelChanged(m);
     }
 
+    _handleZipPurchaseResponse(m)
+    {
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
+        {
+            this._log.info(`Received Zip Purchase response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+        // TH-1A, TH-2A
+
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, 'Zip Purchase Transaction Ended.');
+        // TH-6A, TH-6E
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+    }
+
+    _handleZipRefundResponse(m)
+    {
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
+        {
+            this._log.info(`Received Zip Refund response but I was not waiting for this one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+        // TH-1A, TH-2A
+
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Zip Refund Transaction Ended.");
+        // TH-6A, TH-6E
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+    }
+
     // endregion
         
     // region Internals for Connection Management
@@ -1769,6 +1878,12 @@ class Spi {
                 break;
             case Events.BatteryLevelChanged:
                 this._handleBatteryLevelChanged(m);
+                break;
+            case Events.ZipPurchaseResponse:
+                this._handleZipPurchaseResponse(m);
+                break;
+            case Events.ZipRefundResponse:
+                this._handleZipRefundResponse(m);
                 break;
             case Events.Error:
                 this._handleErrorEvent(m);
