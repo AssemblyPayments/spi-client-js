@@ -1,0 +1,25 @@
+{
+    "message": {
+        "event": "refund_zip_response",
+        "id": "1",
+        "datetime": "2019-01-11T09:13:11.594",
+        "data": {
+            "bank_date": "11012019",
+            "bank_time": "091304",
+            "customer_receipt": "TBD",
+            "customer_receipt_printed": true,
+            "host_response_code": "000",
+            "host_response_text": "TRANS APPROVED",
+            "merchant_receipt": "TBD",
+            "merchant_receipt_printed": true,
+            "pos_ref_id": "POS_REF_ID_2",
+            "refund_amount": 1000,
+            "success": true,
+            "zip_data": {
+                "location_id": "1234",
+                "receipt_number": "123456",
+                "original_receipt_number": "12345"
+            }
+        }
+    }
+}
