@@ -12,4 +12,4 @@ export {Settlement} from './src/Settlement';
 export {RequestIdHelper} from './src/RequestIdHelper';
 export {DeviceAddressResponseCode} from './src/Service/DeviceService';
 export {BillStatusResponse, BillRetrievalResult, GetOpenTablesResponse, OpenTablesEntry, BillPaymentFlowEndedResponse} from './src/PayAtTable';
-export {PreauthResponse} from './src/Preauth';
+export {AccountVerifyResponse, PreauthResponse} from './src/Preauth';
