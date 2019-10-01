@@ -57,16 +57,20 @@ export class DeviceAddressService
     // RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
     async RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)    
     {
+        const CONNECTION_TIMEOUT = 8000;
         var path = isSecureConnection ? 'fqdn' : 'ip';
         var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
 
-        var response = await fetch(deviceAddressUri, {
-            method: 'GET',
-            headers: {
-                "ASM-MSP-DEVICE-ADDRESS-API-KEY": apiKey
-            }
-        });
-
-        return response;
+        return Promise.race([
+            fetch(deviceAddressUri, {
+              method: 'GET',
+              headers: {
+                'ASM-MSP-DEVICE-ADDRESS-API-KEY': apiKey,
+              },
+            }),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Timeout while trying to retrieve IP address')), CONNECTION_TIMEOUT)
+            ),
+          ]);
     }
 }

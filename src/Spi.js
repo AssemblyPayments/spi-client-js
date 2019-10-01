@@ -77,7 +77,13 @@ class Spi {
         this._maxWaitForCancelTx = 10000;
         this._sleepBeforeReconnectMs = 3000;
         this._missedPongsToDisconnect = 2;
-        this._retriesBeforeResolvingDeviceAddress = 5;
+        this._retriesBeforeResolvingDeviceAddress = 3;
+        this._retriesSinceLastPairing = 0;
+        this._retriesBeforePairing = 3;
+
+        this._regexItemsForEftposAddress = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        this._regexItemsForFqdnEftposAddress = /^[a-zA-Z0-9\.-]+$/;
+        this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
 
         this.CurrentFlow                = null;
         this.CurrentPairingFlowState    = null;
@@ -93,7 +99,7 @@ class Spi {
     DisablePayAtTable()
     {
         this._spiPat = new SpiPayAtTable(this);
-        this._spiPat.Config.PayAtTabledEnabled = false;
+        this._spiPat.Config.PayAtTableEnabled = false;
         return this._spiPat;
     }
 
@@ -110,6 +116,20 @@ class Spi {
             // POS information is now required to be set
             this._log.warn("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
             throw new Error("Missing POS vendor ID and version. posVendorId and posVersion are required before starting");
+        }
+
+        if (!this._isPosIdValid(this._posId))
+        {
+            // continue, as they can set the posId later on
+            this._posId = "";
+            this._log.warn("Invalid parameter, please correct them before pairing");
+        }
+
+        if (!this._isEftposAddressValid(this._eftposAddress))
+        {
+            // continue, as they can set the eftposAddress later on
+            this._eftposAddress = "";
+            this._log.warn("Invalid parameter, please correct them before pairing");
         }
 
         this._resetConn();
@@ -237,6 +257,14 @@ class Spi {
         if (this.CurrentStatus != SpiStatus.Unpaired)
             return false;
 
+        this._posId = ""; // reset posId to give more explicit feedback
+
+        if (!this._isPosIdValid(posId))
+        {
+            this._log.info("Pos Id set to null");
+            return false;
+        }
+
         this._posId = posId;
         this._spiMessageStamp.PosId = posId;
         return true;
@@ -250,6 +278,14 @@ class Spi {
     SetEftposAddress(address)
     {
         if (this.CurrentStatus == SpiStatus.PairedConnected || this._autoAddressResolutionEnabled) {
+            return false;
+        }
+
+        this._eftposAddress = ""; // reset eftposAddress to give more explicit feedback
+
+        if (!this._isEftposAddressValid(address))
+        {
+            this._log.info("Eftpos Address set to null");
             return false;
         }
 
@@ -313,14 +349,16 @@ class Spi {
     // <returns>Whether pairing has initiated or not</returns>
     Pair()
     {
+        this._log.log("Trying to pair ....");
+
         if (this.CurrentStatus != SpiStatus.Unpaired) {
-            this._log.warn("Tried to Pair but we're already so.");
+            this._log.warn("Tried to Pair, but we're already paired. Stop pairing.");
             return false;
         }
 
-        if (!this._posId || !this._eftposAddress)
+        if (!this._isPosIdValid(this._posId) || !this._isEftposAddressValid(this._eftposAddress))
         {
-            this._log.warn("Tried to Pair but missing posId or updatedEftposAddress");
+            this._log.warn("Invalid Pos Id or Eftpos address, stop pairing.");
             return false;
         }
 
@@ -819,7 +857,7 @@ class Spi {
 
         var gltBankDateTimeStr = gltResponse.GetBankDateTimeString(); // ddMMyyyyHHmmss
         var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
-        var compare = requestTime.getTime() - gltBankDateTime.getTime();
+        var compare = parseInt(requestTime) - gltBankDateTime.getTime();
 
         if (!posRefId == gltResponse.GetPosRefId())
         {
@@ -1246,15 +1284,17 @@ class Spi {
     //When the transaction cancel response is returned.
     _handleCancelTransactionResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
-        {
-            this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
-            return;
-        }
+        const incomingPosRefId = m.Data.pos_ref_id;
+        const txState = this.CurrentTxFlowState;
+        const cancelResponse = new CancelTransactionResponse(m);
 
-        var txState = this.CurrentTxFlowState;
-        var cancelResponse = new CancelTransactionResponse(m);
+        if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished || !txState.PosRefId == incomingPosRefId)
+        {
+            if (!cancelResponse.WasTxnPastPointOfNoReturn()) {
+                this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+                return;
+            }
+        }
 
         if (cancelResponse.Success) return;
 
@@ -1323,17 +1363,17 @@ class Spi {
 
     _handlePrintingResponse(m)
     {
-        this.PrintingResponse(m);
+        if (typeof this.PrintingResponse === 'function') this.PrintingResponse(m);
     }
 
     _handleTerminalStatusResponse(m)
     {
-        this.TerminalStatusResponse(m);
+        if (typeof this.TerminalStatusResponse === 'function') this.TerminalStatusResponse(m);
     }
 
     _handleBatteryLevelChanged(m)
     {
-        this.BatteryLevelChanged(m);
+        if (typeof this.BatteryLevelChanged === 'function') this.BatteryLevelChanged(m);
     }
 
     // endregion
@@ -1436,10 +1476,29 @@ class Spi {
                 }
                 else if (this.CurrentFlow == SpiFlow.Pairing)
                 {
-                    this._log.info("Lost Connection during pairing.");
-                    this.CurrentPairingFlowState.Message = "Could not Connect to Pair. Check Network and Try Again...";
-                    this._onPairingFailed();
-                    document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                    if (this.CurrentPairingFlowState.Finished) return;
+
+                    if (this._retriesSinceLastPairing >= this._retriesBeforePairing)
+                    {
+                        this._retriesSinceLastPairing = 0;
+                        this._log.warn("Lost Connection during pairing.");
+                        this._onPairingFailed();
+                        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                        return;
+                    }
+                    else
+                    {
+                        this._log.info(`Will try to re-pair in ${this._sleepBeforeReconnectMs}ms ...`);
+                        setTimeout(() => {
+                            if (this.CurrentStatus != SpiStatus.PairedConnected)
+                            {
+                                // This is non-blocking
+                                if (this._conn) this._conn.Connect();
+                            }
+
+                            this._retriesSinceLastPairing += 1;
+                        }, this._sleepBeforeReconnectMs);
+                    }
                 }
                 break;
             default:
@@ -1744,6 +1803,52 @@ class Spi {
         }
     }
 
+    _isPosIdValid(posId)
+    {
+        if (!posId)
+        {
+            this._log.warn("Pos Id cannot be null or empty");
+            return false;
+        }
+
+        if (posId.length > 16)
+        {
+            this._log.warn("Pos Id is greater than 16 characters");
+            return false;
+        }
+
+        if (!posId.match(this._regexItemsForPosId))
+        {
+            this._log.warn("Pos Id cannot include special characters");
+            return false;
+        }
+
+        return true;
+    }
+
+    _isEftposAddressValid(eftposAddress)
+    {
+        if (!eftposAddress)
+        {
+            this._log.warn("The Eftpos address cannot be null or empty");
+            return false;
+        }
+
+        const sanitisedEftposAddress = eftposAddress.replace(/^w[s]?s:\/\//, "");
+
+        // The eftposAddress may be an IP address or if autoAddressResolutionEnabled is true, a FQDN
+        if (
+            (!this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForEftposAddress)) ||
+            (this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForFqdnEftposAddress))
+        )
+        {
+            this._log.warn("The Eftpos address is not in the right format");
+            return false;
+        }
+
+        return true;
+    }
+
     HasSerialNumberChanged(updatedSerialNumber)
     {
         return this._serialNumber != updatedSerialNumber;
@@ -1785,10 +1890,12 @@ class Spi {
         }
         catch (err) 
         {
+            this.CurrentDeviceStatus = this.CurrentDeviceStatus || new DeviceAddressStatus(isSecureConnection);
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
             this.CurrentDeviceStatus.ResponseStatusDescription = err;
             this.CurrentDeviceStatus.ResponseMessage = err;
 
+            this._log.warn(err.message);
             document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
             return; 
         }

@@ -8,19 +8,7 @@ export class SpiPayAtTable
         this._spi = spi;
         this._log = console;
 
-        this.Config = Object.assign(new PayAtTableConfig(), {
-            PayAtTabledEnabled: true,
-            OperatorIdEnabled: true,
-            AllowedOperatorIds: [],
-            EqualSplitEnabled: true,
-            SplitByAmountEnabled: true,
-            SummaryReportEnabled: true,
-            TippingEnabled: true,
-            LabelOperatorId: "Operator ID",
-            LabelPayButton: "Pay at Table",
-            LabelTableId: "Table Number",
-            TableRetrievalEnabled: true
-        });
+        this.Config = new PayAtTableConfig();
     }
 
     // <summary>
@@ -137,12 +125,15 @@ export class SpiPayAtTable
 
     _handleGetOpenTablesRequest(m)
     {
-        var operatorId = m.Data["operator_id"];
+        const operatorId = m.Data["operator_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        var openTablesResponse = this.GetOpenTables(operatorId); // JSON or string?
-        if (openTablesResponse.TableData.length <= 0)
+        const openTablesResponse = typeof this.GetOpenTables === 'function'
+            ? this.GetOpenTables(operatorId)
+            : null;
+        if (!openTablesResponse || !openTablesResponse.TableData || !openTablesResponse.TableData.length)
         {
+            openTablesResponse = new GetOpenTablesResponse();
             this._log.info("There is no open table.");
         }
 
