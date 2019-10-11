@@ -49,6 +49,13 @@ export class Connection {
         this._ws.onclose   = () => this.onClosed();
         this._ws.onerror   = (err) => this.onError(err);
 
+        const timeoutConnectionAttempt = () => {
+            if (this._ws && this.State === ConnectionState.Connecting) {
+                this.Disconnect();
+            }
+        }
+        setTimeout(timeoutConnectionAttempt.bind(this), 4000);
+
         document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connecting)}));
     }
 
@@ -80,6 +87,8 @@ export class Connection {
     }
 
     onClosed() {
+        if (this.Connected === false && this.State === ConnectionState.Disconnected) return;
+
         this.Connected = false;
         this.State = ConnectionState.Disconnected;
         this._ws = null;
