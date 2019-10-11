@@ -864,9 +864,9 @@ class Spi {
             return SuccessState.Unknown;
         }
 
-        if (gltResponse.GetTxType().toUpperCase() == "PURCHASE" && gltResponse.GetBankNonCashAmount() != expectedAmount && compare > 0)
+        if (gltResponse.GetTxType() && gltResponse.GetTxType().toUpperCase() === "PURCHASE" && gltResponse.GetBankNonCashAmount() !== expectedAmount && compare > 0)
         {
-            return Message.SuccessState.Unknown;
+            return SuccessState.Unknown;
         }
 
         return gltResponse.GetSuccessState();
