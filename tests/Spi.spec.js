@@ -7,7 +7,7 @@ describe('Spi,', () => {
     const eftposAddress = '10.20.30.40';
     const posId = 'DummyPos';
     const posVendorId = 'assembly';
-    const posVersion = '2.6.3';
+    const posVersion = '2.6.6';
 
     beforeEach(() => {
         spyOn(console, 'info');
