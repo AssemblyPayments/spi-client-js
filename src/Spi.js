@@ -859,7 +859,7 @@ class Spi {
         var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
         var compare = parseInt(requestTime) - gltBankDateTime.getTime();
 
-        if (!posRefId == gltResponse.GetPosRefId())
+        if (posRefId !== gltResponse.GetPosRefId())
         {
             return SuccessState.Unknown;
         }
