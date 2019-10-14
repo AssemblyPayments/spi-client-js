@@ -27,9 +27,17 @@ export class Connection {
         this.State      = ConnectionState.Disconnected;
         this.SpiProtocol = SPI_PROTOCOL;
         this._ws        = null;
+        this._conectionTimeout = null;
 
         if(typeof WebSocket === 'undefined') {
             throw new Error('Environment does not support WebSockets');
+        }
+    }
+
+    _cancelConnectionTimeout() {
+        if (this._conectionTimeout) {
+            clearTimeout(this._conectionTimeout);
+            this._connectionTimeout = null;
         }
     }
 
@@ -54,7 +62,7 @@ export class Connection {
                 this.Disconnect();
             }
         }
-        setTimeout(timeoutConnectionAttempt.bind(this), 4000);
+        this._conectionTimeout = setTimeout(timeoutConnectionAttempt, 4000);
 
         document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connecting)}));
     }
@@ -81,12 +89,14 @@ export class Connection {
     }
 
     onOpened() {
+        this._cancelConnectionTimeout();
         this.State = ConnectionState.Connected;
         this.Connected = true;
         document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connected)}));
     }
 
     onClosed() {
+        this._cancelConnectionTimeout();
         if (this.Connected === false && this.State === ConnectionState.Disconnected) return;
 
         this.Connected = false;
@@ -115,6 +125,7 @@ export class Connection {
     }
 
     onError(err) {
+        this._cancelConnectionTimeout();
         document.dispatchEvent(new CustomEvent('ErrorReceived', {detail: new MessageEventArgs(err)}));
     }
 }
