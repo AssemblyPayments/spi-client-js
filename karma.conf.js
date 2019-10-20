@@ -1,10 +1,10 @@
 module.exports = function (config) {
     'use strict';
 
-    function getWebackConfig({ test, plugins }) {
+    function getWebackConfig({ exclude, plugins } = {}) {
         return {
-            test,
-            exclude: [/(node_modules|bower_components)/],
+            test: /\.m?js$/,
+            exclude,
             use: {
                 loader: 'babel-loader',
                 options: {
@@ -68,8 +68,8 @@ module.exports = function (config) {
                 rules: [
                     // two seperate rules are required so that spec files are not instrumented
                     // and included in coverage reporting
-                    getWebackConfig({ test: /(?<!\.spec)\.m?js$/, plugins: [ 'istanbul' ] }),
-                    getWebackConfig({ test: /\.spec\.m?js$/ }),
+                    getWebackConfig({ exclude: [/(bower_components|node_modules|tests)/], plugins: [ 'istanbul' ] }),
+                    getWebackConfig({ exclude: [/(bower_components|node_modules)/] }),
                 ]
             },
             watch: true

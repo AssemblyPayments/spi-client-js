@@ -2,6 +2,7 @@ const path                          = require('path');
 const fs                            = require("fs");
 const webpack                       = require('webpack');
 const apiMocker                     = require('connect-api-mocker');
+const Visualizer                    = require('webpack-visualizer-plugin');
 
 
 const sourcePath    = path.resolve(__dirname,'src');
@@ -55,7 +56,11 @@ const config = {
           }
       ]
     },
-    plugins: []
+    plugins: [
+      new Visualizer({
+        filename: '../coverage/statistics.html'
+      }),
+    ]
 };
 
 if(isProd) {

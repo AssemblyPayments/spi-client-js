@@ -18,7 +18,7 @@ import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, Ht
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-const SPI_VERSION = '2.6.0';
+const SPI_VERSION = '2.6.6';
 
 class Spi {
 
@@ -859,14 +859,14 @@ class Spi {
         var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
         var compare = parseInt(requestTime) - gltBankDateTime.getTime();
 
-        if (!posRefId == gltResponse.GetPosRefId())
+        if (posRefId !== gltResponse.GetPosRefId())
         {
             return SuccessState.Unknown;
         }
 
-        if (gltResponse.GetTxType().toUpperCase() == "PURCHASE" && gltResponse.GetBankNonCashAmount() != expectedAmount && compare > 0)
+        if (gltResponse.GetTxType() && gltResponse.GetTxType().toUpperCase() === "PURCHASE" && gltResponse.GetBankNonCashAmount() !== expectedAmount && compare > 0)
         {
-            return Message.SuccessState.Unknown;
+            return SuccessState.Unknown;
         }
 
         return gltResponse.GetSuccessState();
@@ -1221,7 +1221,7 @@ class Spi {
                 {
                     this._log.info("Eftpos is waiting for us to send it signature accept/decline, but we were not aware of this. " +
                               "The user can only really decline at this stage as there is no receipt to print for signing.");
-                    this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(txState.PosRefId, m.Id, "MISSING RECEIPT\n DECLINE AND TRY AGAIN."), "Recovered in Signature Required but we don't have receipt. You may Decline then Retry.");
+                    this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m).SignatureRequired(txState.PosRefId, m.Id, "MISSING RECEIPT\n DECLINE AND TRY AGAIN."), "Recovered in Signature Required but we don't have receipt. You may Decline then Retry.");
                 }
                 else if (gtlResponse.IsWaitingForAuthCode() && !txState.AwaitingPhoneForAuth)
                 {
