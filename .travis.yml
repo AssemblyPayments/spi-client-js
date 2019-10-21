@@ -7,6 +7,13 @@ sudo: required
 addons:
   chrome: stable
 
+install:
+  - npm install -g codecov
+
+script:
+  - npm run test
+  - codecov
+
 deploy:
 - provider: script
   script: set -o pipefail && ./deploy-check.sh $TRAVIS_TAG
