@@ -18,7 +18,7 @@ import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, Ht
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
 
-const SPI_VERSION = '2.6.6';
+const SPI_VERSION = '2.6.7';
 
 class Spi {
 
