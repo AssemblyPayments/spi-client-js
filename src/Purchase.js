@@ -549,12 +549,12 @@ export class SignatureAccept
 
 export class MotoPurchaseRequest
 {
-    constructor(amountCents, posRefId, surchargeAmount)
+    constructor(amountCents, posRefId, surchargeAmount, SuppressMerchantPassword)
     {
         this.PosRefId = posRefId;
         this.PurchaseAmount = amountCents;
         this.SurchargeAmount = surchargeAmount;
-        this.SuppressMerchantPassword = false;
+        this.SuppressMerchantPassword = SuppressMerchantPassword;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
     }
