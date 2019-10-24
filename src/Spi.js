@@ -17,6 +17,7 @@ import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, 
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
+import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
 const SPI_VERSION = '2.6.8';
@@ -959,6 +960,11 @@ class Spi {
         this._send(new TerminalStatusRequest().ToMessage());
     }
 
+    GetTerminalConfiguration()
+    {
+        this._send(new TerminalConfigurationRequest().ToMessage());
+    }
+
     // endregion
         
     // region Internals for Pairing Flow
@@ -1434,6 +1440,11 @@ class Spi {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
+    TerminalConfigurationResponse(m) {
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
+    }
+
+
     BatteryLevelChanged(m) {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
@@ -1446,6 +1457,11 @@ class Spi {
     _handleTerminalStatusResponse(m)
     {
         if (typeof this.TerminalStatusResponse === 'function') this.TerminalStatusResponse(m);
+    }
+
+    _handleTerminalConfigurationResponse(m)
+    {
+        this.TerminalConfigurationResponse(m);
     }
 
     _handleBatteryLevelChanged(m)
@@ -1875,6 +1891,9 @@ class Spi {
                 break;
             case Events.TerminalStatusResponse:
                 this._handleTerminalStatusResponse(m);
+                break;
+            case Events.TerminalConfigurationResponse:
+                this._handleTerminalConfigurationResponse(m);
                 break;
             case Events.BatteryLevelChanged:
                 this._handleBatteryLevelChanged(m);

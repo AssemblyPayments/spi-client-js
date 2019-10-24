@@ -7,6 +7,7 @@ export {TransactionOptions, TransactionType, SpiFlow, SpiStatus} from './src/Spi
 export {PrintingResponse} from './src/Printing';
 export {RefundResponse, PurchaseResponse, GetLastTransactionResponse, MotoPurchaseResponse} from './src/Purchase';
 export {TerminalStatusResponse, TerminalBattery} from './src/TerminalStatus';
+export {TerminalConfigurationRequest, TerminalConfigurationResponse} from './src/TerminalConfiguration';
 export {CashoutOnlyResponse} from './src/Cashout';
 export {Settlement} from './src/Settlement';
 export {RequestIdHelper} from './src/RequestIdHelper';

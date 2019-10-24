@@ -65,6 +65,9 @@ export const Events = {
     TerminalStatusRequest : "get_terminal_status",
     TerminalStatusResponse : "terminal_status",
 
+    TerminalConfigurationRequest : "get_terminal_configuration",
+    TerminalConfigurationResponse : "terminal_configuration",
+
     BatteryLevelChanged : "battery_level_changed",
 
     PayAtTableGetOpenTables: "get_open_tables",
