@@ -406,7 +406,7 @@ class Spi {
             // Already confirmed from Eftpos - So all good now. We're Paired also from the POS perspective.
             this._log.info("Pair Code Confirmed from POS side, and was already confirmed from Eftpos side. Pairing finalised.");
             this._onPairingSuccess();
-            this._onReadyToTransact();
+            // this._onReadyToTransact();
         }
     }
 
