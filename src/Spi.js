@@ -870,7 +870,6 @@ class Spi {
 
     /// <summary>
     /// Initiates a Zip purchase transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
-    /// <para>Tip and cashout are not allowed simultaneously.</para>
     /// </summary>
     /// <param name="posRefId">An Unique Identifier for your Order/Purchase</param>
     /// <param name="purchaseAmount">The Purchase Amount in Cents.</param>

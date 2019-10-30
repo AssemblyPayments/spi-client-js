@@ -10,14 +10,14 @@ const encKey = '81CF9E6A14CDAF244A30B298D4CECB505C730CE352C6AF6E1DE61B3232E24D3F
 const hmacKey = 'D35060723C9EECDB8AEA019581381CB08F64469FC61A5A04FE553EBDB5CD55B9';
 
 describe('ZipTransactions', () => {
-    it('TestZipPurchaseRequestAccountSummary', () => {
+    it('AccountSummary_ZipPurchaseFor1000Cents_PurchaseStringFor10Dollars', () => {
         const zipPurchaseRequest = new ZipPurchaseRequest(purchaseAmount, posRefId);
         const amountSummary = zipPurchaseRequest.AmountSummary();
 
         expect(amountSummary).toBe(`Purchase: ${(purchaseAmount / 100.0).toFixed(2)}`);
     });
 
-    it('TestZipPurchaseRequestToMessage', () => {
+    it('ToMessage_ZipPurchaseFor1000CentsWithPosRefId_MessageWithPurchaseAmountAndPosRefId', () => {
         const zipPurchaseRequest = new ZipPurchaseRequest(purchaseAmount, posRefId);
         const message = zipPurchaseRequest.ToMessage();
 
@@ -25,7 +25,7 @@ describe('ZipTransactions', () => {
         expect(message.Data.pos_ref_id).toBe(posRefId);
     });
 
-    it('TestZipPurchaseRequestToMessageWithOptions_none', () => {
+    it('ToMessage_ZipPurchaseWithoutReceiptOptions_MessageWithoutReceiptOptions', () => {
         const zipPurchaseRequest = new ZipPurchaseRequest(purchaseAmount, posRefId);
         const message = zipPurchaseRequest.ToMessage();
 
@@ -35,7 +35,7 @@ describe('ZipTransactions', () => {
         expect(message.Data.customer_receipt_footer).toBe('');
     });
 
-    it('TestZipPurchaseRequestToMessageWithOptions', () => {
+    it('ToMessage_ZipPurchaseWithReceiptOptions_MessageWithReceiptOptions', () => {
         const merchantReceiptHeader = '';
         const merchantReceiptFooter = 'merchantfooter';
         const customerReceiptHeader = 'customerHeader';
@@ -55,7 +55,7 @@ describe('ZipTransactions', () => {
         expect(message.Data.customer_receipt_footer).toBe(customerReceiptFooter);
     });
 
-    it('TestZipPurchaseRequestToMessageWithStoreCodeAndDescription', () => {
+    it('ToMessage_ZipPurchaseWithStoreCodeAndDescription_MessageWithStoreCodeAndDescription', () => {
         const storeCode = 'sc';
         const description = 'desc';
 
@@ -71,7 +71,7 @@ describe('ZipTransactions', () => {
         expect(basket.description).toBe(description);
     });
 
-    it('TestZipPurchaseResponse', () => {
+    it('ZipPurchaseResponse_ZipPurchaseResponseMessage_ValidDataFromMessageGetters', () => {
         const secrets = new Secrets(encKey, hmacKey);
         const message = Message.FromJson(JSON.stringify(__fixtures__.ZipPurchaseResponse), secrets);
         const response = new ZipPurchaseResponse(message);
@@ -97,7 +97,7 @@ describe('ZipTransactions', () => {
         expect(response.WasCustomerReceiptPrinted()).toBeTruthy();
     });
 
-    it('TestZipRefundRequestToMessage', () => {
+    it('ToMessage_ZipRefundAmountWithPosRefId_MessageWithRefundAmountAndPosRefId', () => {
         const zipRefundRequest = new ZipRefundRequest(refundAmount, posRefId);
         const message = zipRefundRequest.ToMessage();
 
@@ -105,7 +105,7 @@ describe('ZipTransactions', () => {
         expect(message.Data.pos_ref_id).toBe(posRefId);
     });
 
-    it('TestZipRefundRequestToMessageWithOptions_none', () => {
+    it('ToMessage_ZipRefundWithoutReceiptOptions_MessageWithoutReceiptOptions', () => {
         const zipRefundRequest = new ZipRefundRequest(refundAmount, posRefId);
         const message = zipRefundRequest.ToMessage();
 
@@ -115,7 +115,7 @@ describe('ZipTransactions', () => {
         expect(message.Data.customer_receipt_footer).toBe('');
     });
 
-    it('TestZipRefundRequestToMessageWithOptions', () => {
+    it('ToMessage_ZipRefundWithReceiptOptions_MessageWithReceiptOptions', () => {
         const merchantReceiptHeader = '';
         const merchantReceiptFooter = 'merchantfooter';
         const customerReceiptHeader = 'customerHeader';
@@ -136,7 +136,7 @@ describe('ZipTransactions', () => {
         expect(customerReceiptFooter).toBe(message.Data.customer_receipt_footer);
     });
 
-    it('TestZipRefundRequestToMessageWithOriginal', () => {
+    it('ToMessage_ZipRefundWithReceiptNumber_MessageWithReceiptNumber', () => {
         const originalReceiptNumber = '123456';
 
         const zipRefundRequest = Object.assign(new ZipRefundRequest(refundAmount, posRefId), {
@@ -148,7 +148,7 @@ describe('ZipTransactions', () => {
         expect(zipData.original_receipt_number).toBe(originalReceiptNumber);
     });
 
-    it('TestZipRefundResponse', () => {
+    it('ZipRefundResponse_ZipRefundResponseMessageValidDataFromMessageGetters', () => {
         const secrets = new Secrets(encKey, hmacKey);
         const message = Message.FromJson(JSON.stringify(__fixtures__.ZipRefundResponse), secrets);
         const response = new ZipRefundResponse(message);
