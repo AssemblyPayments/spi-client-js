@@ -99,7 +99,9 @@ export const TransactionType =
     SettlementEnquiry: 'SettlementEnquiry',
     GetLastTransaction: 'GetLastTransaction',
     Preauth: 'Preauth',
-    AccountVerify: 'AccountVerify'
+    AccountVerify: 'AccountVerify',
+    ZipPurchase: 'ZipPurchase',
+    ZipRefund: 'ZipRefund',
 };
 
 // <summary>

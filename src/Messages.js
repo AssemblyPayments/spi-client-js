@@ -65,12 +65,20 @@ export const Events = {
     TerminalStatusRequest : "get_terminal_status",
     TerminalStatusResponse : "terminal_status",
 
+    TerminalConfigurationRequest : "get_terminal_configuration",
+    TerminalConfigurationResponse : "terminal_configuration",
+
     BatteryLevelChanged : "battery_level_changed",
 
     PayAtTableGetOpenTables: "get_open_tables",
     PayAtTableOpenTables: "open_tables",
 
-    PayAtTableBillPaymentFlowEnded: "bill_payment_flow_ended"
+    PayAtTableBillPaymentFlowEnded: "bill_payment_flow_ended",
+
+    ZipPurchaseRequest: "purchase_zip",
+    ZipPurchaseResponse: "purchase_zip_response",
+    ZipRefundRequest: "refund_zip",
+    ZipRefundResponse: "refund_zip_response",
 };
 
 export const SuccessState = {
