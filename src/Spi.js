@@ -152,7 +152,7 @@ class Spi {
     }
 
     /// <summary>
-    /// Set the acquirer code of your bank, please contact Assembly's Integration Engineers for acquirer code.
+    /// Set the acquirer code of your bank, please contact mx51's Integration Engineers for acquirer code.
     /// </summary>
     SetAcquirerCode(acquirerCode)
     {

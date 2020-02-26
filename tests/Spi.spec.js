@@ -6,7 +6,7 @@ import { getLastConsoleCallArgs } from './utils/TestHelpers';
 describe('Spi,', () => {
     const eftposAddress = '10.20.30.40';
     const posId = 'DummyPos';
-    const posVendorId = 'assembly';
+    const posVendorId = 'mx51';
     const posVersion = '2.6.0';
 
     beforeEach(() => {
