@@ -20,7 +20,7 @@ import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.6.8';
+const SPI_VERSION = '2.6.9';
 
 class Spi {
 
