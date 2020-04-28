@@ -59,7 +59,7 @@ export class DeviceAddressService
     {
         const CONNECTION_TIMEOUT = 8000;
         var path = isSecureConnection ? 'fqdn' : 'ip';
-        var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.msp.assemblypayments.com/v1/${serialNumber}/${path}`;
+        var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}`;
 
         return Promise.race([
             fetch(deviceAddressUri, {
