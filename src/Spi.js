@@ -75,6 +75,7 @@ class Spi {
         
         this._readyToTransact = null;
         this._periodicPingThread = null;
+        this._transactionMonitoringThread = null;
 
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
@@ -1532,7 +1533,7 @@ class Spi {
             this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
+        this._transactionMonitoringThread = setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
     }
 
     PrintingResponse(m) {
