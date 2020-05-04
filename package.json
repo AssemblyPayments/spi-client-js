@@ -1,6 +1,6 @@
 {
   "name": "@mx51/spi-client-js",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "JavaScript Client Library for mx51's In-Store Integration.",
   "main": "dist/spi-client-js.js",
   "scripts": {
