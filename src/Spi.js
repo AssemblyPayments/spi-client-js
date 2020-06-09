@@ -52,7 +52,7 @@ class Spi {
         this._deviceApiKey  = null;
         this._acquirerCode  = null;
         this._inTestMode    = false;
-        this._autoAddressResolutionEnabled = false;
+        this._autoAddressResolutionEnabled = true; // enabled by default
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
@@ -60,6 +60,7 @@ class Spi {
         this._posVendorId = null;
         this._posVersion = null;
         this._hasSetInfo = null;
+        this._pairUsingEftposAddress = false;
 
         // We will maintain some state
         this._mostRecentPingSent = null;
@@ -91,6 +92,19 @@ class Spi {
         this.CurrentPairingFlowState    = null;
         this.CurrentTxFlowState         = null;
     }
+    
+   /**
+   * Constructor chaining
+   * 
+   * @constructor
+   * @param {string} posId
+   * @param {string} eftposAddress 
+   * @param {string} secrets 
+   */
+  constructor(posId, eftposAddress, secrets) {
+    constructor(posId, "", eftposAddress, secrets);
+    this._pairUsingEftposAddress = true;
+  }
 
     EnablePayAtTable()
     {
@@ -175,8 +189,6 @@ class Spi {
     /// </summary>
     SetSerialNumber(serialNumber)
     {
-        if (this.CurrentStatus != SpiStatus.Unpaired)
-            return false;
 
         var was = this._serialNumber;
         this._serialNumber = serialNumber;
@@ -204,8 +216,6 @@ class Spi {
     /// <returns></returns>
     SetAutoAddressResolution(autoAddressResolutionEnable)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected)
-            return false;
 
         var was = this._autoAddressResolutionEnabled;
         this._autoAddressResolutionEnabled = autoAddressResolutionEnable;
@@ -227,8 +237,6 @@ class Spi {
     /// <returns></returns>
     SetTestMode(testMode)
     {
-        if (this.CurrentStatus && this.CurrentStatus != SpiStatus.Unpaired)
-            return false;
 
         if (testMode == this._inTestMode)
             return true;
@@ -279,7 +287,7 @@ class Spi {
     // </summary>
     SetEftposAddress(address)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected || this._autoAddressResolutionEnabled) {
+        if (this.CurrentStatus == SpiStatus.PairedConnected) {
             return false;
         }
 
@@ -1046,6 +1054,11 @@ class Spi {
         this.CurrentStatus = SpiStatus.PairedConnected;
         document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
         document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        // set the serial number
+        if (this._pairUsingEftposAddress)
+        {
+            GetTerminalConfiguration();
+        }
     }
 
     _onPairingFailed()
@@ -1460,6 +1473,14 @@ class Spi {
 
     _handleTerminalConfigurationResponse(m)
     {
+        if (this._pairUsingEftposAddress)
+                {
+                    var response = new TerminalConfigurationResponse(m);
+                    if (response.isSuccess())
+                    {
+                        this._serialNumber = response.GetSerialNumber();
+                    }
+                }
         this.TerminalConfigurationResponse(m);
     }
 
@@ -1710,6 +1731,9 @@ class Spi {
         {
             if (!this._hasSetInfo) { 
                 this._callSetPosInfo(); 
+            }
+            if (this._pairUsingEftposAddress) { 
+                GetTerminalConfiguration();
             }
 
             // let's also tell the eftpos our latest table configuration.
