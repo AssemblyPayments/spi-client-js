@@ -166,6 +166,10 @@ export class Message {
         return this.Data.error_reason ? this.Data.error_reason : "";
     }
 
+    GetDataStringValue(attribute) {
+        return this.Data[attribute];
+    }
+
     GetErrorDetail() {
         return this.Data.error_detail;
     }

@@ -17,7 +17,7 @@ import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, 
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
-import {TerminalConfigurationRequest} from './TerminalConfiguration';
+import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
 const SPI_VERSION = '2.6.10';
@@ -37,7 +37,7 @@ class Spi {
         document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
     }
 
-    constructor(posId, serialNumber, eftposAddress, secrets) 
+    constructor(posId, serialNumber = '', eftposAddress, secrets) 
     {
         this._posId = posId;
         this._serialNumber = serialNumber;
@@ -60,7 +60,13 @@ class Spi {
         this._posVendorId = null;
         this._posVersion = null;
         this._hasSetInfo = null;
-        this._pairUsingEftposAddress = false;
+        console.log('Spi constructor ', serialNumber, serialNumber === '');
+        
+        if (serialNumber === '') {
+            this._pairUsingEftposAddress = true;
+        } else {
+            this._pairUsingEftposAddress = false;
+        }
 
         // We will maintain some state
         this._mostRecentPingSent = null;
@@ -92,19 +98,6 @@ class Spi {
         this.CurrentPairingFlowState    = null;
         this.CurrentTxFlowState         = null;
     }
-    
-   /**
-   * Constructor chaining
-   * 
-   * @constructor
-   * @param {string} posId
-   * @param {string} eftposAddress 
-   * @param {string} secrets 
-   */
-  constructor(posId, eftposAddress, secrets) {
-    constructor(posId, "", eftposAddress, secrets);
-    this._pairUsingEftposAddress = true;
-  }
 
     EnablePayAtTable()
     {
@@ -181,6 +174,8 @@ class Spi {
     SetDeviceApiKey(deviceApiKey)
     {
         this._deviceApiKey = deviceApiKey;
+        console.log('SetDeviceKey setting value to ', this._deviceApiKey);
+        
         return true;
     }
 
@@ -1057,7 +1052,7 @@ class Spi {
         // set the serial number
         if (this._pairUsingEftposAddress)
         {
-            GetTerminalConfiguration();
+            this.GetTerminalConfiguration();
         }
     }
 
@@ -1474,14 +1469,15 @@ class Spi {
     _handleTerminalConfigurationResponse(m)
     {
         if (this._pairUsingEftposAddress)
-                {
-                    var response = new TerminalConfigurationResponse(m);
-                    if (response.isSuccess())
-                    {
-                        this._serialNumber = response.GetSerialNumber();
-                    }
-                }
-        this.TerminalConfigurationResponse(m);
+        {            
+            var response = new TerminalConfigurationResponse(m);
+            
+            if (response.GetSuccessState() === SuccessState.Success)
+            {
+                this._serialNumber = response.GetSerialNumber();
+            }
+        }
+        // this.TerminalConfigurationResponse(m);
     }
 
     _handleBatteryLevelChanged(m)
@@ -1529,7 +1525,8 @@ class Spi {
     {
         // Setup the Connection
         this._conn = new Connection();
-
+        console.log('_resetConn called ', this._forceSecureWebSockets);
+        
         if (this._isUsingHttps() || this._forceSecureWebSockets) {
             this._log.info("Secure connection detected.");
             this._eftposAddress = this._eftposAddress.replace("ws://", "wss://");
@@ -1732,8 +1729,9 @@ class Spi {
             if (!this._hasSetInfo) { 
                 this._callSetPosInfo(); 
             }
+
             if (this._pairUsingEftposAddress) { 
-                GetTerminalConfiguration();
+                this.GetTerminalConfiguration();
             }
 
             // let's also tell the eftpos our latest table configuration.
@@ -2021,7 +2019,7 @@ class Spi {
     {
         if (!this._autoAddressResolutionEnabled)
             return;
-    
+        console.log('_autoResolveEftpos _deviceApiKey ', this._deviceApiKey, (!this._serialNumber || !this._deviceApiKey));
         if (!this._serialNumber || !this._deviceApiKey) {
             this._log.warn("Missing serialNumber and/or deviceApiKey. Need to set them before for Auto Address to work.");    
             return;

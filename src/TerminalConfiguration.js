@@ -20,41 +20,45 @@ export class TerminalConfigurationResponse
 
     GetCommsSelected()
     {
-      return _m.GetDataStringValue("comms_selected");
+      return this._m.GetDataStringValue("comms_selected");
     }
 
     GetMerchantId()
     {
-      return _m.GetDataStringValue("merchant_id");
+      return this._m.GetDataStringValue("merchant_id");
     }
 
     GetPAVersion()
     {
-      return _m.GetDataStringValue("pa_version");
+      return this._m.GetDataStringValue("pa_version");
     }
 
     GetPaymentInterfaceVersion()
     {
-      return _m.GetDataStringValue("payment_interface_version");
+      return this._m.GetDataStringValue("payment_interface_version");
     }
 
     GetPluginVersion()
     {
-      return _m.GetDataStringValue("plugin_version");
+      return this._m.GetDataStringValue("plugin_version");
     }
 
     GetSerialNumber()
     {
-      return _m.GetDataStringValue("serial_number");
+      return this._m.GetDataStringValue("serial_number");
     }
 
     GetTerminalId()
     {
-      return _m.GetDataStringValue("terminal_id");
+      return this._m.GetDataStringValue("terminal_id ");
     }
 
     GetTerminalModel()
     {
-      return _m.GetDataStringValue("terminal_model");
+      return this._m.GetDataStringValue("terminal_model");
+    }
+
+    GetSuccessState() {
+      return this._m.GetSuccessState();
     }
 }
