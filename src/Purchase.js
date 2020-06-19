@@ -234,6 +234,115 @@ export class CancelTransactionResponse
     }
 }
 
+export class GetTransactionRequest
+{
+    constructor(posRefId) {
+        this.PosRefId = posRefId
+    }
+
+    ToMessage()
+    {
+
+        const data = {
+            "pos_ref_id": this.PosRefId,
+        };
+
+        return new Message(RequestIdHelper.Id("gt"), Events.GetTransactionRequest, data, true);
+    }
+}
+
+export class GetTransactionResponse
+{
+    constructor (m)
+    {
+        this._m = m;
+        this.Success = false;
+    }
+
+    GetPosRefId()
+    {
+        return this._m.Data.pos_ref_id;
+    }
+
+    GetError()
+    {
+        const error = this._m.Data.error_reason;
+        if (error) return error;
+        return null;
+    }
+
+    /// <summary>
+    /// Tx is a sub object of the payload, so we will copy this into a message for convenience. 
+    /// </summary>
+    GetTxMessage()
+    {
+        const tx = this._m.Data.tx;
+        if (tx) {
+            return new Message(this._m.Id, "gt", tx, false);
+        }
+
+        return null;
+    }
+
+    PosRefIdNotFound()
+    {
+        if (this._m.GetError() !== null)
+            return  this._m.GetError().startsWith("POS_REF_ID_NOT_FOUND");
+
+        return false;
+    }
+
+    PosRefIdInvalid()
+    {
+        if (this._m.GetError() !== null)
+            return this._m.GetError().startsWith("INVALID_ARGUMENTS");
+
+        return false;
+    }
+
+    PosRefIdMissing()
+    {
+        if (this._m.GetError() !== null)
+            return this._m.GetError().startsWith("MISSING_ARGUMENTS");
+
+        return false;
+    }
+
+    WasRetrievedSuccessfully()
+    {
+        return this._m.GetSuccessState() === SuccessState.Success;
+    }
+
+    IsTransactionInProgress()
+    {
+        return this._m.GetError().startsWith("TRANSACTION_IN_PROGRESS");
+    }
+
+    IsWaitingForSignatureResponse()
+    {
+        return this._m.GetError().startsWith("TRANSACTION_IN_PROGRESS_AWAITING_SIGNATURE");
+    }
+
+    IsWaitingForAuthCode()
+    {
+        return this._m.GetError().startsWith("TRANSACTION_IN_PROGRESS_AWAITING_PHONE_AUTH_CODE");
+    }
+
+    IsSomethingElseBlocking()
+    {
+        return this._m.GetError().startsWith("OPERATION_IN_PROGRESS");
+    }
+
+    CopyMerchantReceiptToCustomerReceipt()
+    {
+        const customerReceipt = this._m.Data.customer_receipt;
+        const merchantReceipt = this._m.Data.merchant_receipt;
+        if (merchantReceipt !== "" && customerReceipt === "") {
+            this._m.Data.customer_receipt = merchantReceipt;
+        }
+    }
+}
+
 export class GetLastTransactionRequest
 {
     ToMessage()
@@ -256,11 +365,6 @@ export class GetLastTransactionResponse
         // So we check if we got back an ResponseCode.
         // (as opposed to say an operation_in_progress_error)
         return !!this.GetResponseCode();
-    }
-
-    WasTimeOutOfSyncError()
-    {
-        return this._m.GetError().startsWith("TIME_OUT_OF_SYNC");
     }
 
     WasOperationInProgressError()
