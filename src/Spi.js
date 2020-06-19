@@ -1443,14 +1443,21 @@ class Spi {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
-
     BatteryLevelChanged(m) {
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    TransactionUpdateMessage(m) {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     _handlePrintingResponse(m)
     {
         if (typeof this.PrintingResponse === 'function') this.PrintingResponse(m);
+    }
+
+    _handleTransactionUpdateMessage(m) {
+        if (typeof this.TransactionUpdateMessage === 'function') this.TransactionUpdateMessage(m);
     }
 
     _handleTerminalStatusResponse(m)
@@ -1810,6 +1817,7 @@ class Spi {
             this._spiPreauth._handlePreauthMessage(m);
             return;
         }
+        this._log.info("Received event name:" + m.EventName);
 
         // And then we switch on the event type.
         switch (m.EventName)
@@ -1890,6 +1898,9 @@ class Spi {
                 break;
             case Events.PrintingResponse:
                 this._handlePrintingResponse(m);
+                break;
+            case Events.TransactionUpdateMessage:
+                this._handleTransactionUpdateMessage(m);
                 break;
             case Events.TerminalStatusResponse:
                 this._handleTerminalStatusResponse(m);
