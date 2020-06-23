@@ -186,22 +186,6 @@ export class Message {
         return this.Data.error_detail;
     }
 
-    GetServerTimeDelta()
-    {
-        let now = Date.now();
-        
-        // Stamp format: 2018-04-19T01:42:38.279
-        let dts = this.DateTimeStamp.split(/[\-\+\. :T]/);
-        let msgTime = new Date(
-            // year, month, date
-            dts[0], dts[1] - 1, dts[2],
-            // hour, minute, second, millis
-            dts[3], dts[4], dts[5], dts[6]
-        ).getTime(); // Local time zone
-
-        return msgTime - now;
-    }
-
     // Helper method to parse bank date format 20042018 (ddMMyyyy)
     static ParseBankDate(bankDate) {
         if(bankDate.length !== 8) return null;
@@ -257,13 +241,7 @@ export class Message {
     }
 
     ToJson(stamp) {
-        let now = Date.now();
-        let tzoffset = new Date().getTimezoneOffset() * 60 * 1000;
-        let adjustedTime = new Date(now - tzoffset + stamp.ServerTimeDelta);
-         
-        // Format date: "yyyy-MM-ddTHH:mm:ss.fff"	
-        this.DateTimeStamp = adjustedTime.toISOString().slice(0,-1);
-
+        this.DateTimeStamp = new Date().toISOString(),
         this.PosCounter = stamp.PosCounter++;
         this.ConnId = stamp.ConnId;
         this.PosId = stamp.PosId;
