@@ -13,7 +13,7 @@ import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
-import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
+import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
@@ -1456,8 +1456,9 @@ class Spi {
         if (typeof this.PrintingResponse === 'function') this.PrintingResponse(m);
     }
 
-    _handleTransactionUpdateMessage(m) {
-        if (typeof this.TransactionUpdateMessage === 'function') this.TransactionUpdateMessage(m);
+    _handleTransactionUpdateMessage(m) 
+    {
+        document.dispatchEvent(new CustomEvent('TxnUpdateMessage', { detail: m }));
     }
 
     _handleTerminalStatusResponse(m)
@@ -1817,7 +1818,7 @@ class Spi {
             this._spiPreauth._handlePreauthMessage(m);
             return;
         }
-        this._log.info("Received event name:" + m.EventName);
+        this._log.info("Received event name 1:" + m.EventName);
 
         // And then we switch on the event type.
         switch (m.EventName)

@@ -638,8 +638,6 @@ export class TransactionUpdate
 {
     constructor(m) 
     {
-        console.log('TransactionUpdate m ', m);
-        
         this.DisplayMessageCode = m.Data.display_message_code;
         this.DisplayMessageText = m.Data.display_message_text;
     }
