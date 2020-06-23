@@ -257,7 +257,14 @@ export class Message {
     }
 
     ToJson(stamp) {
-        this.PosCounter = stamp.PosCounter ++;
+        let now = Date.now();
+        let tzoffset = new Date().getTimezoneOffset() * 60 * 1000;
+        let adjustedTime = new Date(now - tzoffset + stamp.ServerTimeDelta);
+         
+        // Format date: "yyyy-MM-ddTHH:mm:ss.fff"	
+        this.DateTimeStamp = adjustedTime.toISOString().slice(0,-1);
+
+        this.PosCounter = stamp.PosCounter++;
         this.ConnId = stamp.ConnId;
         this.PosId = stamp.PosId;
 
