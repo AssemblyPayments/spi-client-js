@@ -20,7 +20,7 @@ import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.6.10';
+const SPI_VERSION = '2.7.0';
 
 class Spi {
 
@@ -55,7 +55,7 @@ class Spi {
         this._autoAddressResolutionEnabled = false;
 
         // Our stamp for signing outgoing messages
-        this._spiMessageStamp = new MessageStamp(this._posId, this._secrets, 0);
+        this._spiMessageStamp = new MessageStamp(this._posId, this._secrets);
 
         this._posVendorId = null;
         this._posVersion = null;
@@ -1536,6 +1536,7 @@ class Spi {
 
             case ConnectionState.Connected:
                 this._retriesSinceLastDeviceAddressResolution = 0;
+                this._spiMessageStamp.ResetConnection();
 
                 if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
@@ -1559,6 +1560,7 @@ class Spi {
                 this._mostRecentPongReceived = null;
                 this._missedPongsCount = 0;
                 this._stopPeriodicPing();
+                this._spiMessageStamp.ResetConnection();
 
                 if (this.CurrentStatus != SpiStatus.Unpaired)
                 {
@@ -1751,12 +1753,12 @@ class Spi {
     // <param name="m"></param>
     _handleIncomingPong(m)
     {
-        // We need to maintain this time delta otherwise the server will not accept our messages.
-        this._spiMessageStamp.ServerTimeDelta = m.GetServerTimeDelta();
-
         if (this._mostRecentPongReceived == null)
         {
             // First pong received after a connection, and after the pairing process is fully finalised.
+            // Receive connection id from PinPad after first pong, store this as this needs to be passed for every request.
+            this._spiMessageStamp.SetConnectionId(m.ConnId);
+
             if (this.CurrentStatus != SpiStatus.Unpaired)
             {
                 this._log.info("First pong of connection and in paired state.");
