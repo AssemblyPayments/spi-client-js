@@ -590,7 +590,8 @@ describe("Spi,", () => {
 
       // assert
       expect(getLastConsoleCallArgs()).toMatch(/unexpected/);
-      expect(spi.CurrentTxFlowState.Finished).toBeFalse();
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.Success).toBe(SuccessState.Failed);
     });
 
     it("should handle a GT response where the transaction data is missing", () => {

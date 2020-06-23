@@ -1322,8 +1322,8 @@ class Spi {
             else
             {
                 // get transaction failed, but we weren't given a specific reason
-                this._log.info(`GTR-08: Unexpected Response in Get Transaction - Received posRefId:${gtResponse.GetPosRefId()} Error:${m.GetError()}. Ignoring.`);
-                return;
+                this._log.info(`GTR-08: Unexpected Response in Get Transaction - Received posRefId:${gtResponse.GetPosRefId()} Error:${m.GetError()}.`);
+                txState.Completed(SuccessState.Failed, m, `Get Transaction failed, ${m.GetError()}.`);
             }
         }
         else
