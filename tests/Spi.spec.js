@@ -291,43 +291,43 @@ describe("Spi,", () => {
 
   describe("InitiateRecovery()", () => {
     it("should not initiate a Recovery when not paired", () => {
-        // arrange
-        const spi = new Spi(posId, "", eftposAddress, null);
-        spi.CurrentStatus = SpiStatus.Unpaired;
-  
-        // act
-        const initiateTxResult = spi.InitiateRecovery();
-  
-        // assert
-        expect(initiateTxResult.Message).toMatch(/not paired/i);
-      });
-  
-      it("should not initiate a Recovery when not idle", () => {
-        // arrange
-        const spi = new Spi(posId, "", eftposAddress, null);
-        spi.CurrentFlow = SpiFlow.Transaction;
-  
-        // act
-        const initiateTxResult = spi.InitiateRecovery();
-  
-        // assert
-        expect(initiateTxResult.Message).toMatch(/not idle/i);
-      });
-  
-      it("should initiate a Recovery", () => {
-          // arrange
-          const spi = new Spi(posId, "", eftposAddress, null);
-          spi.CurrentFlow = SpiFlow.Idle;
-          spi._send = () => true;
-    
-          // act
-          const initiateTxResult = spi.InitiateRecovery();
-    
-          // assert
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentStatus = SpiStatus.Unpaired;
 
-          expect(initiateTxResult.Message).toMatch(/recovery initiated/i);
-          expect(spi.CurrentTxFlowState.AwaitingGtResponse).toBeTrue;
-        });
+      // act
+      const initiateTxResult = spi.InitiateRecovery();
+
+      // assert
+      expect(initiateTxResult.Message).toMatch(/not paired/i);
+    });
+
+    it("should not initiate a Recovery when not idle", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+
+      // act
+      const initiateTxResult = spi.InitiateRecovery();
+
+      // assert
+      expect(initiateTxResult.Message).toMatch(/not idle/i);
+    });
+
+    it("should initiate a Recovery", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      spi._send = () => true;
+
+      // act
+      const initiateTxResult = spi.InitiateRecovery();
+
+      // assert
+
+      expect(initiateTxResult.Message).toMatch(/recovery initiated/i);
+      expect(spi.CurrentTxFlowState.AwaitingGtResponse).toBeTrue;
+    });
   });
 
   describe("_handleGetTransactionResponse()", () => {
