@@ -1818,8 +1818,7 @@ class Spi {
             this._spiPreauth._handlePreauthMessage(m);
             return;
         }
-        this._log.info("Received event name 1:" + m.EventName);
-
+        
         // And then we switch on the event type.
         switch (m.EventName)
         {
