@@ -1,9 +1,8 @@
 {
   "message": {
     "data": {
-      "error_detail": "418 I'm a teapot",
-      "error_reason": "INTERNAL_ERROR",
-      "pos_ref_id": "purchase-2000-01-01T00:00:00.000Z",
+      "error_detail": "No transactions have been performed",
+      "error_reason": "NO_TRANSACTION",
       "success": false
     },
     "datetime": "2000-01-01T00:00:00.000",
