@@ -254,8 +254,6 @@ export class TransactionFlowState
         // Whether we're currently waiting for a Get Transaction Response to get an update. 
         // </summary>
         this.AwaitingGtResponse = null;
-
-        this.GTResponsePosRefId = null;
     }
 
     Sent(msg)

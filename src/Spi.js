@@ -1275,7 +1275,6 @@ class Spi {
         this._log.info("Got Transaction.");
         txState.GotGtResponse();
         const gtResponse = new GetTransactionResponse(m);
-        txState.GTResponsePosRefId = gtResponse.GetPosRefId();
 
         if (!gtResponse.WasRetrievedSuccessfully())
         {
