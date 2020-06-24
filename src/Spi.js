@@ -1458,7 +1458,7 @@ class Spi {
 
     _handleTransactionUpdateMessage(m) 
     {
-        document.dispatchEvent(new CustomEvent('TxnUpdateMessage', { detail: m }));
+        if (typeof this.TransactionUpdateMessage === 'function') this.TransactionUpdateMessage(m);
     }
 
     _handleTerminalStatusResponse(m)
@@ -1818,7 +1818,7 @@ class Spi {
             this._spiPreauth._handlePreauthMessage(m);
             return;
         }
-        
+
         // And then we switch on the event type.
         switch (m.EventName)
         {
