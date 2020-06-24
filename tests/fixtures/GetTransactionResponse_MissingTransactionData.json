@@ -1,0 +1,11 @@
+{
+  "message": {
+    "data": {
+      "pos_ref_id": "gt-2000-01-01T00:00:00.000Z",
+      "success": true
+    },
+    "datetime": "2000-01-01T00:00:00.000",
+    "event": "get_transaction_response",
+    "id": "gt"
+  }
+}
