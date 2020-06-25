@@ -5,7 +5,7 @@ export {Secrets} from './src/Secrets';
 export {SuccessState} from './src/Messages';
 export {TransactionOptions, TransactionType, SpiFlow, SpiStatus, TransactionFlowState} from './src/SpiModels';
 export {PrintingResponse} from './src/Printing';
-export {RefundResponse, PurchaseResponse, GetLastTransactionResponse, MotoPurchaseResponse} from './src/Purchase';
+export {RefundResponse, PurchaseResponse, GetLastTransactionResponse, MotoPurchaseResponse, TransactionUpdate} from './src/Purchase';
 export {TerminalStatusResponse, TerminalBattery} from './src/TerminalStatus';
 export {TerminalConfigurationRequest, TerminalConfigurationResponse} from './src/TerminalConfiguration';
 export {CashoutOnlyResponse} from './src/Cashout';

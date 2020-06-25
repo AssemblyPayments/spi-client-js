@@ -633,3 +633,20 @@ export class AuthCodeAdvice
         return new Message(RequestIdHelper.Id("authad"), Events.AuthCodeAdvice, data, true);
     }
 }
+
+export class TransactionUpdate
+{
+    constructor(m) 
+    {
+        this.DisplayMessageCode = m.Data.display_message_code;
+        this.DisplayMessageText = m.Data.display_message_text;
+    }
+
+    GetDisplayMessageCode() {
+        return this.DisplayMessageCode;
+    }
+
+    GetDisplayMessageText() {
+        return this.DisplayMessageText;
+    }
+}

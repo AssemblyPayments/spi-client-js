@@ -13,7 +13,7 @@ import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
-import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired} from './Purchase';
+import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {TerminalStatusRequest} from './TerminalStatus';
@@ -1443,14 +1443,22 @@ class Spi {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
-
     BatteryLevelChanged(m) {
+        throw new Error('Method not implemented. Please overwrite this method in your POS');
+    }
+
+    TransactionUpdateMessage(m) {
         throw new Error('Method not implemented. Please overwrite this method in your POS');
     }
 
     _handlePrintingResponse(m)
     {
         if (typeof this.PrintingResponse === 'function') this.PrintingResponse(m);
+    }
+
+    _handleTransactionUpdateMessage(m) 
+    {
+        if (typeof this.TransactionUpdateMessage === 'function') this.TransactionUpdateMessage(m);
     }
 
     _handleTerminalStatusResponse(m)
@@ -1890,6 +1898,9 @@ class Spi {
                 break;
             case Events.PrintingResponse:
                 this._handlePrintingResponse(m);
+                break;
+            case Events.TransactionUpdateMessage:
+                this._handleTransactionUpdateMessage(m);
                 break;
             case Events.TerminalStatusResponse:
                 this._handleTerminalStatusResponse(m);

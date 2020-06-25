@@ -62,6 +62,7 @@ export const Events = {
     PrintingRequest : "print",
     PrintingResponse : "print_response",
 
+    TransactionUpdateMessage : "txn_update_message",
     TerminalStatusRequest : "get_terminal_status",
     TerminalStatusResponse : "terminal_status",
 
