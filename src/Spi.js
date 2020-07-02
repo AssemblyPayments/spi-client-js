@@ -1012,16 +1012,13 @@ class Spi {
         {
             if (this.CurrentPairingFlowState.AwaitingCheckFromPos)
             {
-                // Still Waiting for User to say yes on POS
-                this._log.info("Got Pair Confirm from Eftpos, but still waiting for use to confirm from POS.");
-                this.CurrentPairingFlowState.Message = "Confirm that the following Code is what the EFTPOS showed";
-                document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                // Waiting for PoS, auto confirming code
+                this._log.info("Confirming pairing from library.");
+                this.PairingConfirmCode();
+
             }
-            else
-            {
-                this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
-                this._onPairingSuccess();
-            }
+            this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
+            this._onPairingSuccess();
             // I need to ping/login even if the pos user has not said yes yet, 
             // because otherwise within 5 seconds connectiong will be dropped by eftpos.
             this._startPeriodicPing();
