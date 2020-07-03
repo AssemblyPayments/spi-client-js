@@ -25,6 +25,8 @@ export const Events = {
      GetLastTransactionResponse : "last_transaction",
      GetTransactionRequest: "get_transaction",
      GetTransactionResponse: "get_transaction_response",
+     ReversalRequest : "reverse_transaction",
+     ReversalResponse : "reverse_transaction_response",
      RefundRequest : "refund",
      RefundResponse : "refund_response",
      SignatureRequired : "signature_required",
