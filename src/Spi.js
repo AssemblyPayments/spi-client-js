@@ -16,6 +16,7 @@ import {PingHelper, PongHelper} from './PingHelper';
 import {GetTransactionRequest, GetTransactionResponse, GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
+import {ReversalRequest} from './Reversal';
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
@@ -860,6 +861,30 @@ class Spi {
     }
 
     /// <summary>
+    /// Alpha Build - Please do not use
+    /// </summary>
+    /// <param name="posRefId"></param>
+    /// <returns></returns>
+    InitiateReversal(posRefId)
+    {
+        if (this.CurrentStatus === SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow !== SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+
+        this.CurrentFlow = SpiFlow.Transaction;
+
+        const reversalRequestMsg = new ReversalRequest(posRefId).ToMessage();
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.Reversal, 0, reversalRequestMsg,
+            "Waiting for EFTPOS to make a reversal request");
+        if (this._send(reversalRequestMsg)) {
+            this.CurrentTxFlowState.Sent("Asked EFTPOS reversal");
+        }
+
+        return new InitiateTxResult(true, "Reversal Initiated");
+    }
+
+    /// <summary>
     /// Initiates a Zip refund transaction. Be subscribed to TxFlowStateChanged event to get updates on the process.
     /// </summary>
     /// <param name="posRefId">Alphanumeric Identifier for your refund.</param>
@@ -1230,6 +1255,28 @@ class Spi {
         // TH-6A, TH-6E
         
         document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+    }
+
+    /// <summary>
+    /// Handle the Reversal Response received from the PinPad
+    /// </summary>
+    /// <param name="m"></param>
+    _handleReversalTransaction(m)
+    {
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (
+            this.CurrentFlow !== SpiFlow.Transaction ||
+            this.CurrentTxFlowState.Finished ||
+            !this.CurrentTxFlowState.PosRefId === incomingPosRefId
+        ) {
+            this._log.info(`Received Reversal response but I was not waiting for this one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Reversal Transaction Ended.");
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
@@ -1902,6 +1949,9 @@ class Spi {
             case Events.SettlementEnquiryResponse:
                 this._handleSettlementEnquiryResponse(m);
                 break;
+            case Events.ReversalResponse:
+                this._handleReversalTransaction(m);
+                break;
             case Events.Ping:
                 this._handleIncomingPing(m);
                 break;
@@ -2129,6 +2179,11 @@ class Spi {
     _isSecureConnection() 
     {
         return this._isUsingHttps() || this._forceSecureWebSockets;
+    }
+
+    _sendTransactionReport() {
+        // TODO: Dummy method. Delete when analytics is implemented
+        return;
     }
 }
 

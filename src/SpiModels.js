@@ -91,16 +91,17 @@ export class PairingFlowState
 
 export const TransactionType = 
 {
+    AccountVerify: 'AccountVerify',
+    CashoutOnly: 'CashoutOnly',
+    GetTransaction: 'GetTransaction',
+    GetLastTransaction: 'GetLastTransaction',
+    MOTO: 'MOTO',
+    Preauth: 'Preauth',
     Purchase: 'Purchase',
     Refund: 'Refund',
-    CashoutOnly: 'CashoutOnly',
-    MOTO: 'MOTO',
+    Reversal: 'Reversal',
     Settle: 'Settle',
     SettlementEnquiry: 'SettlementEnquiry',
-    GetLastTransaction: 'GetLastTransaction',
-    GetTransaction: 'GetTransaction',
-    Preauth: 'Preauth',
-    AccountVerify: 'AccountVerify',
     ZipPurchase: 'ZipPurchase',
     ZipRefund: 'ZipRefund',
 };
