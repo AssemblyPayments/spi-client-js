@@ -555,7 +555,7 @@ describe("Spi,", () => {
       expect(spi.CurrentTxFlowState.Finished).toBeFalse();
     });
 
-    it("should handle a GT response where a signature is currently being requested on the terminal", () => {
+    it("should handle a GT response where a signature response is about to be required", () => {
       // arrange
       const {
         message: {
@@ -579,6 +579,34 @@ describe("Spi,", () => {
 
       // assert
       expect(spi.CurrentTxFlowState.AwaitingSignatureCheck).toBeTrue();
+      expect(spi.CurrentTxFlowState.Finished).toBeFalse();
+    });
+
+    it("should handle a GT response where a signature is currently being requested on the terminal", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+          id: lastGtRequestId,
+        },
+      } = __fixtures__.GetTransactionResponse_SignatureRequired;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Purchase
+      );
+      spi.CurrentTxFlowState.SignatureRequired();
+      spi.CurrentTxFlowState.CallingGt(lastGtRequestId);
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.GetTransactionResponse_SignatureRequired)
+      );
+
+      // act
+      spi._handleGetTransactionResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/waiting for signature/);
       expect(spi.CurrentTxFlowState.Finished).toBeFalse();
     });
 
