@@ -1,0 +1,79 @@
+{
+  "message": {
+    "data": {
+      "accumulated_settle_by_acquirer_count": "0",
+      "accumulated_settle_by_acquirer_value": "0",
+      "accumulated_total_count": "0",
+      "accumulated_total_value": "0",
+      "bank_date": "01012000",
+      "bank_time": "100000",
+      "host_response_code": "000",
+      "host_response_text": "APPROVED",
+      "merchant_acquirer": "EFTPOS FROM BANK",
+      "merchant_address": "201 Kent Street",
+      "merchant_city": "Sydney",
+      "merchant_country": "Australia",
+      "merchant_name": "Merchant",
+      "merchant_postcode": "2000",
+      "merchant_receipt": "EFTPOS FROM BANK\r\nMerchant\r\n\r\n\r\n SETTLEMENT INQUIRY\r\n\r\nDebit\r\nTOT     0      $0.00\r\n\r\nMasterCard\r\nTOT     0      $0.00\r\n\r\nVisa\r\nTOT     0      $0.00\r\n\r\nSTOTAL  0      $0.00\r\n\r\nAmex\r\nTOT     0      $0.00\r\n\r\nDiners\r\nTOT     0      $0.00\r\n\r\nJCB\r\nTOT     0      $0.00\r\n\r\nUnionPay\r\nTOT     0      $0.00\r\n\r\nTOTAL\r\nTOT     0      $0.00\r\n\r\n   (000) APPROVED\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+      "merchant_receipt_printed": false,
+      "schemes": [
+        {
+          "scheme_name": "Debit",
+          "settle_by_acquirer": "Yes",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "MasterCard",
+          "settle_by_acquirer": "Yes",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "Visa",
+          "settle_by_acquirer": "Yes",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "Amex",
+          "settle_by_acquirer": "No",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "Diners",
+          "settle_by_acquirer": "No",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "JCB",
+          "settle_by_acquirer": "No",
+          "total_count": "0",
+          "total_value": "0"
+        },
+        {
+          "scheme_name": "UnionPay",
+          "settle_by_acquirer": "No",
+          "total_count": "0",
+          "total_value": "0"
+        }
+      ],
+      "settlement_period_end_date": "02Jan20",
+      "settlement_period_end_time": "23:59",
+      "settlement_period_start_date": "02Jan20",
+      "settlement_period_start_time": "00:00",
+      "settlement_triggered_date": "02Jan20",
+      "settlement_triggered_time": "23:59:00",
+      "stan": "000000",
+      "success": true,
+      "terminal_id": "100000000000",
+      "transaction_range": "000000-000000"
+    },
+    "datetime": "2000-01-01T00:00:00.000",
+    "event": "settlement_enquiry_response",
+    "id": "stlenq"
+  }
+}

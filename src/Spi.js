@@ -1,3 +1,4 @@
+import {AnalyticsService, TransactionReport} from './Service/AnalyticsService';
 import {Message, MessageStamp, Events, SuccessState} from './Messages';
 import {SpiConfig, SpiFlow, SpiStatus, PairingFlowState, TransactionFlowState, TransactionType, InitiateTxResult, MidTxResult, SubmitAuthCodeResult, TransactionOptions} from './SpiModels';
 import {RequestIdHelper} from './RequestIdHelper';
@@ -62,6 +63,9 @@ class Spi {
         this._posVendorId = null;
         this._posVersion = null;
         this._hasSetInfo = null;
+        this._libraryLanguage = "js";
+
+        this._transactionReport = new TransactionReport();
 
         // We will maintain some state
         this._mostRecentPingSent = null;
@@ -636,7 +640,7 @@ class Spi {
     // <returns>MidTxResult - false only if you called it in the wrong state</returns>
     CancelTransaction()
     {
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
         {
             this._log.info("Asked to cancel transaction but I was not in the middle of one.");
             return new MidTxResult(false, "Asked to cancel transaction but I was not in the middle of one.");
@@ -645,7 +649,7 @@ class Spi {
         // TH-1C, TH-3C - Merchant pressed cancel
         if (this.CurrentTxFlowState.RequestSent)
         {
-            var cancelReq = new CancelTransactionRequest();
+            const cancelReq = new CancelTransactionRequest();
             this.CurrentTxFlowState.Cancelling("Attempting to Cancel Transaction...");
             this._send(cancelReq.ToMessage());
         }
@@ -656,6 +660,7 @@ class Spi {
         }
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
         return new MidTxResult(true, "");
     }
 
@@ -1164,8 +1169,8 @@ class Spi {
     // <param name="m"></param>
     _handlePurchaseResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
         {
             this._log.info(`Received Purchase response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}"`);
             return;
@@ -1176,6 +1181,7 @@ class Spi {
         // TH-6A, TH-6E
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
@@ -1184,8 +1190,8 @@ class Spi {
     // <param name="m"></param>
     _handleCashoutOnlyResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
         {
             this._log.info(`Received Cashout Response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
@@ -1196,6 +1202,7 @@ class Spi {
         // TH-6A, TH-6E
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
@@ -1204,8 +1211,8 @@ class Spi {
     // <param name="m"></param>
     _handleMotoPurchaseResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished || !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
         {
             this._log.info(`Received Moto Response but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
@@ -1216,6 +1223,7 @@ class Spi {
         // TH-6A, TH-6E
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }   
 
     // <summary>
@@ -1224,8 +1232,8 @@ class Spi {
     // <param name="m"></param>
     _handleRefundResponse(m)
     {
-        var incomingPosRefId = m.Data.pos_ref_id;
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished | !this.CurrentTxFlowState.PosRefId == incomingPosRefId)
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished | !this.CurrentTxFlowState.PosRefId === incomingPosRefId)
         {
             this._log.info(`Received Refund response but I was not waiting for this one. Incoming Pos Ref ID: ${incomingPosRefId}`);
             return;
@@ -1236,15 +1244,16 @@ class Spi {
         // TH-6A, TH-6E
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
-    // TODO: Handle the Settlement Response received from the PinPad
+    // Handle the Settlement Response received from the PinPad
     // </summary>
     // <param name="m"></param>
-    HandleSettleResponse(m)
+    _handleSettleResponse(m)
     {
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
         {
             this._log.info(`Received Settle response but I was not waiting for one. ${m.DecryptedJson}`);
             return;
@@ -1255,6 +1264,7 @@ class Spi {
         // TH-6A, TH-6E
     
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
@@ -1263,7 +1273,7 @@ class Spi {
     // <param name="m"></param>
     _handleSettlementEnquiryResponse(m)
     {
-        if (this.CurrentFlow != SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
+        if (this.CurrentFlow !== SpiFlow.Transaction || this.CurrentTxFlowState.Finished)
         {
             this._log.info(`Received Settlement Enquiry response but I was not waiting for one. ${m.DecryptedJson}`);
             return;
@@ -1274,6 +1284,7 @@ class Spi {
         // TH-6A, TH-6E
         
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     /// <summary>
@@ -1460,6 +1471,7 @@ class Spi {
             txState.Completed(m.GetSuccessState(), m, "Last Transaction Retrieved");
         }
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+        this._sendTransactionReport();
     }
 
     //When the transaction cancel response is returned.
@@ -1469,7 +1481,7 @@ class Spi {
         const txState = this.CurrentTxFlowState;
         const cancelResponse = new CancelTransactionResponse(m);
 
-        if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished || !txState.PosRefId == incomingPosRefId)
+        if (this.CurrentFlow !== SpiFlow.Transaction || txState.Finished || !txState.PosRefId === incomingPosRefId)
         {
             if (!cancelResponse.WasTxnPastPointOfNoReturn()) {
                 this._log.info(`Received Cancel Required but I was not waiting for one. Incoming Pos Ref ID: ${incomingPosRefId}`);
@@ -1484,6 +1496,7 @@ class Spi {
         txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
     
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+        this._sendTransactionReport();
     }
 
     _handleSetPosInfoResponse(m)
@@ -1831,6 +1844,7 @@ class Spi {
         {
             if (!this._hasSetInfo) { 
                 this._callSetPosInfo(); 
+                this._transactionReport = TransactionReportHelper.CreateTransactionReportEnvelope(this._posVendorId, this._posVersion, this._libraryLanguage, Spi.GetVersion(), this._serialNumber);
             }
 
             // let's also tell the eftpos our latest table configuration.
@@ -1842,7 +1856,7 @@ class Spi {
 
     _callSetPosInfo()
     {
-        var setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, "js", SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
+        const setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, this._libraryLanguage, SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
         this._send(setPosInfoRequest.toMessage());
     }
 
@@ -1900,7 +1914,7 @@ class Spi {
     // <param name="m"></param>
     _handleIncomingPing(m)
     {
-        var pong = PongHelper.GeneratePongRessponse(m);
+        const pong = PongHelper.GeneratePongResponse(m);
         this._send(pong);
     }
 
@@ -1970,7 +1984,7 @@ class Spi {
                 this._handleGetLastTransactionResponse(m);
                 break;
             case Events.SettleResponse:
-                this.HandleSettleResponse(m);
+                this._handleSettleResponse(m);
                 break;
             case Events.SettlementEnquiryResponse:
                 this._handleSettlementEnquiryResponse(m);
@@ -2196,6 +2210,31 @@ class Spi {
         this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
     }
 
+    async _sendTransactionReport()
+    {
+        const CurrentTxFlowState = this.CurrentTxFlowState;
+        const transactionReport = this._transactionReport;
+
+        transactionReport.TxType = CurrentTxFlowState.Type;
+        transactionReport.TxResult = CurrentTxFlowState.Success;
+        transactionReport.TxStartTime = CurrentTxFlowState.RequestTime;
+        transactionReport.TxEndTime = CurrentTxFlowState.RequestTime;
+        transactionReport.DurationMs = CurrentTxFlowState.CompletedTime - CurrentTxFlowState.RequestTime;
+        transactionReport.CurrentFlow = this.CurrentFlow;
+        transactionReport.CurrentTxFlowState = CurrentTxFlowState.Type;
+        transactionReport.CurrentStatus = this.CurrentStatus;
+        transactionReport.PosRefId = CurrentTxFlowState.PosRefId;
+        transactionReport.Event = `Waiting for Signature: ${CurrentTxFlowState.AwaitingSignatureCheck}, Attemtping to Cancel: ${CurrentTxFlowState.AttemptingToCancel}, Finished: ${CurrentTxFlowState.Finished}`;
+        transactionReport.SerialNumber = this._serialNumber;
+
+        try {
+            await AnalyticsService.ReportTransaction(transactionReport, this._deviceApiKey, this._acquirerCode, this._inTestMode);
+        } catch (error) {
+            this._log.error(error);
+            this._log.warn("Error reporting to analytics service.");
+        }
+    }
+
     _isUsingHttps() 
     {
         return 'https:' == document.location.protocol ? true : false;
@@ -2205,11 +2244,6 @@ class Spi {
     _isSecureConnection() 
     {
         return this._isUsingHttps() || this._forceSecureWebSockets;
-    }
-
-    _sendTransactionReport() {
-        // TODO: Dummy method. Delete when analytics is implemented
-        return;
     }
 }
 
