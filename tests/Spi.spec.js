@@ -207,6 +207,46 @@ describe("Spi,", () => {
     expect(spi._eftposAddress).toBe("");
   });
 
+  describe("InitiateReversal()", () => {
+    it("should not initiate a Reversal when not paired", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentStatus = SpiStatus.Unpaired;
+
+      // act
+      const initiateReversalResult = spi.InitiateReversal();
+
+      // assert
+      expect(initiateReversalResult.Message).toMatch(/not paired/i);
+    });
+
+    it("should not initiate a Reversal when not idle", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+
+      // act
+      const initiateReversalResult = spi.InitiateReversal();
+
+      // assert
+      expect(initiateReversalResult.Message).toMatch(/not idle/i);
+    });
+
+    it("should initiate a Reversal", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      spi._send = () => true;
+
+      // act
+      const initiateReversalResult = spi.InitiateReversal();
+
+      // assert
+      expect(initiateReversalResult.Message).toMatch(/reversal initiated/i);
+      expect(spi.CurrentTxFlowState.Type).toBe(TransactionType.Reversal);
+    });
+  });
+
   describe("InitiateGetLastTx()", () => {
     it("should not initiate a GLT when not paired", () => {
       // arrange
@@ -327,6 +367,48 @@ describe("Spi,", () => {
 
       expect(initiateTxResult.Message).toMatch(/recovery initiated/i);
       expect(spi.CurrentTxFlowState.AwaitingGtResponse).toBeTrue;
+    });
+  });
+
+  describe("_handleReversalTransaction()", () => {
+    it("should handle a Reversal response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.ReversalResponse_Success)
+      );
+
+      // act
+      spi._handleReversalTransaction(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/was not waiting/);
+    });
+
+    it("should handle a Reversal response where the reversal was successful", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.ReversalResponse_Success;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Reversal
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.ReversalResponse_Success)
+      );
+
+      // act
+      spi._handleReversalTransaction(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(/reversal .* ended/i);
     });
   });
 
