@@ -35,7 +35,7 @@ class Spi {
         }
 
         this._currentStatus = value;
-        document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
+        this._eventBus.dispatchEvent(new CustomEvent('StatusChanged', { detail: value }));
     }
 
     constructor(posId, serialNumber, eftposAddress, secrets) 
@@ -45,9 +45,10 @@ class Spi {
         this._secrets = secrets;
         this._forceSecureWebSockets = false;
         this._eftposAddress = "ws://" + eftposAddress;
+        this._eventBus = document;
         this._log = console;
         this.Config = new SpiConfig();
-        this._conn = new Connection();
+        this._conn = new Connection(this);
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
@@ -74,6 +75,7 @@ class Spi {
         
         this._readyToTransact = null;
         this._periodicPingThread = null;
+        this._transactionMonitoringThread = null;
 
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
@@ -153,6 +155,23 @@ class Spi {
     }
 
     /// <summary>
+    /// Set a custom event bus so that events from multiple SPI instances can be seperated
+    /// </summary>
+    SetEventBus(eventBus) {
+        if (
+            eventBus &&
+            typeof eventBus.addEventListener === "function" &&
+            typeof eventBus.removeEventListener === "function" &&
+            typeof eventBus.dispatchEvent === "function"
+        ) {
+            this._eventBus = eventBus;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Set the acquirer code of your bank, please contact mx51's Integration Engineers for acquirer code.
     /// </summary>
     SetAcquirerCode(acquirerCode)
@@ -193,7 +212,7 @@ class Spi {
             }
 
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SERIAL_NUMBER_NOT_CHANGED;
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
         }
 
         return true;
@@ -376,7 +395,7 @@ class Spi {
             ConfirmationCode: ""
         });
 
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         this._conn.Connect(); // Non-Blocking
         return true;
     }
@@ -400,7 +419,7 @@ class Spi {
             this._log.info("Pair Code Confirmed from POS side, but am still waiting for confirmation from Eftpos.");
             this.CurrentPairingFlowState.Message =
                 "Click YES on EFTPOS if code is: " + this.CurrentPairingFlowState.ConfirmationCode;
-            document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+            this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         }
         else
         {
@@ -483,7 +502,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${amountCents / 100.0}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Purchase Initiated");
     }
 
@@ -520,7 +539,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${purchase.AmountSummary()}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Purchase Initiated");
     }
 
@@ -555,7 +574,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${(amountCents / 100.0).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Refund Initiated");
     }
     
@@ -577,7 +596,7 @@ class Spi {
             ? new SignatureAccept(this.CurrentTxFlowState.PosRefId).ToMessage()
             : new SignatureDecline(this.CurrentTxFlowState.PosRefId).ToMessage());
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new MidTxResult(true, "");
     }
 
@@ -605,7 +624,7 @@ class Spi {
         this.CurrentTxFlowState.AuthCodeSent(`Submitting Auth Code ${authCode}`);
         this._send(new AuthCodeAdvice(this.CurrentTxFlowState.PosRefId, authCode).ToMessage());
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new SubmitAuthCodeResult(true, "Valid Code.");
     }
 
@@ -636,7 +655,7 @@ class Spi {
             this.CurrentTxFlowState.Failed(null, "Transaction Cancelled. Request Had not even been sent yet.");
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new MidTxResult(true, "");
     }
 
@@ -668,7 +687,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to do cashout for ${(amountCents / 100).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Cashout Initiated");
     }    
 
@@ -703,7 +722,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${(amountCents / 100).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "MOTO Initiated");
     }
 
@@ -738,7 +757,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to settle.`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Settle Initiated");   
     }
 
@@ -765,7 +784,7 @@ class Spi {
             this.CurrentTxFlowState.Sent("Asked EFTPOS to make a settlement enquiry.");
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Settle Initiated");   
     }
 
@@ -796,7 +815,7 @@ class Spi {
             this.CurrentTxFlowState.Sent("Asked EFTPOS for last transaction.");
         }
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "GLT Initiated");   
     }
 
@@ -856,7 +875,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to recover state.`);
         }
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Recovery Initiated");
     }
 
@@ -917,7 +936,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${refundAmount / 100}`);
         }
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, 'Zip Refund Initiated');
     }
 
@@ -955,7 +974,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept Zip payment for ${zipPurchase.AmountSummary()}`);
         }
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, 'Zip Purchase Initiated');
     }
 
@@ -991,7 +1010,7 @@ class Spi {
     _handleKeyRequest(m)
     {
         this.CurrentPairingFlowState.Message = "Negotiating Pairing...";
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
 
         // Use the helper. It takes the incoming request, and generates the secrets and the response.
         var ph      = new PairingHelper();
@@ -1012,7 +1031,7 @@ class Spi {
         this.CurrentPairingFlowState.AwaitingCheckFromEftpos = true;
         this.CurrentPairingFlowState.AwaitingCheckFromPos = true;
         this.CurrentPairingFlowState.Message = "Confirm that the following Code is showing on the Terminal";
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     // <summary>
@@ -1057,8 +1076,8 @@ class Spi {
         this.CurrentPairingFlowState.Finished = true;
         this.CurrentPairingFlowState.Message = "Pairing Successful!";
         this.CurrentStatus = SpiStatus.PairedConnected;
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     _onPairingFailed()
@@ -1072,7 +1091,7 @@ class Spi {
         this.CurrentPairingFlowState.Finished = true;
         this.CurrentPairingFlowState.Successful = false;
         this.CurrentPairingFlowState.AwaitingCheckFromPos = false;
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     _doUnpair()
@@ -1081,7 +1100,7 @@ class Spi {
         this._conn.Disconnect();
         this._secrets = null;
         this._spiMessageStamp.Secrets = null;
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
     // <summary>
@@ -1095,7 +1114,7 @@ class Spi {
         this._secrets = krRes.NewSecrets; // and update our secrets with them
         this._spiMessageStamp.Secrets = this._secrets; // and our stamp
         this._send(krRes.KeyRollingConfirmation); // and we tell the server that all is well.
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
     // <summary>
@@ -1114,7 +1133,7 @@ class Spi {
         }
         this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m), "Ask Customer to Sign the Receipt");
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1133,7 +1152,7 @@ class Spi {
         var msg = `Auth Code Required. Call ${phoneForAuthRequired.GetPhoneNumber()} and quote merchant id ${phoneForAuthRequired.GetMerchantId()}`;
         this.CurrentTxFlowState.PhoneForAuthRequired(phoneForAuthRequired, msg);
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1153,7 +1172,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Purchase Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1173,7 +1192,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Cashout Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1193,7 +1212,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Moto Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }   
 
     // <summary>
@@ -1213,7 +1232,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Refund Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1232,7 +1251,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settle Transaction Ended.");
         // TH-6A, TH-6E
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1251,7 +1270,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settlement Enquiry Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     /// <summary>
@@ -1408,7 +1427,7 @@ class Spi {
                 txState.Completed(tx.GetSuccessState(), tx, `Transaction Recovered for ${gtResponse.GetPosRefId()}.`);
             } 
         }
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
     }
 
     /// <summary>
@@ -1437,7 +1456,7 @@ class Spi {
             gtlResponse.CopyMerchantReceiptToCustomerReceipt();
             txState.Completed(m.GetSuccessState(), m, "Last Transaction Retrieved");
         }
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
     }
 
     //When the transaction cancel response is returned.
@@ -1461,7 +1480,7 @@ class Spi {
 
         txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
     }
 
     _handleSetPosInfoResponse(m)
@@ -1514,10 +1533,10 @@ class Spi {
         }
         
         if (needsPublishing) {
-            document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+            this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
+        this._transactionMonitoringThread = setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
     }
 
     PrintingResponse(m) {
@@ -1578,7 +1597,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, 'Zip Purchase Transaction Ended.');
         // TH-6A, TH-6E
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     _handleZipRefundResponse(m)
@@ -1594,7 +1613,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Zip Refund Transaction Ended.");
         // TH-6A, TH-6E
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // endregion
@@ -1604,7 +1623,7 @@ class Spi {
     _resetConn()
     {
         // Setup the Connection
-        this._conn = new Connection();
+        this._conn = new Connection(this);
 
         if (this._isUsingHttps() || this._forceSecureWebSockets) {
             this._log.info("Secure connection detected.");
@@ -1613,9 +1632,9 @@ class Spi {
           this._conn.Address = this._eftposAddress;
     
         // Register our Event Handlers
-        document.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
-        document.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
-        document.addEventListener('ErrorReceived', (e) => this._onWsErrorReceived(e.detail));
+        this._eventBus.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
+        this._eventBus.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
+        this._eventBus.addEventListener('ErrorReceived', (e) => this._onWsErrorReceived(e.detail));
     }
 
     // <summary>
@@ -1638,7 +1657,7 @@ class Spi {
                 if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
                     this.CurrentPairingFlowState.Message = "Requesting to Pair...";
-                    document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                    this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                     var pr = PairingHelper.NewPairRequest();
                     this._send(pr.ToMessage());
                 }
@@ -1706,7 +1725,7 @@ class Spi {
                         this._retriesSinceLastPairing = 0;
                         this._log.warn("Lost Connection during pairing.");
                         this._onPairingFailed();
-                        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                         return;
                     }
                     else
@@ -1802,7 +1821,7 @@ class Spi {
                 // TH-3AR - We had not even sent the request yet. Let's do that now
                 this._send(this.CurrentTxFlowState.Request);
                 this.CurrentTxFlowState.Sent("Sending Request Now...");
-                document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+                this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
             }
         }
         else
@@ -1868,7 +1887,7 @@ class Spi {
         }
 
         this._mostRecentPongReceived = m;
-        document.dispatchEvent(new CustomEvent('SpiPong', {detail: m}))
+        this._eventBus.dispatchEvent(new CustomEvent('SpiPong', { detail: m }))
         this._log.debug(`PongLatency:${Date.now() - this._mostRecentPingSentTime}`);
     }
 
@@ -2138,7 +2157,7 @@ class Spi {
             this.CurrentDeviceStatus.ResponseMessage = err;
 
             this._log.warn(err.message);
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return; 
         }
 
@@ -2146,14 +2165,14 @@ class Spi {
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
         if(!addressResponse.ok || !addressResponseJson || !this.CurrentDeviceStatus.Address) {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
@@ -2161,7 +2180,7 @@ class Spi {
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
@@ -2171,7 +2190,7 @@ class Spi {
         this._conn.Address = this._eftposAddress;
         this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SUCCESS;
 
-        document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+        this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
     }
 
     _isUsingHttps() 
