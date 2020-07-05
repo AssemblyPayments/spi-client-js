@@ -136,7 +136,7 @@ export class SpiPreauth
             this._spi.CurrentTxFlowState.Sent(sentMsg);
         }
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
         return new InitiateTxResult(true, "Preauth Initiated");
     }
 
@@ -175,7 +175,7 @@ export class SpiPreauth
         currentTxFlowState.Completed(m.GetSuccessState(), m, "Account Verify Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
     }
     
     _handlePreauthResponse(m)
@@ -192,7 +192,7 @@ export class SpiPreauth
         currentTxFlowState.Completed(m.GetSuccessState(), m, "Preauth Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this._spi.CurrentTxFlowState}));
     }
 
     static IsPreauthEvent(eventName)
