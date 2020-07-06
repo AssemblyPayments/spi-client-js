@@ -91,15 +91,17 @@ export class PairingFlowState
 
 export const TransactionType = 
 {
+    AccountVerify: 'AccountVerify',
+    CashoutOnly: 'CashoutOnly',
+    GetTransaction: 'GetTransaction',
+    GetLastTransaction: 'GetLastTransaction',
+    MOTO: 'MOTO',
+    Preauth: 'Preauth',
     Purchase: 'Purchase',
     Refund: 'Refund',
-    CashoutOnly: 'CashoutOnly',
-    MOTO: 'MOTO',
+    Reversal: 'Reversal',
     Settle: 'Settle',
     SettlementEnquiry: 'SettlementEnquiry',
-    GetLastTransaction: 'GetLastTransaction',
-    Preauth: 'Preauth',
-    AccountVerify: 'AccountVerify',
     ZipPurchase: 'ZipPurchase',
     ZipRefund: 'ZipRefund',
 };
@@ -189,9 +191,9 @@ export class TransactionFlowState
         this.LastStateRequestTime = null;
         
         // <summary>
-        // The id of the last glt request message that was sent. used to match with the response.
+        // The id of the gt request message that was sent. Used to match with the response.
         // </summary>
-        this.LastGltRequestId = null;
+        this.GtRequestId = null;
 
         // <summary>
         // Whether we're currently attempting to Cancel the transaction.
@@ -250,11 +252,9 @@ export class TransactionFlowState
         this.Request = message;
 
         // <summary>
-        // Whether we're currently waiting for a Get Last Transaction Response to get an update. 
+        // Whether we're currently waiting for a Get Transaction Response to get an update. 
         // </summary>
-        this.AwaitingGltResponse = null;
-
-        this.GLTResponsePosRefId = null;
+        this.AwaitingGtResponse = null;
     }
 
     Sent(msg)
@@ -278,16 +278,16 @@ export class TransactionFlowState
         this.DisplayMessage = msg;
     }
 
-    CallingGlt(gltRequestId)
+    CallingGt(gtRequestId)
     {
-        this.AwaitingGltResponse = true;
+        this.AwaitingGtResponse = true;
         this.LastStateRequestTime = Date.now();
-        this.LastGltRequestId = gltRequestId;
+        this.GtRequestId = gtRequestId;
     }
 
-    GotGltResponse()
+    GotGtResponse()
     {
-        this.AwaitingGltResponse = false;
+        this.AwaitingGtResponse = false;
     }
     
     Failed(response, msg)
@@ -330,7 +330,7 @@ export class TransactionFlowState
         this.Response = response;
         this.Finished = true;
         this.AttemptingToCancel = false;
-        this.AwaitingGltResponse = false;
+        this.AwaitingGtResponse = false;
         this.AwaitingSignatureCheck = false;
         this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;
@@ -342,7 +342,7 @@ export class TransactionFlowState
         this.Response = null;
         this.Finished = true;
         this.AttemptingToCancel = false;
-        this.AwaitingGltResponse = false;
+        this.AwaitingGtResponse = false;
         this.AwaitingSignatureCheck = false;
         this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;

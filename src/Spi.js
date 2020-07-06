@@ -13,14 +13,15 @@ import {SetPosInfoRequest, SetPosInfoResponse, DeviceInfo} from './PosInfo';
 import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
-import {GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
+import {GetTransactionRequest, GetTransactionResponse, GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
+import {ReversalRequest} from './Reversal';
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.7.0';
+const SPI_VERSION = '2.8.0';
 
 class Spi {
 
@@ -34,7 +35,7 @@ class Spi {
         }
 
         this._currentStatus = value;
-        document.dispatchEvent(new CustomEvent('StatusChanged', {detail: value}));
+        this._eventBus.dispatchEvent(new CustomEvent('StatusChanged', { detail: value }));
     }
 
     constructor(posId, serialNumber, eftposAddress, secrets) 
@@ -44,9 +45,10 @@ class Spi {
         this._secrets = secrets;
         this._forceSecureWebSockets = false;
         this._eftposAddress = "ws://" + eftposAddress;
+        this._eventBus = document;
         this._log = console;
         this.Config = new SpiConfig();
-        this._conn = new Connection();
+        this._conn = new Connection(this);
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
@@ -73,6 +75,7 @@ class Spi {
         
         this._readyToTransact = null;
         this._periodicPingThread = null;
+        this._transactionMonitoringThread = null;
 
         this._txMonitorCheckFrequency = 1000;
         this._checkOnTxFrequency = 20000;
@@ -152,6 +155,23 @@ class Spi {
     }
 
     /// <summary>
+    /// Set a custom event bus so that events from multiple SPI instances can be seperated
+    /// </summary>
+    SetEventBus(eventBus) {
+        if (
+            eventBus &&
+            typeof eventBus.addEventListener === "function" &&
+            typeof eventBus.removeEventListener === "function" &&
+            typeof eventBus.dispatchEvent === "function"
+        ) {
+            this._eventBus = eventBus;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Set the acquirer code of your bank, please contact mx51's Integration Engineers for acquirer code.
     /// </summary>
     SetAcquirerCode(acquirerCode)
@@ -192,7 +212,7 @@ class Spi {
             }
 
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SERIAL_NUMBER_NOT_CHANGED;
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
         }
 
         return true;
@@ -375,7 +395,7 @@ class Spi {
             ConfirmationCode: ""
         });
 
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         this._conn.Connect(); // Non-Blocking
         return true;
     }
@@ -399,7 +419,7 @@ class Spi {
             this._log.info("Pair Code Confirmed from POS side, but am still waiting for confirmation from Eftpos.");
             this.CurrentPairingFlowState.Message =
                 "Click YES on EFTPOS if code is: " + this.CurrentPairingFlowState.ConfirmationCode;
-            document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+            this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
         }
         else
         {
@@ -482,7 +502,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${amountCents / 100.0}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Purchase Initiated");
     }
 
@@ -519,7 +539,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept payment for ${purchase.AmountSummary()}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Purchase Initiated");
     }
 
@@ -554,7 +574,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${(amountCents / 100.0).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Refund Initiated");
     }
     
@@ -576,7 +596,7 @@ class Spi {
             ? new SignatureAccept(this.CurrentTxFlowState.PosRefId).ToMessage()
             : new SignatureDecline(this.CurrentTxFlowState.PosRefId).ToMessage());
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new MidTxResult(true, "");
     }
 
@@ -604,7 +624,7 @@ class Spi {
         this.CurrentTxFlowState.AuthCodeSent(`Submitting Auth Code ${authCode}`);
         this._send(new AuthCodeAdvice(this.CurrentTxFlowState.PosRefId, authCode).ToMessage());
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new SubmitAuthCodeResult(true, "Valid Code.");
     }
 
@@ -635,7 +655,7 @@ class Spi {
             this.CurrentTxFlowState.Failed(null, "Transaction Cancelled. Request Had not even been sent yet.");
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new MidTxResult(true, "");
     }
 
@@ -667,7 +687,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to do cashout for ${(amountCents / 100).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Cashout Initiated");
     }    
 
@@ -702,7 +722,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS do MOTO for ${(amountCents / 100).toFixed(2)}`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "MOTO Initiated");
     }
 
@@ -737,7 +757,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to settle.`);
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Settle Initiated");   
     }
 
@@ -764,7 +784,7 @@ class Spi {
             this.CurrentTxFlowState.Sent("Asked EFTPOS to make a settlement enquiry.");
         }
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Settle Initiated");   
     }
 
@@ -775,28 +795,55 @@ class Spi {
     // </summary>
     InitiateGetLastTx()
     {
-        if (this.CurrentStatus == SpiStatus.Unpaired) {
+        if (this.CurrentStatus === SpiStatus.Unpaired) {
             return new InitiateTxResult(false, "Not Paired");
         }
 
-        if (this.CurrentFlow != SpiFlow.Idle) {
+        if (this.CurrentFlow !== SpiFlow.Idle) {
             return new InitiateTxResult(false, "Not Idle");
         }
 
-        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
-        var posRefId = gltRequestMsg.Id; // GetLastTx is not trying to get anything specific back. So we just use the message id.
+        const gltRequestMsg = new GetLastTransactionRequest().ToMessage();
+        const posRefId = gltRequestMsg.Id; // GetLastTx is not trying to get anything specific back. So we just use the message id.
+
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg, 
+            posRefId, TransactionType.GetLastTransaction, 0, gltRequestMsg,
             "Waiting for EFTPOS connection to make a Get-Last-Transaction request.");
-        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
         if (this._send(gltRequestMsg))
         {
-            this.CurrentTxFlowState.Sent(`Asked EFTPOS for last transaction.`);
+            this.CurrentTxFlowState.Sent("Asked EFTPOS for last transaction.");
         }
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "GLT Initiated");   
+    }
+
+    /// <summary>
+    /// Initiates a Get Transaction request. Use this when you want to retrieve from one of the last 10 transactions
+    /// that was processed by the Eftpos.
+    /// Be subscribed to TxFlowStateChanged event to get updates on the process.
+    /// </summary>
+    /// <param name="posRefId">This is the posRefId of the transaction you are trying to retrieve</param>
+    InitiateGetTx(posRefId)
+    {
+        if (this.CurrentStatus === SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow !== SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+
+        const gtRequestMsg = new GetTransactionRequest(posRefId).ToMessage();
+        this.CurrentFlow = SpiFlow.Transaction;
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.GetTransaction, 0, gtRequestMsg,
+            "Waiting for EFTPOS connection to make a Get Transaction request.");
+        this.CurrentTxFlowState.CallingGt(gtRequestMsg.Id);
+        if (this._send(gtRequestMsg)) {
+            this.CurrentTxFlowState.Sent(`Asked EFTPOS to Get Transaction ${posRefId}.`);
+        }
+
+        document.dispatchEvent(new CustomEvent("TxFlowStateChanged", { detail: this.CurrentTxFlowState }));
+        return new InitiateTxResult(true, "GT Initiated");
+
     }
 
     // <summary>
@@ -811,24 +858,49 @@ class Spi {
     // <returns></returns>
     InitiateRecovery(posRefId, txType)
     {
-        if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+        if (this.CurrentStatus === SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
     
-        if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+        if (this.CurrentFlow !== SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         
         this.CurrentFlow = SpiFlow.Transaction;
         
-        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
+        const gtRequestMsg = new GetTransactionRequest(posRefId).ToMessage();
         this.CurrentTxFlowState = new TransactionFlowState(
-            posRefId, txType, 0, gltRequestMsg, 
+            posRefId, txType, 0, gtRequestMsg,
             "Waiting for EFTPOS connection to attempt recovery.");
+        this.CurrentTxFlowState.CallingGt(gtRequestMsg.Id);
         
-        if (this._send(gltRequestMsg))
+        if (this._send(gtRequestMsg))
         {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to recover state.`);
         }
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "Recovery Initiated");
+    }
+
+    /// <summary>
+    /// Alpha Build - Please do not use
+    /// </summary>
+    /// <param name="posRefId"></param>
+    /// <returns></returns>
+    InitiateReversal(posRefId)
+    {
+        if (this.CurrentStatus === SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
+
+        if (this.CurrentFlow !== SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
+
+        this.CurrentFlow = SpiFlow.Transaction;
+
+        const reversalRequestMsg = new ReversalRequest(posRefId).ToMessage();
+        this.CurrentTxFlowState = new TransactionFlowState(
+            posRefId, TransactionType.Reversal, 0, reversalRequestMsg,
+            "Waiting for EFTPOS to make a reversal request");
+        if (this._send(reversalRequestMsg)) {
+            this.CurrentTxFlowState.Sent("Asked EFTPOS reversal");
+        }
+
+        return new InitiateTxResult(true, "Reversal Initiated");
     }
 
     /// <summary>
@@ -864,7 +936,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to refund ${refundAmount / 100}`);
         }
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, 'Zip Refund Initiated');
     }
 
@@ -902,53 +974,10 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to accept Zip payment for ${zipPurchase.AmountSummary()}`);
         }
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, 'Zip Purchase Initiated');
     }
 
-    // <summary>
-    // GltMatch attempts to conclude whether a gltResponse matches an expected transaction and returns
-    // the outcome. 
-    // If Success/Failed is returned, it means that the gtlResponse did match, and that transaction was succesful/failed.
-    // If Unknown is returned, it means that the gltResponse does not match the expected transaction. 
-    // </summary>
-    // <param name="gltResponse">The GetLastTransactionResponse message to check</param>
-    // <param name="posRefId">The Reference Id that you passed in with the original request.</param>
-    // <param name="expectedAmount">The total amount in the original request</param>
-    // <param name="requestTime">The request time</param>
-    // <returns></returns>
-    GltMatch(gltResponse, posRefId, expectedAmount, requestTime, ...deprecatedArgs) 
-    {
-        // Obsolete method call check
-        // Old interface: GltMatch(GetLastTransactionResponse gltResponse, TransactionType expectedType, int expectedAmount, DateTime requestTime, string posRefId)
-        if(deprecatedArgs.length) {
-            if(deprecatedArgs.length === 1) {
-                this._log.info("Obsolete method call detected: Use GltMatch(gltResponse, posRefId)");
-                return this.GltMatch(gltResponse, deprecatedArgs[0]);
-            } else {
-                throw new Error("Obsolete method call with unknown args: Use GltMatch(GetLastTransactionResponse gltResponse, string posRefId)");
-            }
-        }
-
-        this._log.info(`GLT CHECK: PosRefId: ${posRefId}->${gltResponse.GetPosRefId()}`);
-
-        var gltBankDateTimeStr = gltResponse.GetBankDateTimeString(); // ddMMyyyyHHmmss
-        var gltBankDateTime = new Date(`${gltBankDateTimeStr.substr(4,4)}-${gltBankDateTimeStr.substr(2,2)}-${gltBankDateTimeStr.substr(0,2)} ${gltBankDateTimeStr.substr(8,2)}:${gltBankDateTimeStr.substr(10,2)}:${gltBankDateTimeStr.substr(12,2)}`);
-        var compare = parseInt(requestTime) - gltBankDateTime.getTime();
-
-        if (posRefId !== gltResponse.GetPosRefId())
-        {
-            return SuccessState.Unknown;
-        }
-
-        if (gltResponse.GetTxType() && gltResponse.GetTxType().toUpperCase() === "PURCHASE" && gltResponse.GetBankNonCashAmount() !== expectedAmount && compare > 0)
-        {
-            return SuccessState.Unknown;
-        }
-
-        return gltResponse.GetSuccessState();
-    }
-    
     PrintReceipt(key, payload)
     {
         if (this.CurrentStatus === SpiStatus.PairedConnected) {
@@ -981,7 +1010,7 @@ class Spi {
     _handleKeyRequest(m)
     {
         this.CurrentPairingFlowState.Message = "Negotiating Pairing...";
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
 
         // Use the helper. It takes the incoming request, and generates the secrets and the response.
         var ph      = new PairingHelper();
@@ -1002,7 +1031,7 @@ class Spi {
         this.CurrentPairingFlowState.AwaitingCheckFromEftpos = true;
         this.CurrentPairingFlowState.AwaitingCheckFromPos = true;
         this.CurrentPairingFlowState.Message = "Confirm that the following Code is showing on the Terminal";
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     // <summary>
@@ -1020,8 +1049,7 @@ class Spi {
             {
                 // Waiting for PoS, auto confirming code
                 this._log.info("Confirming pairing from library.");
-                this.PairingConfirmCode();
-
+                this.PairingConfirmCode();            
             }
             this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
             this._onPairingSuccess();
@@ -1047,8 +1075,8 @@ class Spi {
         this.CurrentPairingFlowState.Finished = true;
         this.CurrentPairingFlowState.Message = "Pairing Successful!";
         this.CurrentStatus = SpiStatus.PairedConnected;
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     _onPairingFailed()
@@ -1062,7 +1090,7 @@ class Spi {
         this.CurrentPairingFlowState.Finished = true;
         this.CurrentPairingFlowState.Successful = false;
         this.CurrentPairingFlowState.AwaitingCheckFromPos = false;
-        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
     }
 
     _doUnpair()
@@ -1071,7 +1099,7 @@ class Spi {
         this._conn.Disconnect();
         this._secrets = null;
         this._spiMessageStamp.Secrets = null;
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
     // <summary>
@@ -1085,7 +1113,7 @@ class Spi {
         this._secrets = krRes.NewSecrets; // and update our secrets with them
         this._spiMessageStamp.Secrets = this._secrets; // and our stamp
         this._send(krRes.KeyRollingConfirmation); // and we tell the server that all is well.
-        document.dispatchEvent(new CustomEvent('SecretsChanged', {detail: this._secrets}));
+        this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
     // <summary>
@@ -1104,7 +1132,7 @@ class Spi {
         }
         this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m), "Ask Customer to Sign the Receipt");
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1123,7 +1151,7 @@ class Spi {
         var msg = `Auth Code Required. Call ${phoneForAuthRequired.GetPhoneNumber()} and quote merchant id ${phoneForAuthRequired.GetMerchantId()}`;
         this.CurrentTxFlowState.PhoneForAuthRequired(phoneForAuthRequired, msg);
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1143,7 +1171,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Purchase Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1163,7 +1191,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Cashout Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1183,7 +1211,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Moto Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }   
 
     // <summary>
@@ -1203,7 +1231,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Refund Transaction Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1222,7 +1250,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settle Transaction Ended.");
         // TH-6A, TH-6E
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // <summary>
@@ -1241,7 +1269,29 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Settlement Enquiry Ended.");
         // TH-6A, TH-6E
         
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+    }
+
+    /// <summary>
+    /// Handle the Reversal Response received from the PinPad
+    /// </summary>
+    /// <param name="m"></param>
+    _handleReversalTransaction(m)
+    {
+        const incomingPosRefId = m.Data.pos_ref_id;
+        if (
+            this.CurrentFlow !== SpiFlow.Transaction ||
+            this.CurrentTxFlowState.Finished ||
+            !this.CurrentTxFlowState.PosRefId === incomingPosRefId
+        ) {
+            this._log.info(`Received Reversal response but I was not waiting for this one. Incoming Pos Ref ID: ${incomingPosRefId}`);
+            return;
+        }
+
+        this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Reversal Transaction Ended.");
+
+        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // <summary>
@@ -1250,14 +1300,14 @@ class Spi {
     // <param name="m"></param>
     _handleErrorEvent(m)
     {
-        if (this.CurrentFlow == SpiFlow.Transaction
+        if (this.CurrentFlow === SpiFlow.Transaction
             && !this.CurrentTxFlowState.Finished
             && this.CurrentTxFlowState.AttemptingToCancel
-            && m.GetError() == "NO_TRANSACTION")
+            && m.GetError() === "NO_TRANSACTION")
         {
             // TH-2E
-            this._log.info(`Was trying to cancel a transaction but there is nothing to cancel. Calling GLT to see what's up`);
-            this._callGetLastTransaction();
+            this._log.info("Was trying to cancel a transaction but there is nothing to cancel. Calling GT to see what's up");
+            this._callGetTransaction(this.CurrentTxFlowState.PosRefId);
         }
         else
         {
@@ -1266,104 +1316,146 @@ class Spi {
     }
 
     // <summary>
-    // When the PinPad returns to us what the Last Transaction was.
+    // When the PinPad returns to us what the Transaction was.
     // </summary>
     // <param name="m"></param>
-    _handleGetLastTransactionResponse(m)
+    _handleGetTransactionResponse(m)
     {
-        var txState = this.CurrentTxFlowState;
-        if (this.CurrentFlow != SpiFlow.Transaction || txState.Finished)
+        const txState = this.CurrentTxFlowState;
+        if (this.CurrentFlow !== SpiFlow.Transaction || txState.Finished)
         {
-            this._log.info("Received glt response but we were not in the middle of a tx. ignoring.");
+            this._log.info("Received gt response but we were not in the middle of a tx. ignoring.");
             return;
         }
 
-        if (!txState.AwaitingGltResponse)
+        if (!txState.AwaitingGtResponse)
         {
-            this._log.info("received a glt response but we had not asked for one within this transaction. Perhaps leftover from previous one. ignoring.");
+            this._log.info("received a gt response but we had not asked for one within this transaction. Perhaps leftover from previous one. ignoring.");
             return;
         }
 
-        if (txState.LastGltRequestId != m.Id)
+        if (txState.GtRequestId !== m.Id)
         {
-            this._log.info("received a glt response but the message id does not match the glt request that we sent. strange. ignoring.");
+            this._log.info("received a gt response but the message id does not match the gt request that we sent. strange. ignoring.");
             return;
         }
 
-        // TH-4 We were in the middle of a transaction.
-        // Let's attempt recovery. This is step 4 of Transaction Processing Handling
-        this._log.info(`Got Last Transaction..`);
-        txState.GotGltResponse();
-        var gtlResponse = new GetLastTransactionResponse(m);
-        txState.GLTResponsePosRefId = gtlResponse.GetPosRefId();
-        if (!gtlResponse.WasRetrievedSuccessfully())
+        this._log.info("Got Transaction.");
+        txState.GotGtResponse();
+        const gtResponse = new GetTransactionResponse(m);
+
+        if (!gtResponse.WasRetrievedSuccessfully())
         {
-            if (gtlResponse.IsStillInProgress(txState.PosRefId))
+            // GetTransaction Failed... let's figure out one of reason and act accordingly
+            if (gtResponse.IsWaitingForSignatureResponse())
             {
-                // TH-4E - Operation In Progress
-
-                if (gtlResponse.IsWaitingForSignatureResponse() && !txState.AwaitingSignatureCheck)
+                if (!txState.AwaitingSignatureCheck)
                 {
-                    this._log.info("Eftpos is waiting for us to send it signature accept/decline, but we were not aware of this. " +
-                              "The user can only really decline at this stage as there is no receipt to print for signing.");
-                    this.CurrentTxFlowState.SignatureRequired(new SignatureRequired(m).SignatureRequired(txState.PosRefId, m.Id, "MISSING RECEIPT\n DECLINE AND TRY AGAIN."), "Recovered in Signature Required but we don't have receipt. You may Decline then Retry.");
-                }
-                else if (gtlResponse.IsWaitingForAuthCode() && !txState.AwaitingPhoneForAuth)
-                {
-                    this._log.info("Eftpos is waiting for us to send it auth code, but we were not aware of this. " +
-                              "We can only cancel the transaction at this stage as we don't have enough information to recover from this.");
-                    this.CurrentTxFlowState.PhoneForAuthRequired(new PhoneForAuthRequired(txState.PosRefId, m.Id, "UNKNOWN", "UNKNOWN"), "Recovered mid Phone-For-Auth but don't have details. You may Cancel then Retry.");
+                    this._log.info("GTR-01: Eftpos is waiting for us to send it signature accept/decline, but we were not aware of this. The user can only really decline at this stage as there is no receipt to print for signing.");
+                    txState.SignatureRequired(new SignatureRequired(m).SignatureRequired(txState.PosRefId, m.Id, "MISSING RECEIPT\n DECLINE AND TRY AGAIN."), "Recovered in Signature Required but we don't have receipt. You may Decline then Retry.");
                 }
                 else
                 {
-                    this._log.info("Operation still in progress... stay waiting.");
+                    this._log.info("Waiting for Signature response ... stay waiting.");
                     // No need to publish txFlowStateChanged. Can return;
                     return;
                 }
             }
-            else if (gtlResponse.WasTimeOutOfSyncError())
+            else if (gtResponse.IsWaitingForAuthCode() && !txState.AwaitingPhoneForAuth)
             {
-                // Let's not give up based on a TOOS error.
-                // Let's log it, and ignore it. 
-                this._log.info(`Time-Out-Of-Sync error in Get Last Transaction response. Let's ignore it and we'll try again.`);
-                // No need to publish txFlowStateChanged. Can return;
+                this._log.info(
+                    "GTR-02: Eftpos is waiting for us to send it auth code, but we were not aware of this. We can only cancel the transaction at this stage as we don't have enough information to recover from this."
+                );
+                txState.PhoneForAuthRequired(new PhoneForAuthRequired(txState.PosRefId, m.Id, "UNKNOWN", "UNKNOWN"), "Recovered mid Phone-For-Auth but don't have details. You may Cancel then Retry.");
+            }
+            else if (gtResponse.IsTransactionInProgress())
+            {
+                this._log.info("GTR-03: Transaction is currently in progress... stay waiting.");
+                return;
+            }
+            else if (gtResponse.PosRefIdNotFound()) 
+            {
+                this._log.info("GTR-04: Get transaction failed, PosRefId is not found.");
+                txState.Completed(SuccessState.Failed, m, `PosRefId not found for ${gtResponse.GetPosRefId()}.`);
+            }
+            else if (gtResponse.PosRefIdInvalid())
+            {
+                this._log.info("GTR-05: Get transaction failed, PosRefId is invalid.");
+                txState.Completed(SuccessState.Failed, m, `PosRefId invalid for ${gtResponse.GetPosRefId()}.`);
+            }
+            else if (gtResponse.PosRefIdMissing())
+            {
+                this._log.info("GTR-06: Get transaction failed, PosRefId is missing.");
+                txState.Completed(SuccessState.Failed, m, `PosRefId is missing for ${gtResponse.GetPosRefId()}.`);
+            }
+            else if (gtResponse.IsSomethingElseBlocking())
+            {
+                this._log.info("GTR-07: Terminal is Blocked by something else... stay waiting.");
                 return;
             }
             else
             {
-                // TH-4X - Unexpected Response when recovering
-                this._log.info(`Unexpected Response in Get Last Transaction during - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}. Ignoring.`);
-                return;
+                // get transaction failed, but we weren't given a specific reason
+                this._log.info(`GTR-08: Unexpected Response in Get Transaction - Received posRefId:${gtResponse.GetPosRefId()} Error:${m.GetError()}.`);
+                txState.Completed(SuccessState.Failed, m, `Get Transaction failed, ${m.GetError()}.`);
             }
         }
         else
         {
-            if (txState.Type == TransactionType.GetLastTransaction)
+            const tx = gtResponse.GetTxMessage();
+            if (tx === null)
             {
-                // THIS WAS A PLAIN GET LAST TRANSACTION REQUEST, NOT FOR RECOVERY PURPOSES.
-                this._log.info("Retrieved Last Transaction as asked directly by the user.");
-                gtlResponse.CopyMerchantReceiptToCustomerReceipt();
-                txState.Completed(m.GetSuccessState(), m, "Last Transaction Retrieved");
+                // tx payload missing from get transaction protocol, could be a VAA issue.
+                this._log.info("GTR-09: Unexpected Response in Get Transaction. Missing TX payload... stay waiting");
+                return;
+            }
+
+            // get transaction was successful
+            gtResponse.CopyMerchantReceiptToCustomerReceipt();
+
+            if (txState.Type === TransactionType.GetTransaction)
+            {
+                // this was a get transaction request, not for recovery
+                this._log.info("GTR-10: Retrieved Transaction as asked directly by the user.");
+                txState.Completed(tx.GetSuccessState(), tx, `Transaction Retrieved for ${gtResponse.GetPosRefId()}.`);
             }
             else
             {
-                // TH-4A - Let's try to match the received last transaction against the current transaction
-                var successState = this.GltMatch(gtlResponse, txState.PosRefId, txState.AmountCents, txState.RequestTime);
-                if (successState == SuccessState.Unknown)
-                {
-                    // TH-4N: Didn't Match our transaction. Consider Unknown State.
-                    this._log.info("Did not match transaction.");
-                    txState.UnknownCompleted("Failed to recover Transaction Status. Check EFTPOS. ");
-                }
-                else
-                {
-                    // TH-4Y: We Matched, transaction finished, let's update ourselves
-                    gtlResponse.CopyMerchantReceiptToCustomerReceipt();
-                    txState.Completed(successState, m, "Transaction Ended.");
-                }
+                // this was a get transaction from a recovery
+                this._log.info("GTR-11: Retrieved transaction during recovery.");
+                txState.Completed(tx.GetSuccessState(), tx, `Transaction Recovered for ${gtResponse.GetPosRefId()}.`);
             } 
         }
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
+    }
+
+    /// <summary>
+    /// When the PinPad returns to us what the Last Transaction was.
+    /// </summary>
+    /// <param name="m"></param>
+    _handleGetLastTransactionResponse(m)
+    {
+        const txState = this.CurrentTxFlowState;
+        if (this.CurrentFlow !== SpiFlow.Transaction || txState.Finished || txState.Type !== TransactionType.GetLastTransaction)
+        {
+            this._log.info("Received glt response but we were not expecting one. ignoring.");
+            return;
+        }
+
+        this._log.info("Got Last Transaction Response..");
+        const gtlResponse = new GetLastTransactionResponse(m);
+        if (!gtlResponse.WasRetrievedSuccessfully())
+        {
+            this._log.info(`Error in Response for Get Last Transaction - Received posRefId:${gtlResponse.GetPosRefId()} Error:${m.GetError()}. UnknownCompleted.`);
+            txState.UnknownCompleted("Failed to Retrieve Last Transaction");
+        }
+        else
+        {
+            this._log.info("Retrieved Last Transaction as asked directly by the user.");
+            gtlResponse.CopyMerchantReceiptToCustomerReceipt();
+            txState.Completed(m.GetSuccessState(), m, "Last Transaction Retrieved");
+        }
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
     }
 
     //When the transaction cancel response is returned.
@@ -1387,7 +1479,7 @@ class Spi {
 
         txState.CancelFailed("Failed to cancel transaction: " + cancelResponse.GetErrorDetail() + ". Check EFTPOS.");
     
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: txState}));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: txState }));
     }
 
     _handleSetPosInfoResponse(m)
@@ -1406,32 +1498,44 @@ class Spi {
 
     _startTransactionMonitoringThread()
     {
-        var needsPublishing = false;
+        let needsPublishing = false;
     
-        var txState = this.CurrentTxFlowState;
-        if (this.CurrentFlow == SpiFlow.Transaction && !txState.Finished)
+        const txState = this.CurrentTxFlowState;
+        if (this.CurrentFlow === SpiFlow.Transaction && !txState.Finished)
         {
-            var state = txState;
+            const state = txState;
             if (state.AttemptingToCancel && Date.now() > state.CancelAttemptTime + this._maxWaitForCancelTx)
             {
                 // TH-2T - too long since cancel attempt - Consider unknown
-                this._log.info(`Been too long waiting for transaction to cancel.`);
-                txState.UnknownCompleted(`Waited long enough for Cancel Transaction result. Check EFTPOS. `);
+                this._log.info("Been too long waiting for transaction to cancel.");
+                txState.UnknownCompleted("Waited long enough for Cancel Transaction result. Check EFTPOS. ");
                 needsPublishing = true;
             }
             else if (state.RequestSent && Date.now() > state.LastStateRequestTime + this._checkOnTxFrequency)
             {
-                // TH-1T, TH-4T - It's been a while since we received an update, let's call a GLT
-                this._log.info(`Checking on our transaction. Last we asked was at ${state.LastStateRequestTime}...`);
-                this._callGetLastTransaction();
+                // It's been a while since we received an update.
+
+                if (txState.Type === TransactionType.GetLastTransaction)
+                {
+                    // It is not possible to recover a GLT with a GT, so we send another GLT
+                    txState.LastStateRequestTime = Date.Now();
+                    this._send(new GetLastTransactionRequest().ToMessage());
+                    this._log.info(`Been to long waiting for GLT response. Sending another GLT. Last checked at ${state.LastStateRequestTime}...`);
+                }
+                else
+                {
+                    // let's call a GT to see what is happening
+                    this._log.info(`Checking on our transaction. Last checked at ${state.LastStateRequestTime}...`);
+                    this._callGetTransaction(txState.PosRefId);
+                }
             }
         }
         
         if (needsPublishing) {
-            document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+            this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         }
 
-        setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
+        this._transactionMonitoringThread = setTimeout(() => this._startTransactionMonitoringThread(), this._txMonitorCheckFrequency);
     }
 
     PrintingResponse(m) {
@@ -1492,7 +1596,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, 'Zip Purchase Transaction Ended.');
         // TH-6A, TH-6E
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     _handleZipRefundResponse(m)
@@ -1508,7 +1612,7 @@ class Spi {
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Zip Refund Transaction Ended.");
         // TH-6A, TH-6E
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
     }
 
     // endregion
@@ -1518,7 +1622,7 @@ class Spi {
     _resetConn()
     {
         // Setup the Connection
-        this._conn = new Connection();
+        this._conn = new Connection(this);
 
         if (this._isUsingHttps() || this._forceSecureWebSockets) {
             this._log.info("Secure connection detected.");
@@ -1527,9 +1631,9 @@ class Spi {
           this._conn.Address = this._eftposAddress;
     
         // Register our Event Handlers
-        document.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
-        document.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
-        document.addEventListener('ErrorReceived', (e) => this._onWsErrorReceived(e.detail));
+        this._eventBus.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
+        this._eventBus.addEventListener('MessageReceived', (e) => this._onSpiMessageReceived(e.detail));
+        this._eventBus.addEventListener('ErrorReceived', (e) => this._onWsErrorReceived(e.detail));
     }
 
     // <summary>
@@ -1552,7 +1656,7 @@ class Spi {
                 if (this.CurrentFlow == SpiFlow.Pairing && this.CurrentStatus == SpiStatus.Unpaired)
                 {
                     this.CurrentPairingFlowState.Message = "Requesting to Pair...";
-                    document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                    this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                     var pr = PairingHelper.NewPairRequest();
                     this._send(pr.ToMessage());
                 }
@@ -1620,7 +1724,7 @@ class Spi {
                         this._retriesSinceLastPairing = 0;
                         this._log.warn("Lost Connection during pairing.");
                         this._onPairingFailed();
-                        document.dispatchEvent(new CustomEvent('PairingFlowStateChanged', {detail: this.CurrentPairingFlowState}));
+                        this._eventBus.dispatchEvent(new CustomEvent('PairingFlowStateChanged', { detail: this.CurrentPairingFlowState }));
                         return;
                     }
                     else
@@ -1703,20 +1807,20 @@ class Spi {
         // So, we have just made a connection, pinged and logged in successfully.
         this.CurrentStatus = SpiStatus.PairedConnected;
 
-        if (this.CurrentFlow == SpiFlow.Transaction && !this.CurrentTxFlowState.Finished)
+        if (this.CurrentFlow === SpiFlow.Transaction && !this.CurrentTxFlowState.Finished)
         {
             if (this.CurrentTxFlowState.RequestSent)
             {
                 // TH-3A - We've just reconnected and were in the middle of Tx.
-                // Let's get the last transaction to check what we might have missed out on.
-                this._callGetLastTransaction();
+                // Let's get the transaction to check what we might have missed out on.
+                this._callGetTransaction(this.CurrentTxFlowState.PosRefId);
             }
             else
             {
                 // TH-3AR - We had not even sent the request yet. Let's do that now
                 this._send(this.CurrentTxFlowState.Request);
-                this.CurrentTxFlowState.Sent(`Sending Request Now...`);
-                document.dispatchEvent(new CustomEvent('TxFlowStateChanged', {detail: this.CurrentTxFlowState}));
+                this.CurrentTxFlowState.Sent("Sending Request Now...");
+                this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
             }
         }
         else
@@ -1782,7 +1886,7 @@ class Spi {
         }
 
         this._mostRecentPongReceived = m;
-        document.dispatchEvent(new CustomEvent('SpiPong', {detail: m}))
+        this._eventBus.dispatchEvent(new CustomEvent('SpiPong', { detail: m }))
         this._log.debug(`PongLatency:${Date.now() - this._mostRecentPingSentTime}`);
     }
 
@@ -1797,13 +1901,13 @@ class Spi {
     }
 
     // <summary>
-    // Ask the PinPad to tell us what the Most Recent Transaction was
+    // Ask the PinPad to tell us about the transaction with the posRefId
     // </summary>
-    _callGetLastTransaction()
+    _callGetTransaction(posRefId)
     {
-        var gltRequestMsg = new GetLastTransactionRequest().ToMessage();
-        this.CurrentTxFlowState.CallingGlt(gltRequestMsg.Id);
-        this._send(gltRequestMsg);
+        const gtRequestMsg = new GetTransactionRequest(posRefId).ToMessage();
+        this.CurrentTxFlowState.CallingGt(gtRequestMsg.Id);
+        this._send(gtRequestMsg);
     }
 
     // <summary>
@@ -1855,6 +1959,9 @@ class Spi {
             case Events.AuthCodeRequired:
                 this._handleAuthCodeRequired(m);
                 break;
+            case Events.GetTransactionResponse:
+                this._handleGetTransactionResponse(m);
+                break;
             case Events.GetLastTransactionResponse:
                 this._handleGetLastTransactionResponse(m);
                 break;
@@ -1863,6 +1970,9 @@ class Spi {
                 break;
             case Events.SettlementEnquiryResponse:
                 this._handleSettlementEnquiryResponse(m);
+                break;
+            case Events.ReversalResponse:
+                this._handleReversalTransaction(m);
                 break;
             case Events.Ping:
                 this._handleIncomingPing(m);
@@ -2046,7 +2156,7 @@ class Spi {
             this.CurrentDeviceStatus.ResponseMessage = err;
 
             this._log.warn(err.message);
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return; 
         }
 
@@ -2054,14 +2164,14 @@ class Spi {
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
         if(!addressResponse.ok || !addressResponseJson || !this.CurrentDeviceStatus.Address) {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
@@ -2069,7 +2179,7 @@ class Spi {
         {
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
 
-            document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
@@ -2079,7 +2189,7 @@ class Spi {
         this._conn.Address = this._eftposAddress;
         this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SUCCESS;
 
-        document.dispatchEvent(new CustomEvent('DeviceAddressChanged', {detail: this.CurrentDeviceStatus}));
+        this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
     }
 
     _isUsingHttps() 
@@ -2091,6 +2201,11 @@ class Spi {
     _isSecureConnection() 
     {
         return this._isUsingHttps() || this._forceSecureWebSockets;
+    }
+
+    _sendTransactionReport() {
+        // TODO: Dummy method. Delete when analytics is implemented
+        return;
     }
 }
 

@@ -1,0 +1,52 @@
+{
+    "message": {
+        "data": {
+            "success": true,
+            "tx": {
+                "account_type": "CREDIT",
+                "bank_date": "01012000",
+                "bank_noncash_amount": 10,
+                "bank_settlement_date": "01012000",
+                "bank_time": "100000",
+                "card_entry": "EMV_CTLS",
+                "currency": "AUD",
+                "customer_receipt": "EFTPOS FROM BANK\r\nMerchant\r\n\r\nPURCHASE     AUD0.10\r\n\r\n   (002) APPROVED\r\n\r\nPartial Approval\r\n\r\n*DUPLICATE  RECEIPT*\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+                "customer_receipt_printed": false,
+                "emv_actioncode": "ARQ",
+                "emv_actioncode_values": "9AEC44D34DE93EEA",
+                "emv_pix": "1010",
+                "emv_rid": "A000000004",
+                "emv_tsi": "E800",
+                "emv_tvr": "0000000000",
+                "expiry_date": "0101",
+                "host_response_code": "002",
+                "host_response_text": "APPROVED",
+                "informative_text": "                ",
+                "masked_pan": "............1111",
+                "merchant_acquirer": "EFTPOS FROM BANK",
+                "merchant_addr": "201 Kent Street",
+                "merchant_city": "Sydney",
+                "merchant_country": "Australia",
+                "merchant_id": "10000000",
+                "merchant_name": "Merchant",
+                "merchant_postcode": "2000",
+                "merchant_receipt": "EFTPOS FROM BANK\r\nMerchant\r\n\r\nPURCHASE     AUD0.10\r\n\r\n   (002) APPROVED\r\n\r\nPartial Approval\r\n\r\n*DUPLICATE  RECEIPT*\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+                "merchant_receipt_printed": false,
+                "online_indicator": "Y",
+                "pos_ref_id": "purchase-2000-01-01T00:00:00.000Z",
+                "purchase_amount": 10,
+                "rrn": "100000000000",
+                "scheme_app_name": "MasterCard",
+                "scheme_name": "MasterCard",
+                "stan": "001249",
+                "success": true,
+                "terminal_id": "100000000000",
+                "terminal_ref_id": "10000000_00000000000000",
+                "transaction_type": "PURCHASE"
+            }
+        },
+        "datetime": "2000-01-01T00:00:00.000",
+        "event": "get_transaction_response",
+        "id": "gt"
+    }
+}

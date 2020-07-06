@@ -3,11 +3,11 @@
     "data": {
       "error_detail": "Payment interface is busy, cannot process operation at this time",
       "error_reason": "OPERATION_IN_PROGRESS",
-      "pos_ref_id": "purchase-2000-01-01T00:00:00.000Z",
+      "pos_ref_id": "gt-2000-01-01T00:00:00.000Z",
       "success": false
     },
     "datetime": "2000-01-01T00:00:00.000",
-    "event": "last_transaction",
-    "id": "glt"
+    "event": "get_transaction_response",
+    "id": "gt"
   }
 }
