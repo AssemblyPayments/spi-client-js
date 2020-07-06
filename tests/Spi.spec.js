@@ -202,6 +202,96 @@ describe('Spi,', () => {
         expect(spi._eftposAddress).toBe('');
     });
 
+    describe("PrintReceipt()", () => {
+      it("should not initiate a PrintReceipt when not paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.Unpaired;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.PrintReceipt();
+  
+        // assert
+        expect(spi._send).not.toHaveBeenCalled();
+      });
+  
+      it("should initiate a PrintReceipt when paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.PairedConnected;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.PrintReceipt();
+  
+        // assert
+        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'print' }));
+      });
+    });
+  
+    describe("GetTerminalStatus()", () => {
+      it("should not initiate a GetTerminalStatus when not paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.Unpaired;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.GetTerminalStatus();
+  
+        // assert
+        expect(spi._send).not.toHaveBeenCalled();
+      });
+  
+      it("should initiate a GetTerminalStatus when paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.PairedConnected;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.GetTerminalStatus();
+  
+        // assert
+        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'get_terminal_status' }));
+      });
+    });
+  
+    describe("GetTerminalConfiguration()", () => {
+      it("should not initiate a GetTerminalConfiguration when not paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.Unpaired;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.GetTerminalConfiguration();
+  
+        // assert
+        expect(spi._send).not.toHaveBeenCalled();
+      });
+  
+      it("should initiate a GetTerminalConfiguration when paired", () => {
+        // arrange
+        const spi = new Spi(posId, "", eftposAddress, null);
+        spi.CurrentStatus = SpiStatus.PairedConnected;
+        spi._send = () => true;
+        spyOn(spi, "_send");
+  
+        // act
+        spi.GetTerminalConfiguration();
+  
+        // assert
+        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'get_terminal_configuration' }));
+      });
+    });
+
     it('should handle a GLT response that is outside of a TX', () => {
         // arrange
         const spi = new Spi(posId, '', eftposAddress, null);

@@ -1,5 +1,6 @@
 import {RequestIdHelper} from './RequestIdHelper';
 import {BillPayment, PayAtTableConfig, PaymentHistoryEntry, BillRetrievalResult, BillStatusResponse} from './PayAtTable';
+import {SpiStatus} from '../src/SpiModels';
 
 export class SpiPayAtTable
 {  
@@ -41,7 +42,9 @@ export class SpiPayAtTable
 
     PushPayAtTableConfig()
     {
-        this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        if (this._spi.CurrentStatus === SpiStatus.PairedConnected) {
+            this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        }
     } 
     
     _handleGetBillDetailsRequest(m)
