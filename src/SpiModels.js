@@ -255,6 +255,11 @@ export class TransactionFlowState
         // Whether we're currently waiting for a Get Transaction Response to get an update. 
         // </summary>
         this.AwaitingGtResponse = null;
+
+        /// <summary>
+        /// The time when the transaction was completed
+        /// </summary>
+        this.CompletedTime = null;
     }
 
     Sent(msg)
@@ -296,6 +301,7 @@ export class TransactionFlowState
         this.Finished = true;
         this.Response = response;
         this.DisplayMessage = msg;
+        this.CompletedTime = Date.now();
     }
 
     SignatureRequired(spiMessage, msg)
@@ -334,6 +340,7 @@ export class TransactionFlowState
         this.AwaitingSignatureCheck = false;
         this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;
+        this.CompletedTime = Date.now();
     }
 
     UnknownCompleted(msg)
@@ -346,6 +353,7 @@ export class TransactionFlowState
         this.AwaitingSignatureCheck = false;
         this.AwaitingPhoneForAuth = false;
         this.DisplayMessage = msg;
+        this.CompletedTime = Date.now();
     }
 }
 

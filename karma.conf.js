@@ -63,6 +63,7 @@ module.exports = function (config) {
         },
 
         webpack: {
+            devtool: 'source-map',
             mode: 'development',
             module: {
                 rules: [

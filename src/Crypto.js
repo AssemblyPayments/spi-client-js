@@ -2,11 +2,6 @@ import jsSHA from 'jssha';
 import aesjs from 'aes-js';
 
 export class Crypto {
-    
-    constructor() {
-
-    }
-
     // <summary>
     // Encrypt a block using CBC and PKCS7.
     // </summary>
