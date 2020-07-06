@@ -1,5 +1,14 @@
-import {RequestIdHelper} from './RequestIdHelper';
-import {BillPayment, PayAtTableConfig, PaymentHistoryEntry, BillRetrievalResult, BillStatusResponse} from './PayAtTable';
+import { RequestIdHelper } from './RequestIdHelper';
+import {
+    BillPayment,
+    BillPaymentFlowEndedAckRequest,
+    BillPaymentFlowEndedResponse,
+    BillRetrievalResult,
+    BillStatusResponse,
+    PayAtTableConfig,
+    PaymentHistoryEntry,
+} from './PayAtTable';
+import { SpiStatus } from './SpiModels';
 
 export class SpiPayAtTable
 {  
@@ -41,7 +50,9 @@ export class SpiPayAtTable
 
     PushPayAtTableConfig()
     {
-        this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        if (this._spi.CurrentStatus === SpiStatus.PairedConnected) {
+            this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        }
     } 
     
     _handleGetBillDetailsRequest(m)
@@ -143,5 +154,13 @@ export class SpiPayAtTable
     _handleBillPaymentFlowEnded(m)
     {
         this.BillPaymentFlowEnded(m);
+
+        // bill payment flow has ended, we need to respond with an ack
+        if (this._spi.CurrentStatus === SpiStatus.PairedConnected)
+        {
+            const billPaymentFlowEndedResponse = new BillPaymentFlowEndedResponse(m);
+
+            this._spi._send(new BillPaymentFlowEndedAckRequest(billPaymentFlowEndedResponse.BillId).ToMessage());
+        }
     }
 }

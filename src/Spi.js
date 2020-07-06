@@ -951,17 +951,23 @@ class Spi {
     
     PrintReceipt(key, payload)
     {
-        this._send(new PrintingRequest(key, payload).toMessage());
+        if (this.CurrentStatus === SpiStatus.PairedConnected) {
+            this._send(new PrintingRequest(key, payload).toMessage());
+        }
     }
 
     GetTerminalStatus()
     {
-        this._send(new TerminalStatusRequest().ToMessage());
+        if (this.CurrentStatus === SpiStatus.PairedConnected) {
+            this._send(new TerminalStatusRequest().ToMessage());
+        }
     }
 
     GetTerminalConfiguration()
     {
-        this._send(new TerminalConfigurationRequest().ToMessage());
+        if (this.CurrentStatus === SpiStatus.PairedConnected) {
+            this._send(new TerminalConfigurationRequest().ToMessage());
+        }
     }
 
     // endregion

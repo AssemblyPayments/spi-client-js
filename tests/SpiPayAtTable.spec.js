@@ -1,4 +1,5 @@
 import {Spi} from '../src/Spi';
+import {SpiStatus} from '../src/SpiModels';
 import {SpiPayAtTable} from '../src/SpiPayAtTable';
 import {BillStatusResponse, BillRetrievalResult, GetOpenTablesResponse, OpenTablesEntry} from '../src/PayAtTable';
 import {Message} from '../src/Messages';
@@ -16,15 +17,36 @@ describe('SpiPayAtTable', function() {
         expect(payAtTable.Config.TableRetrievalEnabled).toBeFalsy();
     });
   
-    it('should push pay at table config', function() 
-    {
-        var spi = new Spi('TABLEPOS1', 'localhost', null);
-        spyOn(spi,'_send');
-        var payAtTable = new SpiPayAtTable(spi);
+    describe("PushPayAtTableConfig()", () => {
+        it("should not push pay at table config when not paired", () => {
+            // arrange
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const payAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.Unpaired;
+            spi._send = () => true;
+            spyOn(spi, "_send");
 
-        payAtTable.PushPayAtTableConfig();
+            // act
+            payAtTable.PushPayAtTableConfig();
 
-        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'set_table_config' }));
+            // assert
+            expect(spi._send).not.toHaveBeenCalled();
+        });
+
+        it("should push pay at table config when paired", () => {
+            // arrange
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const payAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.PairedConnected;
+            spi._send = () => true;
+            spyOn(spi, "_send");
+
+            // act
+            payAtTable.PushPayAtTableConfig();
+
+            // assert
+            expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'set_table_config' }));
+        });
     });
 
     it('should open a table and correctly return a response with the open table', () =>
@@ -119,5 +141,46 @@ describe('SpiPayAtTable', function() {
           expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
         })
     });
+
+    describe("_handleBillPaymentFlowEnded()", () => {
+        it("should not handle BillPaymentFlowEnded when not paired", () => {
+            // arrange
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const spiPayAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.Unpaired;
+            spi._send = () => true;
+            spyOn(spi, "_send");
+            spiPayAtTable.BillPaymentFlowEnded = () => true;
+    
+            // act
+            spiPayAtTable._handleBillPaymentFlowEnded({});
+    
+            // assert
+            expect(spi._send).not.toHaveBeenCalled();
+        });
+  
+        it("should handle BillPaymentFlowEnded when paired", () => {
+            // arrange
+            const billMessage = {
+                Data: {
+                    bill_id: '100',
+                }
+            };
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const spiPayAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.PairedConnected;
+            spi._send = () => true;
+            spyOn(spi, "_send");
+            spiPayAtTable.BillPaymentFlowEnded = () => true;
+    
+            // act
+            spiPayAtTable._handleBillPaymentFlowEnded(billMessage);
+    
+            // assert
+            expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({
+                EventName: 'bill_payment_flow_ended_ack'
+            }));
+        });
+      });
 
 });
