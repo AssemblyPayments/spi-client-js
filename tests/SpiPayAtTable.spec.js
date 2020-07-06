@@ -142,4 +142,45 @@ describe('SpiPayAtTable', function() {
         })
     });
 
+    describe("_handleBillPaymentFlowEnded()", () => {
+        it("should not handle BillPaymentFlowEnded when not paired", () => {
+            // arrange
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const spiPayAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.Unpaired;
+            spi._send = () => true;
+            spyOn(spi, "_send");
+            spiPayAtTable.BillPaymentFlowEnded = () => true;
+    
+            // act
+            spiPayAtTable._handleBillPaymentFlowEnded({});
+    
+            // assert
+            expect(spi._send).not.toHaveBeenCalled();
+        });
+  
+        it("should handle BillPaymentFlowEnded when paired", () => {
+            // arrange
+            const billMessage = {
+                Data: {
+                    bill_id: '100',
+                }
+            };
+            const spi = new Spi("TABLEPOS1", "", "localhost", null);
+            const spiPayAtTable = new SpiPayAtTable(spi);
+            spi.CurrentStatus = SpiStatus.PairedConnected;
+            spi._send = () => true;
+            spyOn(spi, "_send");
+            spiPayAtTable.BillPaymentFlowEnded = () => true;
+    
+            // act
+            spiPayAtTable._handleBillPaymentFlowEnded(billMessage);
+    
+            // assert
+            expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({
+                EventName: 'bill_payment_flow_ended_ack'
+            }));
+        });
+      });
+
 });
