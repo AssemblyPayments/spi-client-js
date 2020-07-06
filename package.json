@@ -8,7 +8,9 @@
     "build": "webpack -p",
     "build:dev": "webpack",
     "test": "karma start",
-    "transpile": "babel src --out-file ./dist/spi-client-js.js"
+    "transpile": "babel src --out-file ./dist/spi-client-js.js",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "repository": {
     "type": "git",
@@ -18,32 +20,33 @@
   "license": "Apache-2.0",
   "homepage": "https://github.com/mx51/spi-client-js",
   "dependencies": {
-    "@babel/polyfill": "^7.8.3",
-    "@babel/runtime": "^7.8.4",
+    "@babel/polyfill": "^7.10.4",
+    "@babel/runtime": "^7.10.4",
     "aes-js": "^3.1.2",
-    "bn.js": "^4.11.8",
-    "jssha": "^2.3.1"
+    "bn.js": "^5.1.2",
+    "jssha": "^3.1.0",
+    "snyk": "^1.360.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.8.4",
-    "@babel/core": "^7.8.4",
-    "@babel/plugin-transform-runtime": "^7.8.3",
-    "@babel/preset-env": "^7.8.4",
-    "babel-loader": "^8.0.6",
+    "@babel/cli": "^7.10.4",
+    "@babel/core": "^7.10.4",
+    "@babel/plugin-transform-runtime": "^7.10.4",
+    "@babel/preset-env": "^7.10.4",
+    "babel-loader": "^8.1.0",
     "babel-plugin-istanbul": "^6.0.0",
-    "connect-api-mocker": "^1.7.0",
-    "core-js": "^3.6.4",
+    "connect-api-mocker": "^1.9.0",
+    "core-js": "^3.6.5",
     "jasmine": "^3.5.0",
-    "karma": "^4.4.1",
+    "karma": "^5.1.0",
     "karma-chrome-launcher": "^3.1.0",
-    "karma-coverage": "^2.0.1",
-    "karma-jasmine": "^3.1.1",
+    "karma-coverage": "^2.0.2",
+    "karma-jasmine": "^3.3.1",
     "karma-json-fixtures-preprocessor": "0.0.6",
     "karma-webpack": "^4.0.2",
-    "webpack": "^4.41.6",
+    "webpack": "^4.43.0",
     "webpack-visualizer-plugin": "^0.1.11",
-    "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "^3.10.3"
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
   },
   "bugs": {
     "url": "https://github.com/mx51/spi-client-js/issues"
@@ -57,5 +60,6 @@
     "spi",
     "api",
     "client"
-  ]
+  ],
+  "snyk": true
 }
