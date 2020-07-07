@@ -18,6 +18,7 @@ import {GetTransactionRequest, GetTransactionResponse, GetLastTransactionRequest
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {ReversalRequest} from './Reversal';
+import {TransactionReportHelper} from "./TransactionReportHelper";
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
