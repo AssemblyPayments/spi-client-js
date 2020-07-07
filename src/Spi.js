@@ -847,7 +847,7 @@ class Spi {
             this.CurrentTxFlowState.Sent(`Asked EFTPOS to Get Transaction ${posRefId}.`);
         }
 
-        document.dispatchEvent(new CustomEvent("TxFlowStateChanged", { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent("TxFlowStateChanged", { detail: this.CurrentTxFlowState }));
         return new InitiateTxResult(true, "GT Initiated");
 
     }
@@ -1303,7 +1303,7 @@ class Spi {
 
         this.CurrentTxFlowState.Completed(m.GetSuccessState(), m, "Reversal Transaction Ended.");
 
-        document.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
         this._sendTransactionReport();
     }
 
