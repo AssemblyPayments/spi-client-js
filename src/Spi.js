@@ -86,7 +86,7 @@ class Spi {
         this._retriesSinceLastPairing = 0;
         this._retriesBeforePairing = 3;
 
-        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(\:[0-9]{1,5})?$/;
+        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:\d*)?$/; 
         this._regexItemsForFqdnEftposAddress = /^[a-zA-Z0-9\.-]+$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
 
