@@ -91,7 +91,7 @@ class Spi {
         this._retriesSinceLastPairing = 0;
         this._retriesBeforePairing = 3;
 
-        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(\:[0-9]{1,5})?$/;
+        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:\d*)?$/; 
         this._regexItemsForFqdnEftposAddress = /^[a-zA-Z0-9\.-]+$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
 
@@ -1055,8 +1055,7 @@ class Spi {
             {
                 // Waiting for PoS, auto confirming code
                 this._log.info("Confirming pairing from library.");
-                this.PairingConfirmCode();
-
+                this.PairingConfirmCode();            
             }
             this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
             this._onPairingSuccess();
@@ -2242,6 +2241,11 @@ class Spi {
     _isSecureConnection() 
     {
         return this._isUsingHttps() || this._forceSecureWebSockets;
+    }
+
+    _sendTransactionReport() {
+        // TODO: Dummy method. Delete when analytics is implemented
+        return;
     }
 }
 
