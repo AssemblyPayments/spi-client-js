@@ -13,18 +13,13 @@ import BN from 'bn.js';
 // p and g are the shared constants for the algorithm, aka primeP and primeG.
 // </summary>
 export class DiffieHellman {
-
-    constructor () {
-
-    }
-
     // <summary>
     // Generates a random Private Key that you can use.
     // </summary>
     // <param name="p"></param>
     // <returns>Random Private Key</returns>
     RandomPrivateKey(maxValue) {
-        let maxValueBN      = new BN(maxValue);
+        let maxValueBN      = new BN(maxValue, 16);
         let shiftDistance   = Math.floor((Math.random() * 1000) + 1);
         let randBitInt      = maxValueBN.shrn(shiftDistance); // Right shift divides by a power of 2
         let min             = new BN(2);

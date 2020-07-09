@@ -3,7 +3,7 @@ import {Events, Message} from './Messages';
 
 export class PongHelper
 {
-    static GeneratePongRessponse(ping)
+    static GeneratePongResponse(ping)
     {
         return new Message(ping.Id, Events.Pong, null, true);
     }

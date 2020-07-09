@@ -2,13 +2,14 @@
     "message": {
         "data": {
             "account_type": "SAVINGS",
-            "cash_amount": 1500,
-            "bank_cash_amount": 1500,
             "auth_code": "839791",
+            "bank_cash_amount": 1500,
             "bank_date": "06022018",
+            "bank_noncash_amount": 0,
             "bank_settlement_date": "07022018",
             "bank_time": "144752",
             "card_entry": "EMV_INSERT",
+            "cash_amount": 1500,
             "currency": "AUD",
             "customer_receipt": "",
             "customer_receipt_printed": false,
@@ -27,15 +28,17 @@
             "merchant_receipt": "",
             "merchant_receipt_printed": false,
             "online_indicator": "Y",
+            "pos_ref_id": "cashout-2000-01-01T00:00:00.000Z",
             "rrn": "180206002786",
             "scheme_name": "Debit",
             "stan": "002786",
             "success": true,
             "terminal_id": "100381990118",
+            "terminal_ref_id": "10000000_00000000000000",
             "transaction_type": "CASH"
         },
         "datetime": "2018-02-06T14:48:12.915",
         "event": "cash_response",
-        "id": "7"
+        "id": "cshout"
     }
  }

@@ -1,3 +1,4 @@
+import { TransactionReportHelper } from "../src/TransactionReportHelper";
 import { Message, SuccessState } from "../src/Messages";
 import { Spi } from "../src/Spi";
 import {
@@ -13,9 +14,18 @@ describe("Spi,", () => {
   const posId = "DummyPos";
   const posVendorId = "mx51";
   const posVersion = "2.8.0";
+  const serialNumber = "321-321-321";
+  let fetchHelper;
 
   beforeEach(() => {
+    spyOn(console, "error");
     spyOn(console, "info");
+    spyOn(console, "warn");
+
+    const fetchPromise = new Promise((resolve, reject) => {
+      fetchHelper = { resolve, reject };
+    });
+    spyOn(window, "fetch").and.returnValue(fetchPromise);
   });
 
   it("should set PosId correctly when SetPosId is passed a PosId that is valid", () => {
@@ -416,6 +426,38 @@ describe("Spi,", () => {
       // assert
       expect(spi._send).not.toHaveBeenCalled();
     });
+  });
+
+  describe("InitiateRecovery()", () => {
+    it("should not initiate a Recovery when not paired", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentStatus = SpiStatus.Unpaired;
+
+      // act
+      const initiateTxResult = spi.InitiateRecovery();
+
+      // assert
+      expect(initiateTxResult.Message).toMatch(/not paired/i);
+    });
+
+    it("should not initiate a Recovery when not idle", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+
+      // act
+      const initiateTxResult = spi.InitiateRecovery();
+
+      // assert
+      expect(initiateTxResult.Message).toMatch(/not idle/i);
+    });
+
+    it("should initiate a Recovery", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      spi._send = () => true;
 
     it("should initiate a GetTerminalStatus when paired", () => {
       // arrange
@@ -462,6 +504,271 @@ describe("Spi,", () => {
       // assert
       expect(spi._send).toHaveBeenCalledWith(
         jasmine.objectContaining({ EventName: "get_terminal_configuration" })
+      );
+    });
+  });
+
+  describe("_handlePurchaseResponse()", () => {
+    it("should handle a purchase response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.PurchaseResponse)
+      );
+
+      // act
+      spi._handlePurchaseResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for one/);
+    });
+
+    it("should handle a purchase response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.PurchaseResponse;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Purchase
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.PurchaseResponse)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handlePurchaseResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(
+        /purchase .* ended/i
+      );
+    });
+  });
+
+  describe("_handleCashoutOnlyResponse()", () => {
+    it("should handle a cashout only response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.CashoutOnlyResponse)
+      );
+
+      // act
+      spi._handleCashoutOnlyResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for one/);
+    });
+
+    it("should handle a cashout only response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.CashoutOnlyResponse;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.CashoutOnly
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.CashoutOnlyResponse)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handleCashoutOnlyResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(
+        /cashout .* ended/i
+      );
+    });
+  });
+
+  describe("_handleMotoPurchaseResponse()", () => {
+    it("should handle a MOTO response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.MotoResponse_Phone)
+      );
+
+      // act
+      spi._handleMotoPurchaseResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for one/);
+    });
+  });
+
+    it("should handle a MOTO response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.MotoResponse_Phone;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.MOTO
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.MotoResponse_Phone)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handleMotoPurchaseResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(/moto .* ended/i);
+    });
+  });
+
+  describe("_handleRefundResponse()", () => {
+    it("should handle a refund response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.RefundResponse)
+      );
+
+      // act
+      spi._handleRefundResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for this one/);
+    });
+
+    it("should handle a refund response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.RefundResponse;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Refund
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.RefundResponse)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handleRefundResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(/refund .* ended/i);
+    });
+  });
+
+  describe("_handleSettleResponse()", () => {
+    it("should handle a settle response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.SettleResponse)
+      );
+
+      // act
+      spi._handleSettleResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for one/);
+    });
+
+    it("should handle a settle response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.SettleResponse;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Settle
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.SettleResponse)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handleSettleResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(/settle .* ended/i);
+    });
+  });
+
+  describe("_handleSettlementEnquiryResponse()", () => {
+    it("should handle a settlement enquiry response that was unexpected", () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.SettlementEnquiryResponse)
+      );
+
+      // act
+      spi._handleSettlementEnquiryResponse(message);
+
+      // assert
+      expect(getLastConsoleCallArgs()).toMatch(/not waiting for one/);
+    });
+
+    it("should handle a settlement enquiry response where the response was returned", () => {
+      // arrange
+      const {
+        message: {
+          data: { pos_ref_id: posRefId },
+        },
+      } = __fixtures__.SettlementEnquiryResponse;
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Transaction;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.SettlementEnquiry
+      );
+      const message = Message.FromJson(
+        JSON.stringify(__fixtures__.SettlementEnquiryResponse)
+      );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+
+      // act
+      spi._handleSettlementEnquiryResponse(message);
+
+      // assert
+      expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+      expect(spi.CurrentTxFlowState.DisplayMessage).toMatch(
+        /settlement enquiry ended/i
       );
     });
   });
@@ -906,7 +1213,6 @@ describe("Spi,", () => {
       const {
         message: {
           data: { pos_ref_id: posRefId },
-          id: lastGltRequestId,
         },
       } = __fixtures__.GetLastTransactionResponse_NoTransactions;
       const spi = new Spi(posId, "", eftposAddress, null);
@@ -918,6 +1224,7 @@ describe("Spi,", () => {
       const message = Message.FromJson(
         JSON.stringify(__fixtures__.GetLastTransactionResponse_NoTransactions)
       );
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
 
       // act
       spi._handleGetLastTransactionResponse(message);
@@ -928,12 +1235,12 @@ describe("Spi,", () => {
       expect(spi.CurrentTxFlowState.Success).toBe(SuccessState.Unknown);
     });
 
+
     it("should handle a GLT response where the GLT was successfully returned", () => {
       // arrange
       const {
         message: {
           data: { pos_ref_id: posRefId },
-          id: lastGltRequestId,
         },
       } = __fixtures__.GetLastTransactionResponse_PurchaseSuccess;
       const spi = new Spi(posId, "", eftposAddress, null);
@@ -945,6 +1252,7 @@ describe("Spi,", () => {
       const message = Message.FromJson(
         JSON.stringify(__fixtures__.GetLastTransactionResponse_PurchaseSuccess)
       );
+      fetchHelper.resolve({ ok: true }); // Report TX mock
 
       // act
       spi._handleGetLastTransactionResponse(message);
@@ -952,6 +1260,85 @@ describe("Spi,", () => {
       // assert
       expect(getLastConsoleCallArgs()).toMatch(/retrieved last transaction/);
       expect(spi.CurrentTxFlowState.Finished).toBeTrue();
+    });
+  });
+
+  describe("_sendTransactionReport()", () => {
+    it("should handle a successfully sent transaction report", async () => {
+      // arrange
+      const posRefId = "purchase";
+      const spi = new Spi(posId, serialNumber, eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        posRefId,
+        TransactionType.Purchase
+      );
+      spi.CurrentStatus = SpiStatus.PairedConnected;
+      spi.CurrentTxFlowState.Sent();
+      spi.CurrentTxFlowState.Completed(SuccessState.Success);
+      spi._transactionReport = TransactionReportHelper.CreateTransactionReportEnvelope(
+        posVendorId,
+        posVersion,
+        spi._libraryLanguage,
+        Spi.GetVersion(),
+        serialNumber
+      );
+
+      // act
+      fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
+      await spi._sendTransactionReport();
+
+      // assert
+      expect(spi._transactionReport).toEqual(
+        jasmine.objectContaining({
+          PosVendorId: posVendorId,
+          PosVersion: posVersion,
+          LibraryLanguage: spi._libraryLanguage,
+          LibraryVersion: posVersion,
+          PosRefId: posRefId,
+          SerialNumber: serialNumber,
+          TxType: TransactionType.Purchase,
+          TxResult: SuccessState.Success,
+          CurrentFlow: SpiFlow.Idle,
+          CurrentTxFlowState: TransactionType.Purchase,
+          CurrentStatus: SpiStatus.PairedConnected,
+        })
+      );
+      expect(spi._transactionReport.Event).toMatch(
+        /signature: false.*cancel: false.*finished: true/i
+      );
+      expect(spi._transactionReport.DurationMs).toEqual(jasmine.any(Number));
+      expect(spi._transactionReport.TxStartTime).toEqual(jasmine.any(Number));
+      expect(spi._transactionReport.TxEndTime).toEqual(jasmine.any(Number));
+      expect(window.fetch).toHaveBeenCalled();
+    });
+
+    it("should handle a failed to send transaction report", async () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      spi.CurrentFlow = SpiFlow.Idle;
+      spi.CurrentTxFlowState = new TransactionFlowState(
+        "purchase",
+        TransactionType.Purchase
+      );
+      const errorResponse = {
+        error: {
+          code: 418,
+          message: "Still a teapot, not a terminal",
+        },
+      };
+      fetchHelper.resolve({
+        json: () => Promise.resolve(errorResponse),
+        ok: false,
+        status: 418,
+      }); // Mock the response from ReportTx
+
+      // act
+      await spi._sendTransactionReport();
+
+      // assert
+      expect(getLastConsoleCallArgs("error")).toMatch(/teapot/i);
+      expect(getLastConsoleCallArgs("warn")).toMatch(/error reporting/i);
     });
   });
 });
