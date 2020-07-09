@@ -43,7 +43,7 @@
     "webpack": "^4.41.6",
     "webpack-visualizer-plugin": "^0.1.11",
     "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "^3.10.3"
+    "webpack-dev-server": "^3.11.0"
   },
   "bugs": {
     "url": "https://github.com/mx51/spi-client-js/issues"
