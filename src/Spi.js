@@ -2202,11 +2202,6 @@ class Spi {
     {
         return this._isUsingHttps() || this._forceSecureWebSockets;
     }
-
-    _sendTransactionReport() {
-        // TODO: Dummy method. Delete when analytics is implemented
-        return;
-    }
 }
 
 export {Spi, SPI_VERSION};
