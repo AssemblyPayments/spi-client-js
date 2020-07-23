@@ -1702,7 +1702,14 @@ class Spi {
                         // TH-1D
                         this._log.info(`Lost connection in the middle of a transaction...`);
                     }
-                    
+
+                    // As we have no way to recover from a reversal in the event of a disconnection, we will fail the reversal.
+                    if (this.CurrentTxFlowState && this.CurrentTxFlowState.Type === TransactionType.Reversal)
+                    {
+                        this.CurrentTxFlowState.Completed(SuccessState.Failed, null, "We were in the middle of a reversal when a disconnection happened, let's fail the reversal.");
+                        this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+                    }
+
                     if (this._conn == null) return; // This means the instance has been disposed. Aborting.
                     
                     if (this._autoAddressResolutionEnabled)
