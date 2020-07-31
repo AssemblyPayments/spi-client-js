@@ -1652,6 +1652,7 @@ class Spi {
         // TH-6A, TH-6E
 
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     _handleZipRefundResponse(m)
@@ -1668,6 +1669,7 @@ class Spi {
         // TH-6A, TH-6E
 
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // endregion

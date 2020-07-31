@@ -445,7 +445,7 @@ export class GetLastTransactionResponse
     
     GetResponseText()
     {
-        return this._m.Data.host_response_text | "";
+        return this._m.Data.host_response_text || "";
     }
 
     GetResponseCode()
