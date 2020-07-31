@@ -49,17 +49,17 @@ export const DeviceAddressResponseCode =
 
 export const HttpStatusCode = 
 {
-    NotFound: 404
+    NotFound: 404,
+    OK: 200,
 };
 
 export class DeviceAddressService
 {
-    // RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, useSecureWebSockets, isTestMode)
-    async RetrieveService(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)    
+    async RetrieveDeviceAddress(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)
     {
         const CONNECTION_TIMEOUT = 8000;
-        var path = isSecureConnection ? 'fqdn' : 'ip';
-        var deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}`;
+        const path = isSecureConnection ? 'fqdn' : 'ip';
+        const deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}`;
 
         return Promise.race([
             fetch(deviceAddressUri, {
