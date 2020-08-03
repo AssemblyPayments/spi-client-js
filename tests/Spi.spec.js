@@ -141,7 +141,7 @@ describe("Spi,", () => {
 
     // act
     spi.SetEftposAddress(eftposAddress);
-    const spiEftposAddress = spi._eftposAddress.replace("ws://", "");
+    const spiEftposAddress = spi._eftposAddress.replace(/^w[s]?s:\/\//, "");
 
     // assert
     expect(spiEftposAddress).toBe(eftposAddress);
@@ -155,7 +155,7 @@ describe("Spi,", () => {
 
     // act
     spi.Start();
-    const spiEftposAddress = spi._eftposAddress.replace("ws://", "");
+    const spiEftposAddress = spi._eftposAddress.replace(/^w[s]?s:\/\//, "");
 
     // assert
     expect(spiEftposAddress).toBe(eftposAddress);
@@ -169,7 +169,7 @@ describe("Spi,", () => {
 
     // act
     spi.SetEftposAddress(invalidEftposAddress);
-    const spiEftposAddress = spi._eftposAddress.replace("ws://", "");
+    const spiEftposAddress = spi._eftposAddress.replace(/^w[s]?s:\/\//, "");
 
     // assert
     expect(spiEftposAddress).toBe("");
@@ -197,7 +197,7 @@ describe("Spi,", () => {
 
     // act
     spi.SetEftposAddress(invalidEftposAddress);
-    const spiEftposAddress = spi._eftposAddress.replace("ws://", "");
+    const spiEftposAddress = spi._eftposAddress.replace(/^w[s]?s:\/\//, "");
 
     // assert
     expect(spiEftposAddress).toBe("");

@@ -1,4 +1,4 @@
-import {Events, Message} from './Messages';
+import {Events, Message, SuccessState} from './Messages';
 import {RequestIdHelper} from './RequestIdHelper';
 
 export class TerminalConfigurationRequest
@@ -15,46 +15,52 @@ export class TerminalConfigurationResponse
 {
     constructor(m)
     {
+        this._success = m.GetSuccessState() === SuccessState.Success;
         this._m = m;
+    }
+
+    isSuccess()
+    {
+      return this._success;
     }
 
     GetCommsSelected()
     {
-      return _m.GetDataStringValue("comms_selected");
+      return this._m.Data.comms_selected;
     }
 
     GetMerchantId()
     {
-      return _m.GetDataStringValue("merchant_id");
+      return this._m.Data.merchant_id;
     }
 
     GetPAVersion()
     {
-      return _m.GetDataStringValue("pa_version");
+      return this._m.Data.pa_version;
     }
 
     GetPaymentInterfaceVersion()
     {
-      return _m.GetDataStringValue("payment_interface_version");
+      return this._m.Data.payment_interface_version;
     }
 
     GetPluginVersion()
     {
-      return _m.GetDataStringValue("plugin_version");
+      return this._m.Data.plugin_version;
     }
 
     GetSerialNumber()
     {
-      return _m.GetDataStringValue("serial_number");
+      return this._m.Data.serial_number;
     }
 
     GetTerminalId()
     {
-      return _m.GetDataStringValue("terminal_id");
+      return this._m.Data.terminal_id;
     }
 
     GetTerminalModel()
     {
-      return _m.GetDataStringValue("terminal_model");
+      return this._m.Data.terminal_model;
     }
 }

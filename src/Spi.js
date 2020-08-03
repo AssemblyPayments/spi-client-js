@@ -15,12 +15,13 @@ import {PurchaseHelper} from './PurchaseHelper';
 import {KeyRollingHelper} from './KeyRollingHelper';
 import {PingHelper, PongHelper} from './PingHelper';
 import {GetTransactionRequest, GetTransactionResponse, GetLastTransactionRequest, GetLastTransactionResponse, SignatureAccept, SignatureDecline, MotoPurchaseRequest, AuthCodeAdvice, CancelTransactionRequest, SignatureRequired, CancelTransactionResponse, PhoneForAuthRequired, TransactionUpdate} from './Purchase';
+import {DeviceHelper} from './DeviceHelper';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {ReversalRequest} from './Reversal';
 import {TransactionReportHelper} from "./TransactionReportHelper";
 import {TerminalStatusRequest} from './TerminalStatus';
-import {TerminalConfigurationRequest} from './TerminalConfiguration';
+import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './TerminalConfiguration';
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
 const SPI_VERSION = '2.8.0';
@@ -45,8 +46,8 @@ class Spi {
         this._posId = posId;
         this._serialNumber = serialNumber;
         this._secrets = secrets;
-        this._forceSecureWebSockets = false;
-        this._eftposAddress = "ws://" + eftposAddress;
+        this._forceSecureWebSockets = this._isSecureConnection();
+        this._eftposAddress = `${this._isSecureConnection() ? "wss" : "ws"}://${eftposAddress}`;
         this._eventBus = document;
         this._log = console;
         this.Config = new SpiConfig();
@@ -56,7 +57,7 @@ class Spi {
         this._deviceApiKey  = null;
         this._acquirerCode  = null;
         this._inTestMode    = false;
-        this._autoAddressResolutionEnabled = false;
+        this._autoAddressResolutionEnabled = this._isSecureConnection();
 
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets);
@@ -200,18 +201,16 @@ class Spi {
     /// </summary>
     SetSerialNumber(serialNumber)
     {
-        if (this.CurrentStatus != SpiStatus.Unpaired)
-            return false;
-
-        var was = this._serialNumber;
+        const was = this._serialNumber;
         this._serialNumber = serialNumber;
+
         if (this.HasSerialNumberChanged(was))
         {
             this._autoResolveEftposAddress();
         }
         else
         {
-            if (this.CurrentDeviceStatus == null)
+            if (this.CurrentDeviceStatus === null)
             {
                 this.CurrentDeviceStatus = new DeviceAddressStatus();
             }
@@ -229,11 +228,9 @@ class Spi {
     /// <returns></returns>
     SetAutoAddressResolution(autoAddressResolutionEnable)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected)
-            return false;
-
-        var was = this._autoAddressResolutionEnabled;
+        const was = this._autoAddressResolutionEnabled;
         this._autoAddressResolutionEnabled = autoAddressResolutionEnable;
+
         if (autoAddressResolutionEnable && !was)
         {
             // we're turning it on
@@ -252,10 +249,7 @@ class Spi {
     /// <returns></returns>
     SetTestMode(testMode)
     {
-        if (this.CurrentStatus && this.CurrentStatus != SpiStatus.Unpaired)
-            return false;
-
-        if (testMode == this._inTestMode)
+        if (testMode === this._inTestMode)
             return true;
 
         // we're changing mode
@@ -273,6 +267,7 @@ class Spi {
     SetSecureWebSockets(useSecureWebSockets)
     {
         this._forceSecureWebSockets = useSecureWebSockets;
+        this._autoResolveEftposAddress();
     }
 
     // <summary>
@@ -304,7 +299,7 @@ class Spi {
     // </summary>
     SetEftposAddress(address)
     {
-        if (this.CurrentStatus == SpiStatus.PairedConnected || this._autoAddressResolutionEnabled) {
+        if (this.CurrentStatus === SpiStatus.PairedConnected) {
             return false;
         }
 
@@ -316,7 +311,7 @@ class Spi {
             return false;
         }
 
-        this._eftposAddress = "ws://" + address;
+        this._eftposAddress = `${this._isSecureConnection() ? "wss" : "ws"}://${address}`;
         this._conn.Address = this._eftposAddress;
         return true;
     }
@@ -431,8 +426,8 @@ class Spi {
             // Already confirmed from Eftpos - So all good now. We're Paired also from the POS perspective.
             this._log.info("Pair Code Confirmed from POS side, and was already confirmed from Eftpos side. Pairing finalised.");
             this._onPairingSuccess();
-            // this._onReadyToTransact();
         }
+
     }
 
     // <summary>
@@ -1005,6 +1000,43 @@ class Spi {
         }
     }
 
+    /// <summary>
+    /// Async call to get the current terminal address, this does not update the internals address of the library.
+    /// </summary>
+    /// <returns></returns>
+    async GetTerminalAddress()
+    {
+        const service = new DeviceAddressService();
+
+        let deviceAddressStatus;
+        try
+        {
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._isSecureConnection(), this._inTestMode);
+            const addressResponseJson = await addressResponse.json();
+            deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
+                {
+                    Data: addressResponseJson,
+                    StatusCode: addressResponse.status,
+                    StatusDescription: addressResponse.statusText,
+                },
+                this._eftposAddress
+            );
+        } 
+        catch (error)
+        {
+            deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
+                {
+                    Data: {},
+                    StatusCode: null,
+                    StatusDescription: error.message,
+                },
+                this._eftposAddress
+            );
+        }
+
+        return deviceAddressStatus.Address;
+    }
+
     // endregion
         
     // region Internals for Pairing Flow
@@ -1046,7 +1078,7 @@ class Spi {
     // <param name="m"></param>
     _handlePairResponse(m)
     {
-        var pairResp = new PairResponse(m);
+        const pairResp = new PairResponse(m);
 
         this.CurrentPairingFlowState.AwaitingCheckFromEftpos = false;
         if (pairResp.Success)
@@ -1056,10 +1088,11 @@ class Spi {
                 // Waiting for PoS, auto confirming code
                 this._log.info("Confirming pairing from library.");
                 this.PairingConfirmCode();
-
             }
+
             this._log.info("Got Pair Confirm from Eftpos, and already had confirm from POS. Now just waiting for first pong.");
             this._onPairingSuccess();
+
             // I need to ping/login even if the pos user has not said yes yet, 
             // because otherwise within 5 seconds connectiong will be dropped by eftpos.
             this._startPeriodicPing();
@@ -1590,7 +1623,14 @@ class Spi {
 
     _handleTerminalConfigurationResponse(m)
     {
-        this.TerminalConfigurationResponse(m);
+        const response = new TerminalConfigurationResponse(m);
+        if (response.isSuccess())
+        {
+            this._serialNumber = response.GetSerialNumber();
+            this._terminalModel = response.GetTerminalModel();
+        }
+
+        if (typeof this.TerminalStatusResponse === 'function') this.TerminalConfigurationResponse(m);
     }
 
     _handleBatteryLevelChanged(m)
@@ -1612,6 +1652,7 @@ class Spi {
         // TH-6A, TH-6E
 
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     _handleZipRefundResponse(m)
@@ -1628,6 +1669,7 @@ class Spi {
         // TH-6A, TH-6E
 
         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
+        this._sendTransactionReport();
     }
 
     // endregion
@@ -1642,8 +1684,9 @@ class Spi {
         if (this._isUsingHttps() || this._forceSecureWebSockets) {
             this._log.info("Secure connection detected.");
             this._eftposAddress = this._eftposAddress.replace("ws://", "wss://");
-          }
-          this._conn.Address = this._eftposAddress;
+            this._autoResolveEftposAddress();
+        }
+        this._conn.Address = this._eftposAddress;
     
         // Register our Event Handlers
         this._eventBus.addEventListener('ConnectionStatusChanged', (e) => this._onSpiConnectionStatusChanged(e.detail));
@@ -1782,12 +1825,12 @@ class Spi {
 
     _periodicPing() {
         // while i'm still connected AND paired...
-        if(this._conn.Connected && this._secrets != null) {
-            this._doPing();
+        if(this._conn.Connected && this._secrets !== null) {
+            this._doPing(); // first ping
 
             setTimeout(() => {
-                if (this._mostRecentPingSent != null &&
-                    (this._mostRecentPongReceived == null || this._mostRecentPongReceived.Id != this._mostRecentPingSent.Id))
+                if (this._mostRecentPingSent !== null &&
+                    (this._mostRecentPongReceived === null || this._mostRecentPongReceived.Id !== this._mostRecentPingSent.Id))
                 {
                     this._missedPongsCount += 1;
 
@@ -1853,9 +1896,11 @@ class Spi {
             }
 
             // let's also tell the eftpos our latest table configuration.
-            if(this._spiPat) {
+            if (this._spiPat) {
                 this._spiPat.PushPayAtTableConfig();
             }
+
+            this.GetTerminalConfiguration();
         }
     }
 
@@ -1879,7 +1924,8 @@ class Spi {
     // Send a Ping to the Server
     _doPing()
     {
-        var ping = PingHelper.GeneratePingRequest();
+        const ping = PingHelper.GeneratePingRequest();
+
         this._mostRecentPingSent = ping;
         this._send(ping);
         this._mostRecentPingSentTime = Date.now();
@@ -2119,10 +2165,10 @@ class Spi {
 
         const sanitisedEftposAddress = eftposAddress.replace(/^w[s]?s:\/\//, "");
 
-        // The eftposAddress may be an IP address or if autoAddressResolutionEnabled is true, a FQDN
+        // The eftposAddress may be an IP address or if it is a secure connection, a FQDN
         if (
-            (!this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForEftposAddress)) ||
-            (this._autoAddressResolutionEnabled && !sanitisedEftposAddress.match(this._regexItemsForFqdnEftposAddress))
+            (!this._isSecureConnection() && !sanitisedEftposAddress.match(this._regexItemsForEftposAddress)) ||
+            (this._isSecureConnection() && !sanitisedEftposAddress.match(this._regexItemsForFqdnEftposAddress))
         )
         {
             this._log.warn("The Eftpos address is not in the right format");
@@ -2137,81 +2183,70 @@ class Spi {
         return this._serialNumber != updatedSerialNumber;
     }
 
-    HasEftposAddressChanged(updatedEftposAddress)
-    {
-        return this._eftposAddress != updatedEftposAddress;
-    }
-
     async _autoResolveEftposAddress()
     {
         if (!this._autoAddressResolutionEnabled)
             return;
     
-        if (!this._serialNumber || !this._deviceApiKey) {
-            this._log.warn("Missing serialNumber and/or deviceApiKey. Need to set them before for Auto Address to work.");    
+        if (!this._serialNumber || !this._deviceApiKey)
+        {
+            this._log.warn("Missing serialNumber and/or deviceApiKey. Need to set them before for Auto Address to work.");
             return;
         }
 
-        var isSecureConnection = this._isSecureConnection();
-
-        var service = new DeviceAddressService();
+        const isSecureConnection = this._isSecureConnection();
+        const service = new DeviceAddressService();
+        let deviceAddressStatus;
 
         try
         {
-            var addressResponse     = await service.RetrieveService(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
-            var addressResponseJson = await addressResponse.json();
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+            const addressResponseJson = await addressResponse.json();
+            deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
+                {
+                    Data: addressResponseJson,
+                    StatusCode: addressResponse.status,
+                    StatusDescription: addressResponse.statusText,
+                },
+                this._eftposAddress
+            );
 
-            this.CurrentDeviceStatus = Object.assign(new DeviceAddressStatus(isSecureConnection), 
-            {
-                ip: addressResponseJson.ip,
-                fqdn: addressResponseJson.fqdn,
-                DeviceAddressResponseCode: addressResponse.status,
-                ResponseStatusDescription: addressResponse.statusText,
-                ResponseMessage: addressResponse.statusText,
-                LastUpdated: addressResponseJson.last_updated
-            });
-        }
-        catch (err) 
+        } 
+        catch (error)
         {
-            this.CurrentDeviceStatus = this.CurrentDeviceStatus || new DeviceAddressStatus(isSecureConnection);
-            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
-            this.CurrentDeviceStatus.ResponseStatusDescription = err;
-            this.CurrentDeviceStatus.ResponseMessage = err;
-
-            this._log.warn(err.message);
-            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
-            return; 
+            this._log.warn("An error occurred communicating with the device address services", error);
+            deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
+                {
+                    Data: {},
+                    StatusCode: null,
+                    StatusDescription: error.message,
+                },
+                this._eftposAddress
+            );
         }
 
-        if (addressResponse.status == HttpStatusCode.NotFound)
-        {
-            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;
+        this.CurrentDeviceStatus = deviceAddressStatus;
 
+        if (deviceAddressStatus.DeviceAddressResponseCode === DeviceAddressResponseCode.DEVICE_SERVICE_ERROR)
+        {
+            this._log.warn("Could not communicate with device address service.");
+            return;
+        }
+        else if (deviceAddressStatus.DeviceAddressResponseCode === DeviceAddressResponseCode.ADDRESS_NOT_CHANGED)
+        {
+            this._log.warn("Address resolved, but device address has not changed.");
+
+            // even though address haven't changed - dispatch event as PoS depend on this
             this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
             return;
         }
 
-        if(!addressResponse.ok || !addressResponseJson || !this.CurrentDeviceStatus.Address) {
-            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.DEVICE_SERVICE_ERROR;
-
-            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
-            return;
-        }
-
-        if (!this.HasEftposAddressChanged(this.CurrentDeviceStatus.Address))
-        {
-            this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.ADDRESS_NOT_CHANGED;
-
-            this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
-            return;
-        }
-
-        // update device and connection address
-        var protocol = isSecureConnection ? "wss" : "ws";
-        this._eftposAddress = protocol + "://" + this.CurrentDeviceStatus.Address;
+        // new address, update device and connection address
+        this._eftposAddress = `${isSecureConnection ? "wss" : "ws"}://${deviceAddressStatus.Address}`;
         this._conn.Address = this._eftposAddress;
-        this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SUCCESS;
+        this._log.info(`Address resolved to ${deviceAddressStatus.Address}`);
 
+        // dispatch event
         this._eventBus.dispatchEvent(new CustomEvent('DeviceAddressChanged', { detail: this.CurrentDeviceStatus }));
     }
 

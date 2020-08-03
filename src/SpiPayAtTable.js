@@ -5,6 +5,7 @@ import {
     BillPaymentFlowEndedResponse,
     BillRetrievalResult,
     BillStatusResponse,
+    GetOpenTablesResponse,
     PayAtTableConfig,
     PaymentHistoryEntry,
 } from './PayAtTable';
@@ -139,7 +140,7 @@ export class SpiPayAtTable
         const operatorId = m.Data["operator_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        const openTablesResponse = typeof this.GetOpenTables === 'function'
+        let openTablesResponse = typeof this.GetOpenTables === 'function'
             ? this.GetOpenTables(operatorId)
             : null;
         if (!openTablesResponse || !openTablesResponse.TableData || !openTablesResponse.TableData.length)
