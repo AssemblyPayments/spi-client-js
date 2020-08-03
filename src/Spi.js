@@ -19,9 +19,10 @@ import {DeviceHelper} from './DeviceHelper';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {ReversalRequest} from './Reversal';
-import {TransactionReportHelper} from "./TransactionReportHelper";
+import {TerminalHelper} from './TerminalHelper';
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './TerminalConfiguration';
+import {TransactionReportHelper} from "./TransactionReportHelper";
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
 const SPI_VERSION = '2.8.0';
@@ -56,6 +57,7 @@ class Spi {
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
         this._acquirerCode  = null;
+        this._terminalModel = null;
         this._inTestMode    = false;
         this._autoAddressResolutionEnabled = this._isSecureConnection();
 
@@ -92,7 +94,7 @@ class Spi {
         this._retriesSinceLastPairing = 0;
         this._retriesBeforePairing = 3;
 
-        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(\:[0-9]{1,5})?$/;
+        this._regexItemsForEftposAddress =/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:\d*)?$/; 
         this._regexItemsForFqdnEftposAddress = /^[a-zA-Z0-9\.-]+$/;
         this._regexItemsForPosId = /^[a-zA-Z0-9]*$/;
 
@@ -524,12 +526,23 @@ class Spi {
 
         if (tipAmount > 0 && (cashoutAmount > 0 || promptForCashout)) return new InitiateTxResult(false, "Cannot Accept Tips and Cashout at the same time.");
         
+        // no printing available, reset header and footer and disable print
+        let transactionOptions = options;
+        if (!TerminalHelper.IsPrinterAvailable(this._terminalModel) && this._isPrintingConfigEnabled())
+        {
+            transactionOptions = new TransactionOptions();
+            this.Config.PromptForCustomerCopyOnEftpos = false;
+            this.Config.PrintMerchantCopy = false;
+            this.Config.SignatureFlowOnEftpos = false;
+            this._log.warn("Printing is enabled on a terminal without printer. Printing options will now be disabled.");
+        }
+
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         this.CurrentFlow = SpiFlow.Transaction;
         
         var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, surchargeAmount);
         purchase.Config = this.Config;
-        purchase.Options = options;
+        purchase.Options = transactionOptions;
         var purchaseMsg = purchase.ToMessage();
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg,
@@ -557,13 +570,24 @@ class Spi {
             return new InitiateTxResult(false, "Not Paired");
         }
 
+        // no printing available, reset header and footer and disable print
+        let transactionOptions = options;
+        if (!TerminalHelper.IsPrinterAvailable(this._terminalModel) && this._isPrintingConfigEnabled())
+        {
+            transactionOptions = new TransactionOptions();
+            this.Config.PromptForCustomerCopyOnEftpos = false;
+            this.Config.PrintMerchantCopy = false;
+            this.Config.SignatureFlowOnEftpos = false;
+            this._log.warn("Printing is enabled on a terminal without printer. Printing options will now be disabled.");
+        }
+
         if (this.CurrentFlow != SpiFlow.Idle) {
             return new InitiateTxResult(false, "Not Idle");
         }
 
         var refundRequest = PurchaseHelper.CreateRefundRequest(amountCents, posRefId, suppressMerchantPassword);
         refundRequest.Config = this.Config;
-        refundRequest.Options = options;
+        refundRequest.Options = transactionOptions;
         var refundMsg = refundRequest.ToMessage();
         this.CurrentFlow = SpiFlow.Transaction;
         this.CurrentTxFlowState = new TransactionFlowState(
@@ -671,11 +695,22 @@ class Spi {
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
+        // no printing available, reset header and footer and disable print
+        let transactionOptions = options;
+        if (!TerminalHelper.IsPrinterAvailable(this._terminalModel) && this._isPrintingConfigEnabled())
+        {
+            transactionOptions = new TransactionOptions();
+            this.Config.PromptForCustomerCopyOnEftpos = false;
+            this.Config.PrintMerchantCopy = false;
+            this.Config.SignatureFlowOnEftpos = false;
+            this._log.warn("Printing is enabled on a terminal without printer. Printing options will now be disabled.");
+        }
+
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
 
         var cashoutMsg = Object.assign(new CashoutOnlyRequest(amountCents, posRefId), {
             SurchargeAmount: surchargeAmount,
-            Options: options,
+            Options: transactionOptions,
             Config: this.Config
         }).ToMessage();
 
@@ -705,13 +740,24 @@ class Spi {
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
+        // no printing available, reset header and footer and disable print
+        let transactionOptions = options;
+        if (!TerminalHelper.IsPrinterAvailable(this._terminalModel) && this._isPrintingConfigEnabled())
+        {
+            transactionOptions = new TransactionOptions();
+            this.Config.PromptForCustomerCopyOnEftpos = false;
+            this.Config.PrintMerchantCopy = false;
+            this.Config.SignatureFlowOnEftpos = false;
+            this._log.warn("Printing is enabled on a terminal without printer. Printing options will now be disabled.");
+        }
+
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         var motoPurchaseMsg = Object.assign(new MotoPurchaseRequest(amountCents, posRefId),
         {
             SurchargeAmount: surchargeAmount,
             SuppressMerchantPassword: suppressMerchantPassword,
             Config: this.Config,
-            Options: options
+            Options: transactionOptions
         }).ToMessage();
 
         this.CurrentFlow = SpiFlow.Transaction;
@@ -738,6 +784,17 @@ class Spi {
             return new InitiateTxResult(false, "Not Paired");
         }
 
+        // no printing available, reset header and footer and disable print
+        let transactionOptions = options;
+        if (!TerminalHelper.IsPrinterAvailable(this._terminalModel) && this._isPrintingConfigEnabled())
+        {
+            transactionOptions = new TransactionOptions();
+            this.Config.PromptForCustomerCopyOnEftpos = false;
+            this.Config.PrintMerchantCopy = false;
+            this.Config.SignatureFlowOnEftpos = false;
+            this._log.warn("Printing is enabled on a terminal without printer. Printing options will now be disabled.");
+        }
+
         if (this.CurrentFlow != SpiFlow.Idle) {
             return new InitiateTxResult(false, "Not Idle");
         }
@@ -745,7 +802,7 @@ class Spi {
         var settleMsg = Object.assign(new SettleRequest(RequestIdHelper.Id("settle")),
         {
             Config: this.Config,
-            Options: options
+            Options: transactionOptions
         }).ToMessage();
 
         this.CurrentFlow = SpiFlow.Transaction;
@@ -1636,6 +1693,16 @@ class Spi {
     _handleBatteryLevelChanged(m)
     {
         if (typeof this.BatteryLevelChanged === 'function') this.BatteryLevelChanged(m);
+    }
+
+    _isPrintingConfigEnabled()
+    {
+        if (this.Config.PromptForCustomerCopyOnEftpos || this.Config.PrintMerchantCopy || this.Config.SignatureFlowOnEftpos)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     _handleZipPurchaseResponse(m)
