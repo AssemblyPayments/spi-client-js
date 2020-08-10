@@ -12,5 +12,6 @@ export {CashoutOnlyResponse} from './src/Cashout';
 export {Settlement} from './src/Settlement';
 export {RequestIdHelper} from './src/RequestIdHelper';
 export {DeviceAddressResponseCode} from './src/Service/DeviceService';
+export {ReversalResponse} from './src/Reversal';
 export {BillStatusResponse, BillRetrievalResult, GetOpenTablesResponse, OpenTablesEntry, BillPaymentFlowEndedResponse} from './src/PayAtTable';
 export {AccountVerifyResponse, PreauthResponse} from './src/Preauth';
