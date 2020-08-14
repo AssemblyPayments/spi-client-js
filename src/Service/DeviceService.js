@@ -16,7 +16,7 @@ export class DeviceAddressStatus
     {
         if(this.UseSecureWebSockets) 
         {
-            this.fqdn = addreses;
+            this.fqdn = address;
         } 
         else
         {
