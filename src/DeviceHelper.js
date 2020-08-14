@@ -1,8 +1,8 @@
 import { DeviceAddressResponseCode, DeviceAddressStatus, HttpStatusCode } from './Service/DeviceService';
 
 export class DeviceHelper {
-  static GenerateDeviceAddressStatus(serviceResponse, currentEftposAddress) {
-    const deviceAddressStatus = new DeviceAddressStatus();
+  static GenerateDeviceAddressStatus(serviceResponse, currentEftposAddress, isSecureWebsockets) {
+    const deviceAddressStatus = new DeviceAddressStatus(isSecureWebsockets);
 
     if (serviceResponse.StatusCode === HttpStatusCode.NotFound) {
       deviceAddressStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.INVALID_SERIAL_NUMBER;

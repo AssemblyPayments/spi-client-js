@@ -214,7 +214,7 @@ class Spi {
         {
             if (this.CurrentDeviceStatus === null)
             {
-                this.CurrentDeviceStatus = new DeviceAddressStatus();
+                this.CurrentDeviceStatus = new DeviceAddressStatus(this._forceSecureWebSockets);
             }
 
             this.CurrentDeviceStatus.DeviceAddressResponseCode = DeviceAddressResponseCode.SERIAL_NUMBER_NOT_CHANGED;
@@ -1076,7 +1076,8 @@ class Spi {
                     StatusCode: addressResponse.status,
                     StatusDescription: addressResponse.statusText,
                 },
-                this._eftposAddress
+                this._eftposAddress,
+                this._forceSecureWebSockets
             );
         } 
         catch (error)
@@ -1087,7 +1088,8 @@ class Spi {
                     StatusCode: null,
                     StatusDescription: error.message,
                 },
-                this._eftposAddress
+                this._eftposAddress,
+                this._forceSecureWebSockets
             );
         }
 
@@ -1814,7 +1816,7 @@ class Spi {
                     }
 
                     // As we have no way to recover from a reversal in the event of a disconnection, we will fail the reversal.
-                    if (this.CurrentTxFlowState && this.CurrentTxFlowState.Type === TransactionType.Reversal)
+                    if (this.CurrentFlow === SpiFlow.Transaction && this.CurrentTxFlowState && this.CurrentTxFlowState.Type === TransactionType.Reversal)
                     {
                         this.CurrentTxFlowState.Completed(SuccessState.Failed, null, "We were in the middle of a reversal when a disconnection happened, let's fail the reversal.");
                         this._eventBus.dispatchEvent(new CustomEvent('TxFlowStateChanged', { detail: this.CurrentTxFlowState }));
@@ -2275,7 +2277,8 @@ class Spi {
                     StatusCode: addressResponse.status,
                     StatusDescription: addressResponse.statusText,
                 },
-                this._eftposAddress
+                this._eftposAddress,
+                this._forceSecureWebSockets
             );
 
         } 
@@ -2288,7 +2291,8 @@ class Spi {
                     StatusCode: null,
                     StatusDescription: error.message,
                 },
-                this._eftposAddress
+                this._eftposAddress,
+                this._forceSecureWebSockets
             );
         }
 
@@ -2297,6 +2301,11 @@ class Spi {
         if (deviceAddressStatus.DeviceAddressResponseCode === DeviceAddressResponseCode.DEVICE_SERVICE_ERROR)
         {
             this._log.warn("Could not communicate with device address service.");
+            return;
+        }
+        else if (deviceAddressStatus.DeviceAddressResponseCode === DeviceAddressResponseCode.INVALID_SERIAL_NUMBER)
+        {
+            this._log.warn("Could not resolve address, invalid serial number.");
             return;
         }
         else if (deviceAddressStatus.DeviceAddressResponseCode === DeviceAddressResponseCode.ADDRESS_NOT_CHANGED)
