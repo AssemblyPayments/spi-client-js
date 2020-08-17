@@ -1,0 +1,43 @@
+{
+  "message": {
+    "data": {
+      "account_type": "CREDIT",
+      "auth_code": "000000",
+      "bank_date": "01012000",
+      "bank_noncash_amount": 100,
+      "bank_settlement_date": "01012000",
+      "bank_time": "100000",
+      "card_entry": "MANUAL_PHONE",
+      "currency": "AUD",
+      "customer_receipt": "EFTPOS FROM BANK\r\nMerchant\r\n\r\nMOTO         AUD1.00\r\n\r\n   (000) APPROVED\r\n\r\nApproved or \r\ncompleted \r\nsuccessfully\r\n\r\n  *CUSTOMER COPY*\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+      "customer_receipt_printed": false,
+      "expiry_date": "0101",
+      "host_response_code": "000",
+      "host_response_text": "APPROVED",
+      "informative_text": "                ",
+      "masked_pan": "............1111",
+      "merchant_acquirer": "EFTPOS FROM BANK SA",
+      "merchant_addr": "201 Kent Street",
+      "merchant_city": "Sydney",
+      "merchant_country": "Australia",
+      "merchant_id": "10000000",
+      "merchant_name": "Merchant",
+      "merchant_postcode": "2000",
+      "merchant_receipt": "EFTPOS FROM BANK\r\nMerchant\r\n\r\nMOTO         AUD1.00\r\n\r\n   (000) APPROVED\r\n\r\nApproved or \r\ncompleted \r\nsuccessfully\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+      "merchant_receipt_printed": false,
+      "online_indicator": "Y",
+      "pos_ref_id": "cashout-2000-01-01T00:00:00.000Z",
+      "purchase_amount": 100,
+      "rrn": "100000000000",
+      "scheme_name": "MasterCard",
+      "stan": "001234",
+      "success": true,
+      "terminal_id": "100000000000",
+      "terminal_ref_id": "10000000_00000000000000",
+      "transaction_type": "MOTO"
+    },
+    "datetime": "2000-01-01T00:00:00.000",
+    "event": "moto_purchase_response",
+    "id": "moto"
+  }
+}

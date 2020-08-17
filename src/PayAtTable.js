@@ -1,5 +1,6 @@
-import {Events, Message} from './Messages';
-import {PurchaseResponse} from './Purchase';
+import { Events, Message } from './Messages';
+import { PurchaseResponse } from './Purchase';
+import { RequestIdHelper } from './RequestIdHelper';
 
 // <summary>
 // This class represents the BillDetails that the POS will be asked for throughout a PayAtTable flow.
@@ -276,5 +277,23 @@ export class BillPaymentFlowEndedResponse
         this.CardTotalAmount = m.Data.card_total_amount;
         this.CashTotalCount = m.Data.cash_total_count;
         this.CashTotalAmount = m.Data.cash_total_amount;
+    }
+}
+
+export class BillPaymentFlowEndedAckRequest
+{
+    constructor(billId)
+    {
+        this.BillId = billId;
+        this.Id = '';
+    }
+
+    ToMessage()
+    {
+        const data = {
+            "bill_id": this.BillId,
+        };
+
+        return new Message(RequestIdHelper.Id("authad"), Events.PayAtTableBillPaymentFlowEndedAck, data, true);
     }
 }

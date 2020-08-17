@@ -1,0 +1,14 @@
+{
+  "message": {
+    "conn_id": "A",
+    "data": {
+      "error_detail": "This transaction could not be reversed",
+      "error_reason": "INTERNAL_ERROR",
+      "success": false,
+      "pos_ref_id": "rev"
+    },
+    "datetime": "2000-01-01T00:00:00.000",
+    "event": "reverse_transaction_response",
+    "id": "rev"
+  }
+}

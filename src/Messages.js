@@ -23,6 +23,10 @@ export const Events = {
      CancelTransactionResponse : "cancel_response",
      GetLastTransactionRequest : "get_last_transaction",
      GetLastTransactionResponse : "last_transaction",
+     GetTransactionRequest: "get_transaction",
+     GetTransactionResponse: "get_transaction_response",
+     ReversalRequest : "reverse_transaction",
+     ReversalResponse : "reverse_transaction_response",
      RefundRequest : "refund",
      RefundResponse : "refund_response",
      SignatureRequired : "signature_required",
@@ -57,11 +61,16 @@ export const Events = {
     PayAtTableSetTableConfig : "set_table_config", // outgoing. When we want to instruct eftpos with the P@T configuration.
     PayAtTableGetBillDetails : "get_bill_details", // incoming. When eftpos wants to aretrieve the bill for a table.
     PayAtTableBillDetails : "bill_details",        // outgoing. We reply with this when eftpos requests to us get_bill_details.
-    PayAtTableBillPayment : "bill_payment",        // incoming. When the eftpos advices 
+    PayAtTableBillPayment : "bill_payment",        // incoming. When the eftpos advices
+    PayAtTableGetOpenTables : "get_open_tables",
+    PayAtTableOpenTables : "open_tables",
+    PayAtTableBillPaymentFlowEnded : "bill_payment_flow_ended",
+    PayAtTableBillPaymentFlowEndedAck : "bill_payment_flow_ended_ack",
 
     PrintingRequest : "print",
     PrintingResponse : "print_response",
 
+    TransactionUpdateMessage : "txn_update_message",
     TerminalStatusRequest : "get_terminal_status",
     TerminalStatusResponse : "terminal_status",
 
@@ -69,11 +78,6 @@ export const Events = {
     TerminalConfigurationResponse : "terminal_configuration",
 
     BatteryLevelChanged : "battery_level_changed",
-
-    PayAtTableGetOpenTables: "get_open_tables",
-    PayAtTableOpenTables: "open_tables",
-
-    PayAtTableBillPaymentFlowEnded: "bill_payment_flow_ended",
 
     ZipPurchaseRequest: "purchase_zip",
     ZipPurchaseResponse: "purchase_zip_response",
@@ -90,10 +94,24 @@ export const SuccessState = {
 // including encryption and date setting.
 // </summary>
 export class MessageStamp {
-    constructor(posId, secrets, serverTimeDelta) {
+    constructor(posId, secrets) {
         this.PosId = posId;
         this.Secrets = secrets;
-        this.ServerTimeDelta = serverTimeDelta;
+        this.ConnId = null;
+        this.PosCounter = null;
+    }
+
+    ResetConnection() {
+        this.min = 100;
+        this.max = 99999;
+
+        this.SetConnectionId('');
+        this.PosCounter = Math.floor(Math.random() * (this.max - this.min + 1) + this.min);
+    }
+
+    SetConnectionId(connId) {
+        if (connId !== null)
+            this.ConnId = connId;
     }
 }
 
@@ -148,6 +166,8 @@ export class Message {
         this.EventName = eventName;
         this.Data = data;
         this.DateTimeStamp = '';
+        this.PosCounter = '';
+        this.ConnId = '';
         this.PosId = ''; // Pos_id is set here only for outgoing Un-encrypted messages. 
         this.IncommingHmac = ''; // Sometimes the logic around the incoming message might need access to the sugnature, for example in the key_check.
         this._needsEncryption = needsEncryption; // Denotes whether an outgoing message needs to be encrypted in ToJson()
@@ -168,22 +188,6 @@ export class Message {
 
     GetErrorDetail() {
         return this.Data.error_detail;
-    }
-
-    GetServerTimeDelta()
-    {
-        let now = Date.now();
-        
-        // Stamp format: 2018-04-19T01:42:38.279
-        let dts = this.DateTimeStamp.split(/[\-\+\. :T]/);
-        let msgTime = new Date(
-            // year, month, date
-            dts[0], dts[1] - 1, dts[2],
-            // hour, minute, second, millis
-            dts[3], dts[4], dts[5], dts[6]
-        ).getTime(); // Local time zone
-
-        return msgTime - now;
     }
 
     // Helper method to parse bank date format 20042018 (ddMMyyyy)
@@ -231,6 +235,7 @@ export class Message {
             message.PosId = decryptedMsg.message.pos_id;
             message.IncomingHmac = env.hmac; 
             message.DecryptedJson = decryptedJson;
+            message.ConnId = decryptedMsg.message.conn_id;
 
             return message;
 
@@ -240,20 +245,20 @@ export class Message {
     }
 
     ToJson(stamp) {
-        let now = Date.now();
-        let tzoffset = new Date().getTimezoneOffset() * 60 * 1000;
-        let adjustedTime = new Date(now - tzoffset + stamp.ServerTimeDelta);
-
-        // Format date: "yyyy-MM-ddTHH:mm:ss.fff"
-        this.DateTimeStamp = adjustedTime.toISOString().slice(0,-1);
+        this.DateTimeStamp = new Date().toISOString(),
+        this.PosCounter = stamp.PosCounter++;
+        this.ConnId = stamp.ConnId;
         this.PosId = stamp.PosId;
+
         
         var envelope = {
             message: {
                 id: this.Id,
                 event: this.EventName,
                 data: this.Data,
-                datetime: this.DateTimeStamp
+                datetime: this.DateTimeStamp,
+                pos_counter: this.PosCounter,
+                conn_id: this.ConnId    
             }
         };
 

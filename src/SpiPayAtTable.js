@@ -1,5 +1,15 @@
-import {RequestIdHelper} from './RequestIdHelper';
-import {BillPayment, PayAtTableConfig, PaymentHistoryEntry, BillRetrievalResult, BillStatusResponse} from './PayAtTable';
+import { RequestIdHelper } from './RequestIdHelper';
+import {
+    BillPayment,
+    BillPaymentFlowEndedAckRequest,
+    BillPaymentFlowEndedResponse,
+    BillRetrievalResult,
+    BillStatusResponse,
+    GetOpenTablesResponse,
+    PayAtTableConfig,
+    PaymentHistoryEntry,
+} from './PayAtTable';
+import { SpiStatus } from './SpiModels';
 
 export class SpiPayAtTable
 {  
@@ -41,7 +51,9 @@ export class SpiPayAtTable
 
     PushPayAtTableConfig()
     {
-        this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        if (this._spi.CurrentStatus === SpiStatus.PairedConnected) {
+            this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
+        }
     } 
     
     _handleGetBillDetailsRequest(m)
@@ -128,7 +140,7 @@ export class SpiPayAtTable
         const operatorId = m.Data["operator_id"];
 
         // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        const openTablesResponse = typeof this.GetOpenTables === 'function'
+        let openTablesResponse = typeof this.GetOpenTables === 'function'
             ? this.GetOpenTables(operatorId)
             : null;
         if (!openTablesResponse || !openTablesResponse.TableData || !openTablesResponse.TableData.length)
@@ -143,5 +155,13 @@ export class SpiPayAtTable
     _handleBillPaymentFlowEnded(m)
     {
         this.BillPaymentFlowEnded(m);
+
+        // bill payment flow has ended, we need to respond with an ack
+        if (this._spi.CurrentStatus === SpiStatus.PairedConnected)
+        {
+            const billPaymentFlowEndedResponse = new BillPaymentFlowEndedResponse(m);
+
+            this._spi._send(new BillPaymentFlowEndedAckRequest(billPaymentFlowEndedResponse.BillId).ToMessage());
+        }
     }
 }

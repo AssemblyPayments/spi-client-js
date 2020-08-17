@@ -4,7 +4,7 @@ export const ConnectionState = {
     Connected: 'Connected'
 };
 
-export const SPI_PROTOCOL   = 'spi.2.6.0';
+export const SPI_PROTOCOL   = 'spi.2.8.0';
 
 export class ConnectionStateEventArgs
 {
@@ -21,11 +21,12 @@ export class MessageEventArgs
 }
 
 export class Connection {
-    constructor() {
+    constructor(spi) {
         this.Address    = null;
         this.Connected  = false;
         this.State      = ConnectionState.Disconnected;
         this.SpiProtocol = SPI_PROTOCOL;
+        this._spi       = spi;
         this._ws        = null;
         this._conectionTimeout = null;
 
@@ -64,7 +65,7 @@ export class Connection {
         }
         this._conectionTimeout = setTimeout(timeoutConnectionAttempt, 4000);
 
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connecting)}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connecting)}));
     }
 
     Disconnect() {
@@ -92,7 +93,7 @@ export class Connection {
         this._cancelConnectionTimeout();
         this.State = ConnectionState.Connected;
         this.Connected = true;
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connected)}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Connected)}));
     }
 
     onClosed() {
@@ -102,7 +103,7 @@ export class Connection {
         this.Connected = false;
         this.State = ConnectionState.Disconnected;
         this._ws = null;
-        document.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Disconnected)}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('ConnectionStatusChanged', {detail: new ConnectionStateEventArgs(ConnectionState.Disconnected)}));
     }
 
     pollWebSocketConnection(count = 0) {
@@ -121,11 +122,11 @@ export class Connection {
     }
 
     onMessageReceived(message) {
-        document.dispatchEvent(new CustomEvent('MessageReceived', {detail: new MessageEventArgs(message.data)}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('MessageReceived', {detail: new MessageEventArgs(message.data)}));
     }
 
     onError(err) {
         this._cancelConnectionTimeout();
-        document.dispatchEvent(new CustomEvent('ErrorReceived', {detail: new MessageEventArgs(err)}));
+        this._spi._eventBus.dispatchEvent(new CustomEvent('ErrorReceived', {detail: new MessageEventArgs(err)}));
     }
 }
