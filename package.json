@@ -25,7 +25,7 @@
     "aes-js": "^3.1.2",
     "bn.js": "^5.1.2",
     "jssha": "^3.1.0",
-    "snyk": "^1.360.0"
+    "snyk": "^1.367.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.4",
