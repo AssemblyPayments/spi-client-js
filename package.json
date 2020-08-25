@@ -10,7 +10,7 @@
     "test": "karma start",
     "transpile": "babel src --out-file ./dist/spi-client-js.js",
     "snyk-protect": "snyk protect",
-    "prepare": "npm run snyk-protect"
+    "postinstall": "npm run snyk-protect"
   },
   "repository": {
     "type": "git",
