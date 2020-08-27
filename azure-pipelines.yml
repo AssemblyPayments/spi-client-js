@@ -16,45 +16,79 @@ trigger:
 
 variables:
   - group: global-variables
+  - name: ARTIFACT_NAME
+    value: spi-client-js
   - name: BRANCH_NAME
     value: $[variables['Build.SourceBranch']]
 
-jobs:
-- job: build
+stages:
+- stage: build
   displayName: 'Build'
-  steps:
-  - task: Npm@1
-    displayName: "Install dependencies"
-    inputs:
-      command: 'install'
+  jobs:
+  - job: build
+    cancelTimeoutInMinutes: 5
+    displayName: 'Build'
+    steps:
+    - task: Npm@1
+      displayName: "Install dependencies"
+      inputs:
+        command: 'install'
 
-  - task: Npm@1
-    displayName: "Build"
-    inputs:
-      command: 'custom'
-      customCommand: 'run build'
+    - task: Npm@1
+      displayName: "Build"
+      inputs:
+        command: 'custom'
+        customCommand: 'run build'
 
-  - task: Npm@1
-    displayName: "Test"
-    inputs:
-      command: 'custom'
-      customCommand: 'test'
+    - task: Npm@1
+      displayName: "Test"
+      inputs:
+        command: 'custom'
+        customCommand: 'test'
 
-  - script: |
-      npm install codecov
-      ./node_modules/.bin/codecov
-    condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'master'))
-    displayName: 'Upload coverage report'
-    env:
-      CODECOV_TOKEN: $(codecovToken)
+    - script: |
+        npm install codecov
+        ./node_modules/.bin/codecov
+      condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'master'))
+      displayName: 'Upload coverage report'
+      env:
+        CODECOV_TOKEN: $(codecovToken)
+      timeoutInMinutes: 5
 
-  - bash: ./deploy-check.sh $(echo ${BRANCH_NAME/refs\/tags\//})
-    condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
-    displayName: 'Check package version matches tag'
-    failOnStderr: true
+    - bash: ./deploy-check.sh $(echo ${BRANCH_NAME/refs\/tags\//})
+      condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
+      displayName: 'Check package version matches tag'
+      failOnStderr: true
 
-  - publish: $(System.DefaultWorkingDirectory)
-    condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
-    artifact: spi-client-js
+    - publish: $(System.DefaultWorkingDirectory)
+      artifact: $(ARTIFACT_NAME)
+      condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
+      displayName: 'Publish Arfifact'
 
-# Note that the release pipeline contains the deployment steps to npm
+- stage: deploy
+  condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
+  dependsOn: build
+  displayName: 'Deploy'
+  jobs:
+  - deployment:
+    cancelTimeoutInMinutes: 5
+    displayName: 'Deploy'
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Npm@1
+            displayName: "Install dependencies"
+            inputs:
+              command: 'install'
+              workingDir: '$(Agent.BuildDirectory)/$(ARTIFACT_NAME)'
+
+          - task: Npm@1
+            displayName: "Publish"
+            inputs:
+              command: 'publish'
+              publishEndpoint: npm
+              verbose: true
+              workingDir: '$(Agent.BuildDirectory)/$(ARTIFACT_NAME)'
+
