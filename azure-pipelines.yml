@@ -23,25 +23,25 @@ variables:
 
 stages:
 - stage: build
-  displayName: 'Build'
+  displayName: Build
   jobs:
   - job: build
     cancelTimeoutInMinutes: 5
-    displayName: 'Build'
+    displayName: Build
     steps:
     - task: Npm@1
-      displayName: "Install dependencies"
+      displayName: Install dependencies
       inputs:
         command: 'install'
 
     - task: Npm@1
-      displayName: "Build"
+      displayName: Build
       inputs:
         command: 'custom'
         customCommand: 'run build'
 
     - task: Npm@1
-      displayName: "Test"
+      displayName: Test
       inputs:
         command: 'custom'
         customCommand: 'test'
@@ -50,42 +50,42 @@ stages:
         npm install codecov
         ./node_modules/.bin/codecov
       condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'master'))
-      displayName: 'Upload coverage report'
+      displayName: Upload coverage report
       env:
         CODECOV_TOKEN: $(codecovToken)
       timeoutInMinutes: 5
 
     - bash: ./deploy-check.sh $(echo ${BRANCH_NAME/refs\/tags\//})
       condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
-      displayName: 'Check package version matches tag'
+      displayName: Check package version matches tag
       failOnStderr: true
 
     - publish: $(System.DefaultWorkingDirectory)
       artifact: $(ARTIFACT_NAME)
       condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
-      displayName: 'Publish Arfifact'
+      displayName: Publish Arfifact
 
 - stage: deploy
   condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
   dependsOn: build
-  displayName: 'Deploy'
+  displayName: Deploy
   jobs:
   - deployment:
     cancelTimeoutInMinutes: 5
-    displayName: 'Deploy'
+    displayName: Deploy
     environment: production
     strategy:
       runOnce:
         deploy:
           steps:
           - task: Npm@1
-            displayName: "Install dependencies"
+            displayName: Install dependencies
             inputs:
               command: 'install'
               workingDir: '$(Agent.BuildDirectory)/$(ARTIFACT_NAME)'
 
           - task: Npm@1
-            displayName: "Publish"
+            displayName: Publish
             inputs:
               command: 'publish'
               publishEndpoint: npm
