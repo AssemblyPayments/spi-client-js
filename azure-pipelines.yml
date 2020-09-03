@@ -62,6 +62,7 @@ stages:
       inputs:
         codeCoverageTool: cobertura
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/coverage'
 
     - script: |
         npm install codecov
