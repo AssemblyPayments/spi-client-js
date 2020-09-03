@@ -55,7 +55,7 @@ stages:
       condition: succeededOrFailed()
       inputs:
         testRunner: JUnit
-        testResultsFiles: '**/cobertura.xml'
+        testResultsFiles: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
 
     - script: |
         npm install codecov
