@@ -47,7 +47,7 @@ stages:
         customCommand: 'test'
 
     - script: dir
-      workingDirectory: $(System.DefaultWorkingDirectory)/coverage/Chrome
+      workingDirectory: $(System.DefaultWorkingDirectory)/coverage
       displayName: List contents of a folder
     
     - task: PublishTestResults@2
