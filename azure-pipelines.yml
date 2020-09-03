@@ -50,6 +50,12 @@ stages:
       workingDirectory: $(System.DefaultWorkingDirectory)/coverage
       displayName: List contents of a folder
     
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testRunner: JUnit
+        testResultsFiles: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
+
     - task: PublishCodeCoverageResults@1
       displayName: "Publish test results"
       condition: succeededOrFailed()
