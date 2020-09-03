@@ -50,12 +50,13 @@ stages:
       workingDirectory: $(System.DefaultWorkingDirectory)/coverage
       displayName: List contents of a folder
     
-    - task: PublishTestResults@2
+    - task: PublishCodeCoverageResults@1
       displayName: "Publish test results"
       condition: succeededOrFailed()
       inputs:
-        testRunner: JUnit
-        testResultsFiles: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
+        #testRunner: JUnit
+        #testResultsFiles: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
 
     - script: |
         npm install codecov
