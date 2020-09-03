@@ -46,10 +46,12 @@ module.exports = function (config) {
             './tests/fixtures/**/*.json'
         ],
 
-        plugins: [
+        // plugins: [
         //     'karma-json-fixtures-preprocessor'
-               'karma-junit-reporter'
-        ],
+        // ],
+        // plugins: [
+        //     require('karma-junit-reporter')
+        // ],
 
         // list of files to exclude
         exclude: [
@@ -86,16 +88,11 @@ module.exports = function (config) {
             stripPrefix: 'tests/fixtures/'
         },
 
-        junitReporter: {
-            outputDir: 'testresults/junit',
-            outputFile: 'result.xml',
-            useBrowserName: false
-         },
-
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ['progress', 'coverage', 'kjhtml', 'junit'],
+        // reporters: ['progress', 'coverage'],
+        reporters: ['progress', 'coverage', 'junit'],
 
         // code coverage reporter
         coverageReporter: {
