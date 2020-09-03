@@ -47,9 +47,14 @@ stages:
         customCommand: 'test'
 
     - script: dir
-      workingDirectory: $(Agent.BuildDirectory)/TestResults
+      workingDirectory: $(Agent.BuildDirectory)
       displayName: List contents of a folder
 
+
+    - script: dir
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      displayName: List contents of a folder
+    
     - task: PublishTestResults@2
       displayName: "Publish test results"
       condition: succeededOrFailed()
