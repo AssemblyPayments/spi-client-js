@@ -47,12 +47,7 @@ stages:
         customCommand: 'test'
 
     - script: dir
-      workingDirectory: $(Agent.BuildDirectory)
-      displayName: List contents of a folder
-
-
-    - script: dir
-      workingDirectory: $(System.DefaultWorkingDirectory)
+      workingDirectory: $(System.DefaultWorkingDirectory)/Coverage
       displayName: List contents of a folder
     
     - task: PublishTestResults@2
