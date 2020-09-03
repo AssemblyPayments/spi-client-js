@@ -57,12 +57,12 @@ stages:
         testResultsFiles: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
 
     - task: PublishCodeCoverageResults@1
-      displayName: "Publish test results"
+      displayName: "Publish code coverage"
       condition: succeededOrFailed()
       inputs:
         codeCoverageTool: cobertura
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
-        reportDirectory: '$(System.DefaultWorkingDirectory)/**/coverage'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/coverage'
 
     - script: |
         npm install codecov
