@@ -89,7 +89,7 @@ module.exports = function (config) {
         },
 
         junitReporter: {
-            outputDir: 'testresults/junit',
+            outputDir: 'test/junit',
             outputFile: 'result.xml',
             useBrowserName: false
          },
