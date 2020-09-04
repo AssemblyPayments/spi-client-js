@@ -55,7 +55,7 @@ stages:
       condition: succeededOrFailed()
       inputs:
         testResultsFormat: 'JUnit'
-        testResultsFiles: '**/testresults/junit/result.xml'
+        testResultsFiles: '**/test/junit/result.xml'
 
 
     - task: PublishCodeCoverageResults@1
