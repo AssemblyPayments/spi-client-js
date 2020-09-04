@@ -46,14 +46,20 @@ stages:
         command: 'custom'
         customCommand: 'test'
 
-    - script: |
-        npm install codecov
-        ./node_modules/.bin/codecov
-      condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'master'))
-      displayName: Upload coverage report
-      env:
-        CODECOV_TOKEN: $(codecovToken)
-      timeoutInMinutes: 5
+    - task: PublishTestResults@2
+      displayName: 'publish unit test results'    
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test/junit/result.xml'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: "Publish code coverage results"
+      condition: succeededOrFailed()
+      inputs:
+        codeCoverageTool: cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/coverage'
 
     - bash: ./deploy-check.sh $(echo ${BRANCH_NAME/refs\/tags\//})
       condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))

@@ -85,15 +85,22 @@ module.exports = function (config) {
             stripPrefix: 'tests/fixtures/'
         },
 
+        junitReporter: {
+            outputDir: 'test/junit',
+            outputFile: 'result.xml',
+            useBrowserName: false
+         },
+         
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ['progress', 'coverage'],
+        reporters: ['progress', 'coverage', 'junit'],
 
         // code coverage reporter
         coverageReporter: {
             dir: 'coverage',
             reporters: [
+                { type: 'cobertura', subdir: '.', file: 'cobertura.xml' },
                 { type: 'json', subdir: '.' },
                 { type: 'lcov', subdir: '.' },
                 { type: 'text' },
