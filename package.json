@@ -9,8 +9,10 @@
     "build:dev": "webpack",
     "test": "karma start",
     "transpile": "babel src --out-file ./dist/spi-client-js.js",
-    "snyk-protect": "snyk protect",
-    "prepare": "npm run snyk-protect"
+    "prepare": "npm run snyk-protect",
+    "snyk-auth": "snyk auth",
+    "snyk-monitor": "snyk monitor",
+    "snyk-protect": "snyk protect"
   },
   "repository": {
     "type": "git",

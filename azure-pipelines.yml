@@ -47,7 +47,7 @@ stages:
         customCommand: 'test'
 
     - task: PublishTestResults@2
-      displayName: 'publish unit test results'    
+      displayName: Publish unit test results
       condition: succeededOrFailed()
       inputs:
         testResultsFormat: 'JUnit'
@@ -60,6 +60,16 @@ stages:
         codeCoverageTool: cobertura
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/cobertura.xml'
         reportDirectory: '$(System.DefaultWorkingDirectory)/coverage'
+
+    - bash: |
+        npm run snyk-auth $SNYK_TOKEN
+        npm run snyk-monitor
+      condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/heads/master'))
+      displayName: Check solution for vulnerabilities
+      env:
+        SNYK_TOKEN: $(snykToken)
+      failOnStderr: true
+      timeoutInMinutes: 5
 
     - bash: ./deploy-check.sh $(echo ${BRANCH_NAME/refs\/tags\//})
       condition: and(succeeded(), contains(variables['BRANCH_NAME'], 'refs/tags/'))
@@ -97,4 +107,3 @@ stages:
               publishEndpoint: npm
               verbose: true
               workingDir: '$(Agent.BuildDirectory)/$(ARTIFACT_NAME)'
-
