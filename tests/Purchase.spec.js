@@ -1,7 +1,7 @@
 import {Message, Events, MessageStamp} from '../src/Messages';
 import {Secrets} from '../src/Secrets';
 import {RequestIdHelper} from '../src/RequestIdHelper';
-import {CancelTransactionResponse} from '../src/Purchase';
+import {CancelTransactionResponse, PurchaseRequest} from '../src/Purchase';
 import {PurchaseHelper} from '../src/PurchaseHelper';
 import {SpiClientUtils} from './utils/SpiClientUtils';
 
@@ -32,6 +32,28 @@ describe('Purchase', function() {
 
     });
 
+    it('should create an amount summary for a purchase request', function() {
+        const purchaseRequest = new PurchaseRequest(100, '123456');
+
+        expect(purchaseRequest.AmountSummary()).toBe('Purchase: 1.00; Tip: 0.00; Cashout: 0.00;');
+    });
+
+    it('should create an amount summary for a purchase request with a tip', function() {
+        const purchaseRequest = new PurchaseRequest(100, '123456');
+        purchaseRequest.TipAmount = 100;
+
+        expect(purchaseRequest.AmountSummary()).toBe('Purchase: 1.00; Tip: 1.00; Cashout: 0.00;');
+    });
+
+    it('should create an amount summary for a purchase request with a cash out', function() {
+        const purchaseRequest = new PurchaseRequest(100, '123456');
+        purchaseRequest.CashoutAmount = 100;
+
+        expect(purchaseRequest.AmountSummary()).toBe('Purchase: 1.00; Tip: 0.00; Cashout: 1.00;');
+    });
+});
+
+describe('CancelTransactionResponse', function() {
     it('should correctly identify and handle trying to cancel a transaction past the point of no return', () => {
         // arrange
         var secrets = SpiClientUtils.SetTestSecrets();

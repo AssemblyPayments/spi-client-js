@@ -20,9 +20,9 @@ export class PurchaseRequest {
 
     AmountSummary()
     {
-        const purchaseAmount = (this.PurchaseAmount || 0 / 100.0).toFixed(2);
-        const tipAmount = (this.TipAmount || 0 / 100.0).toFixed(2);
-        const cashoutAmount = (this.CashoutAmount || 0 / 100.0).toFixed(2);
+        const purchaseAmount = ((this.PurchaseAmount || 0) / 100.0).toFixed(2);
+        const tipAmount = ((this.TipAmount || 0) / 100.0).toFixed(2);
+        const cashoutAmount = ((this.CashoutAmount || 0) / 100.0).toFixed(2);
 
         return `Purchase: ${purchaseAmount}; Tip: ${tipAmount}; Cashout: ${cashoutAmount};`;
     }
