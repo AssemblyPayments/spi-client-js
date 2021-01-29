@@ -19,13 +19,14 @@ import {DeviceHelper} from './DeviceHelper';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {ReversalRequest} from './Reversal';
+import {TenantsService} from './Service/TenantsService';
 import {TerminalHelper} from './TerminalHelper';
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './TerminalConfiguration';
 import {TransactionReportHelper} from "./TransactionReportHelper";
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.8.0';
+const SPI_VERSION = '2.8.2';
 
 class Spi {
 
@@ -1040,6 +1041,25 @@ class Spi {
     {
         if (this.CurrentStatus === SpiStatus.PairedConnected) {
             this._send(new PrintingRequest(key, payload).toMessage());
+        }
+    }
+
+    async GetAvailableTenants(apiKey, countryCode, posVendorId) {
+        try
+        {
+            const { data } = await TenantsService.RetrieveTenantsList(apiKey, countryCode, posVendorId);
+            return {
+                data,
+                success: true
+            }
+        } 
+        catch (error)
+        {
+            this._log.warn("An error occurred communicating with the tenant list service", error);
+            return {
+                data: [],
+                success: false,
+            }
         }
     }
 

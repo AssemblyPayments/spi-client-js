@@ -13,7 +13,7 @@ describe("Spi,", () => {
   const eftposAddress = "10.20.30.40";
   const posId = "DummyPos";
   const posVendorId = "mx51";
-  const posVersion = "2.8.0";
+  const posVersion = "2.8.2";
   const serialNumber = "321-321-321";
   let fetchHelper;
 
@@ -441,6 +441,45 @@ describe("Spi,", () => {
       expect(spi._send).toHaveBeenCalledWith(
         jasmine.objectContaining({ EventName: "get_terminal_status" })
       );
+    });
+  });
+
+  describe("GetAvailableTenants()", () => {
+    it("should return the available tenants", async () => {
+      // arrange
+      const spi = new Spi(posId, "", eftposAddress, null);
+      fetchHelper.resolve({
+        json: () =>
+          Promise.resolve({
+            data: [
+              {
+                code: "gko",
+                name: "Gecko Demo Bank",
+              },
+            ],
+          }),
+      }); // Mock the response from ReportTx
+
+      // act
+      const tenants = await spi.GetAvailableTenants();
+
+      // assert
+      expect(tenants.success).toBeTrue();
+      expect(tenants.data[0].code).toBe("gko");
+    });
+
+    it("should return empty data when request fails", async () => {
+      const spi = new Spi(posId, "", eftposAddress, null);
+      fetchHelper.resolve({
+        json: () => Promise.reject({}),
+      }); // Mock the response from ReportTx
+
+      // act
+      const tenants = await spi.GetAvailableTenants();
+
+      // assert
+      expect(tenants.success).toBeFalse();
+      expect(tenants.data.length).toBe(0);
     });
   });
 
