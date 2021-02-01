@@ -22,9 +22,9 @@ describe("TenantsService", () => {
 
     // act
     const response = await TenantsService.RetrieveTenantsList(
+      posVendorId,
       apiKey,
       countryCode,
-      posVendorId
     );
 
     // assert
@@ -38,6 +38,7 @@ describe("TenantsService", () => {
     // arrange
     const apiKey = "spi-sample-pos";
     const countryCode = "AU";
+    const posVendorId = "spi-sample-pos";
     fetchHelper.resolve({
       ok: false,
       json: () => Promise.reject({}),
@@ -48,8 +49,9 @@ describe("TenantsService", () => {
 
     try {
       await TenantsService.RetrieveTenantsList(
+        posVendorId,
         apiKey,
-        countryCode
+        countryCode,
       );
     } catch (error) {
       errorReturned = error;

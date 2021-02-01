@@ -1,5 +1,5 @@
 export class TenantsService {
-  static async RetrieveTenantsList(apiKey, countryCode, posVendorId) {
+  static async RetrieveTenantsList(posVendorId, apiKey, countryCode) {
     const tenantsServiceUri = `https://spi.integration.mspenv.io/tenants?country-code=${countryCode}&pos-vendor-id=${posVendorId}&apikey=${apiKey}`;
 
     const response = await fetch(tenantsServiceUri);

@@ -461,11 +461,10 @@ describe("Spi,", () => {
       }); // Mock the response from ReportTx
 
       // act
-      const tenants = await spi.GetAvailableTenants();
+      const tenants = await Spi.GetAvailableTenants();
 
       // assert
-      expect(tenants.success).toBeTrue();
-      expect(tenants.data[0].code).toBe("gko");
+      expect(tenants.Data[0].code).toBe("gko");
     });
 
     it("should return empty data when request fails", async () => {
@@ -475,11 +474,10 @@ describe("Spi,", () => {
       }); // Mock the response from ReportTx
 
       // act
-      const tenants = await spi.GetAvailableTenants();
+      const tenants = await Spi.GetAvailableTenants();
 
       // assert
-      expect(tenants.success).toBeFalse();
-      expect(tenants.data.length).toBe(0);
+      expect(tenants.Data.length).toBe(0);
     });
   });
 

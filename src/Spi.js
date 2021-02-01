@@ -1044,22 +1044,21 @@ class Spi {
         }
     }
 
-    async GetAvailableTenants(apiKey, countryCode, posVendorId) {
+    /// <summary>
+    /// Static call to retrieve the available tenants (payment providers) for mx51. This is used to display the payment providers available in your Simple Payments Integration setup.
+    /// </summary>
+    /// <param name="posVendorId">This is the POS identifier, same as the one you provided in SetPosInfo() method</param>
+    /// <param name="countryCode">2 digit ISO Country code, eg. AU</param>
+    /// <param name="apiKey">ApiKey provided by mx51</param>
+    static async GetAvailableTenants(posVendorId, apiKey, countryCode) {
         try
         {
-            const { data } = await TenantsService.RetrieveTenantsList(apiKey, countryCode, posVendorId);
-            return {
-                data,
-                success: true
-            }
+            const { data: Data } = await TenantsService.RetrieveTenantsList(posVendorId, apiKey, countryCode);
+            return { Data };
         } 
         catch (error)
         {
-            this._log.warn("An error occurred communicating with the tenant list service", error);
-            return {
-                data: [],
-                success: false,
-            }
+            return { Data: [] };
         }
     }
 
