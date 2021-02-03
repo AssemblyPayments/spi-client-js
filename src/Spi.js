@@ -19,13 +19,14 @@ import {DeviceHelper} from './DeviceHelper';
 import {DeviceAddressService, DeviceAddressStatus, DeviceAddressResponseCode, HttpStatusCode} from './Service/DeviceService';
 import {PrintingRequest} from './Printing';
 import {ReversalRequest} from './Reversal';
+import {TenantsService} from './Service/TenantsService';
 import {TerminalHelper} from './TerminalHelper';
 import {TerminalStatusRequest} from './TerminalStatus';
 import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './TerminalConfiguration';
 import {TransactionReportHelper} from "./TransactionReportHelper";
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.8.0';
+const SPI_VERSION = '2.8.2';
 
 class Spi {
 
@@ -1040,6 +1041,24 @@ class Spi {
     {
         if (this.CurrentStatus === SpiStatus.PairedConnected) {
             this._send(new PrintingRequest(key, payload).toMessage());
+        }
+    }
+
+    /// <summary>
+    /// Static call to retrieve the available tenants (payment providers) for mx51. This is used to display the payment providers available in your Simple Payments Integration setup.
+    /// </summary>
+    /// <param name="posVendorId">This is the POS identifier, same as the one you provided in SetPosInfo() method</param>
+    /// <param name="countryCode">2 digit ISO Country code, eg. AU</param>
+    /// <param name="apiKey">ApiKey provided by mx51</param>
+    static async GetAvailableTenants(posVendorId, apiKey, countryCode) {
+        try
+        {
+            const { data: Data } = await TenantsService.RetrieveTenantsList(posVendorId, apiKey, countryCode);
+            return { Data };
+        } 
+        catch (error)
+        {
+            return { Data: [] };
         }
     }
 
