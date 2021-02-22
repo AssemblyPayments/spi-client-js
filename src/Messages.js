@@ -258,14 +258,11 @@ export class Message {
                 data: this.Data,
                 datetime: this.DateTimeStamp,
                 pos_counter: this.PosCounter,
+                pos_id: this.PosId,
                 conn_id: this.ConnId    
             }
         };
 
-        if (!this._needsEncryption) {
-            // Unencrypted Messages need PosID inside the message
-            envelope.message.pos_id = this.PosId
-        }
         this.DecryptedJson = JSON.stringify(envelope);
 
         if (!this._needsEncryption) {
