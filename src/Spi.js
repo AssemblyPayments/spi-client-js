@@ -26,7 +26,7 @@ import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './Ter
 import {TransactionReportHelper} from "./TransactionReportHelper";
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.8.2';
+const SPI_VERSION = '3.0.0';
 
 class Spi {
 
