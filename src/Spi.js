@@ -521,7 +521,7 @@ class Spi {
     // <param name="options">The Setting to set Header and Footer for the Receipt</param>
     // <param name="surchargeAmount">The Surcharge Amount in Cents</param>
     // <returns>InitiateTxResult</returns>
-    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = new TransactionOptions(), surchargeAmount = 0)
+    InitiatePurchaseTxV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, options = new TransactionOptions(), surchargeAmount = 0, promptForTip = true)
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return new InitiateTxResult(false, "Not Paired");
 
@@ -541,10 +541,10 @@ class Spi {
         if (this.CurrentFlow != SpiFlow.Idle) return new InitiateTxResult(false, "Not Idle");
         this.CurrentFlow = SpiFlow.Transaction;
         
-        var purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, cashoutAmount, promptForCashout, surchargeAmount);
+        const purchase = PurchaseHelper.CreatePurchaseRequestV2(posRefId, purchaseAmount, tipAmount, promptForTip, cashoutAmount, promptForCashout, surchargeAmount);
         purchase.Config = this.Config;
         purchase.Options = transactionOptions;
-        var purchaseMsg = purchase.ToMessage();
+        const purchaseMsg = purchase.ToMessage();
         this.CurrentTxFlowState = new TransactionFlowState(
             posRefId, TransactionType.Purchase, purchaseAmount, purchaseMsg,
             `Waiting for EFTPOS connection to make payment request. ${purchase.AmountSummary()}`);

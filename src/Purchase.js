@@ -9,6 +9,7 @@ export class PurchaseRequest {
         this.TipAmount = 0;
         this.CashoutAmount = 0;
         this.PromptForCashout = false;
+        this.PromptForTip = true;
         this.SurchargeAmount = 0;
         this.Config = new SpiConfig();
         this.Options = new TransactionOptions();
@@ -34,6 +35,7 @@ export class PurchaseRequest {
             tip_amount: this.TipAmount,
             cash_amount: this.CashoutAmount,
             prompt_for_cashout: this.PromptForCashout, 
+            prompt_for_tip: this.PromptForTip,
             surcharge_amount: this.SurchargeAmount
         };
 
