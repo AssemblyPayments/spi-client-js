@@ -65,10 +65,11 @@ class Spi {
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets);
 
+        this._hasSetInfo = null;
         this._posVendorId = null;
         this._posVersion = null;
-        this._hasSetInfo = null;
         this._libraryLanguage = "js";
+        this._spiceVersion = null;
 
         this._transactionReport = new TransactionReport();
 
@@ -335,6 +336,16 @@ class Spi {
     {
         this._posVendorId = posVendorId;
         this._posVersion = posVersion;
+    }
+
+    ResendPosInfo()
+    {
+        this._callSetPosInfo();
+    }
+
+    SetSpiceInfo(spiceVersion)
+    {
+        this._spiceVersion = spiceVersion;
     }
 
     // <summary>
@@ -1994,7 +2005,7 @@ class Spi {
 
     _callSetPosInfo()
     {
-        const setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, this._libraryLanguage, SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
+        const setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, this._spiceVersion, this._libraryLanguage, SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
         this._send(setPosInfoRequest.toMessage());
     }
 
