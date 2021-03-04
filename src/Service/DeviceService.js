@@ -55,11 +55,11 @@ export const HttpStatusCode =
 
 export class DeviceAddressService
 {
-    async RetrieveDeviceAddress(serialNumber, apiKey = 'spi-sample-pos1', acquirerCode, isSecureConnection, isTestMode)
+    async RetrieveDeviceAddress(serialNumber, apiKey = 'spi-sample-pos1', tenantCode, isSecureConnection, isTestMode)
     {
         const CONNECTION_TIMEOUT = 8000;
         const path = isSecureConnection ? 'fqdn' : 'ip';
-        const deviceAddressUri = isTestMode ? `https://device-address-api-sb.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}` : `https://device-address-api.${acquirerCode}.mspenv.io/v1/${serialNumber}/${path}`;
+        const deviceAddressUri = isTestMode ? `https://device-address-api-sb.${tenantCode}.mspenv.io/v1/${serialNumber}/${path}` : `https://device-address-api.${tenantCode}.mspenv.io/v1/${serialNumber}/${path}`;
 
         return Promise.race([
             fetch(deviceAddressUri, {

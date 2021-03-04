@@ -57,7 +57,7 @@ class Spi {
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
-        this._acquirerCode  = null;
+        this._tenantCode  = null;
         this._terminalModel = null;
         this._inTestMode    = false;
         this._autoAddressResolutionEnabled = this._isSecureConnection();
@@ -186,7 +186,12 @@ class Spi {
     /// </summary>
     SetAcquirerCode(acquirerCode)
     {
-        this._acquirerCode = acquirerCode;
+        this.SetTenantCode(acquirerCode);
+    }
+
+    SetTenantCode(tenantCode)
+    {
+        this._tenantCode = tenantCode;
         return true;
     }
 
@@ -1098,7 +1103,7 @@ class Spi {
         let deviceAddressStatus;
         try
         {
-            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._isSecureConnection(), this._inTestMode);
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._tenantCode, this._isSecureConnection(), this._inTestMode);
             const addressResponseJson = await addressResponse.json();
             deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
                 {
@@ -2299,7 +2304,7 @@ class Spi {
 
         try
         {
-            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._tenantCode, isSecureConnection, this._inTestMode);
             const addressResponseJson = await addressResponse.json();
             deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
                 {
@@ -2374,7 +2379,7 @@ class Spi {
         transactionReport.SerialNumber = this._serialNumber;
 
         try {
-            await AnalyticsService.ReportTransaction(transactionReport, this._deviceApiKey, this._acquirerCode, this._inTestMode);
+            await AnalyticsService.ReportTransaction(transactionReport, this._deviceApiKey, this._tenantCode, this._inTestMode);
         } catch (error) {
             this._log.error(error);
             this._log.warn("Error reporting to analytics service.");
