@@ -109,7 +109,7 @@ export class SpiPayAtTable
             var updatedBillData = BillStatusResponse.ToBillData(updatedHistoryEntries);
 
             // Advise POS of new payment against this bill, and the updated BillData to Save.
-            Promise.resolve(this.BillPaymentReceived(billPayment, updatedBillData)).then(updatedBillStatus => {
+            return Promise.resolve(this.BillPaymentReceived(billPayment, updatedBillData)).then(updatedBillStatus => {
 
                 // Just in case client forgot to set these:
                 updatedBillStatus.BillId = billPayment.BillId;
@@ -144,7 +144,8 @@ export class SpiPayAtTable
           ? this.GetOpenTables(operatorId)
           : null;
 
-      Promise.resolve(openTables).then(openTablesResponse => {
+      // return the promise so tests can wait on it.
+      return Promise.resolve(openTables).then(openTablesResponse => {
         if (!openTablesResponse || !openTablesResponse.TableData || !openTablesResponse.TableData.length)
         {
             openTablesResponse = new GetOpenTablesResponse();
@@ -157,7 +158,8 @@ export class SpiPayAtTable
 
     _handleBillPaymentFlowEnded(m)
     {
-      Promise.resolve(this.BillPaymentFlowEnded(m), () => {
+      // return the promise so tests can wait on it.
+      return Promise.resolve(this.BillPaymentFlowEnded(m)).then(() => {
         // bill payment flow has ended, we need to respond with an ack
         if (this._spi.CurrentStatus === SpiStatus.PairedConnected)
         {
