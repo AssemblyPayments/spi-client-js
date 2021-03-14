@@ -182,13 +182,16 @@ class Spi {
     }
 
     /// <summary>
-    /// Set the acquirer code of your bank, please contact mx51's Integration Engineers for acquirer code.
+    /// Deprecated, please use SetTenantCode(tenantCode)
     /// </summary>
     SetAcquirerCode(acquirerCode)
     {
         this.SetTenantCode(acquirerCode);
     }
 
+    /// <summary>
+    /// Set the tenant code of your provider, please use the GetAvailableTenants method for a list of available tenants.
+    /// </summary>
     SetTenantCode(tenantCode)
     {
         this._tenantCode = tenantCode;
