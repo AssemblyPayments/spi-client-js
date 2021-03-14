@@ -26,7 +26,7 @@ describe('MessagesTest', function() {
     it('should parse unencrypted message', function() {
 
         var mockKeyRequest = JSON.stringify(__fixtures__['KeyRequest']);
-        var incomingMessage = Message.FromJson(mockKeyRequest, null);
+        var incomingMessage = Message.FromJson(mockKeyRequest, {});
         
         expect(incomingMessage.EventName).toEqual('key_request');
     });
