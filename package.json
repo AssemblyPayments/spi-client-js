@@ -44,6 +44,7 @@
     "karma-jasmine": "^4.0.1",
     "karma-json-fixtures-preprocessor": "0.0.6",
     "karma-junit-reporter": "2.0.1",
+    "karma-sourcemap-loader": "^0.3.8",
     "karma-webpack": "^4.0.2",
     "snyk": "^1.467.0",
     "webpack": "^4.46.0",
