@@ -12,7 +12,7 @@ import {
 import { SpiStatus } from './SpiModels';
 
 export class SpiPayAtTable
-{  
+{
     constructor(spi)
     {
         this._spi = spi;
@@ -22,7 +22,7 @@ export class SpiPayAtTable
     }
 
     // <summary>
-    // This delegate will be called when the Eftpos needs to know the current state of a bill for a table. 
+    // This delegate will be called when the Eftpos needs to know the current state of a bill for a table.
     // <para />
     // Parameters:<para />
     // billId - The unique identifier of the bill. If empty, it means that the PayAtTable flow on the Eftpos is just starting, and the lookup is by tableId.<para />
@@ -54,10 +54,10 @@ export class SpiPayAtTable
         if (this._spi.CurrentStatus === SpiStatus.PairedConnected) {
             this._spi._send(this.Config.ToMessage(RequestIdHelper.Id("patconf")));
         }
-    } 
-    
+    }
+
     _handleGetBillDetailsRequest(m)
-    {
+  {
         var operatorId = m.Data["operator_id"];
         var tableId = m.Data["table_id"];
         var paymentFlowStarted = m.Data["payment_flow_started"];
@@ -70,15 +70,15 @@ export class SpiPayAtTable
               this._log.info("Table has 0 total amount. not sending it to eftpos.");
               billStatus.Result = BillRetrievalResult.INVALID_TABLE_ID;
             }
-        
+
             this._spi._send(billStatus.ToMessage(m.Id));
-        })
+        });
     }
 
     _handleBillPaymentAdvice(m)
     {
         var billPayment = new BillPayment(m);
-        
+
         // Ask POS for Bill Details, inluding encoded PaymentData
         return Promise.resolve(this.GetBillStatus(billPayment.BillId, billPayment.TableId, billPayment.OperatorId, billPayment.PaymentFlowStarted)).then(existingBillStatus => {
             if (existingBillStatus.Result != BillRetrievalResult.SUCCESS)
@@ -86,9 +86,9 @@ export class SpiPayAtTable
                 this._log.warn("Could not retrieve Bill Status for Payment Advice. Sending Error to Eftpos.");
                 this._spi._send(existingBillStatus.ToMessage(m.Id));
             }
-                        
+
             var existingPaymentHistory = existingBillStatus.getBillPaymentHistory();
-   
+
             var foundExistingEntry = existingPaymentHistory.find(phe => phe.GetTerminalRefId() == billPayment.PurchaseResponse.GetTerminalReferenceId());
             if (foundExistingEntry)
             {
@@ -105,11 +105,11 @@ export class SpiPayAtTable
             updatedHistoryEntries.push(
                 new PaymentHistoryEntry(billPayment.PaymentType.toLowerCase(), billPayment.PurchaseResponse.ToPaymentSummary())
             );
-            
+
             var updatedBillData = BillStatusResponse.ToBillData(updatedHistoryEntries);
 
             // Advise POS of new payment against this bill, and the updated BillData to Save.
-            Promise.resolve(this.BillPaymentReceived(billPayment, updatedBillData)).then(updatedBillStatus => {
+            return Promise.resolve(this.BillPaymentReceived(billPayment, updatedBillData)).then(updatedBillStatus => {
 
                 // Just in case client forgot to set these:
                 updatedBillStatus.BillId = billPayment.BillId;
@@ -124,12 +124,12 @@ export class SpiPayAtTable
                 {
                   updatedBillStatus.BillData = updatedBillData;
                 }
-    
+
                 this._spi._send(updatedBillStatus.ToMessage(m.Id));
-            })
-        })
+            });
+        });
     }
-    
+
     _handleGetTableConfig(m)
     {
         this._spi._send(this.Config.ToMessage(m.Id));
@@ -137,12 +137,15 @@ export class SpiPayAtTable
 
     _handleGetOpenTablesRequest(m)
     {
-        const operatorId = m.Data["operator_id"];
+      const operatorId = m.Data["operator_id"];
 
-        // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
-        let openTablesResponse = typeof this.GetOpenTables === 'function'
-            ? this.GetOpenTables(operatorId)
-            : null;
+      // Ask POS for Bill Details for this tableId, inluding encoded PaymentData
+      const openTables = typeof this.GetOpenTables === 'function'
+          ? this.GetOpenTables(operatorId)
+          : null;
+
+      // return the promise so tests can wait on it.
+      return Promise.resolve(openTables).then(openTablesResponse => {
         if (!openTablesResponse || !openTablesResponse.TableData || !openTablesResponse.TableData.length)
         {
             openTablesResponse = new GetOpenTablesResponse();
@@ -150,12 +153,13 @@ export class SpiPayAtTable
         }
 
         this._spi._send(openTablesResponse.ToMessage(m.Id));
+      });
     }
 
     _handleBillPaymentFlowEnded(m)
     {
-        this.BillPaymentFlowEnded(m);
-
+      // return the promise so tests can wait on it.
+      return Promise.resolve(this.BillPaymentFlowEnded(m)).then(() => {
         // bill payment flow has ended, we need to respond with an ack
         if (this._spi.CurrentStatus === SpiStatus.PairedConnected)
         {
@@ -163,5 +167,6 @@ export class SpiPayAtTable
 
             this._spi._send(new BillPaymentFlowEndedAckRequest(billPaymentFlowEndedResponse.BillId).ToMessage());
         }
+      });
     }
 }
