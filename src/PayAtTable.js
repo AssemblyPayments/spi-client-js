@@ -7,43 +7,54 @@ import { RequestIdHelper } from './RequestIdHelper';
 // </summary>
 export class BillStatusResponse
 {
-    constructor() {
+    constructor(data = {}) {
+
+        const { 
+            Result = null,
+            BillId = null,
+            TableId = null,
+            OperatorId = null,
+            TotalAmount = 0,
+            OutstandingAmount = 0,
+            BillData = "",
+        } = data;
+ 
         // <summary>
         // Set this Error accordingly if you are not able to return the BillDetails that were asked from you.
         // </summary>
-        this.Result = null;
-        
+        this.Result = Result;
+
         // <summary>
         // This is a unique identifier that you assign to each bill.
         // It migt be for example, the timestamp of when the cover was opened.
         // </summary>
-        this.BillId = null;
-        
+        this.BillId = BillId;
+
         // <summary>
         // This is the table id that this bill was for.
-        // The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will 
-        // retrieve the bill using the table id. 
+        // The waiter will enter it on the Eftpos at the start of the PayAtTable flow and the Eftpos will
+        // retrieve the bill using the table id.
         // </summary>
-        this.TableId = null;
+        this.TableId = TableId;
 
-        this.OperatorId = null;
-        
+        this.OperatorId = OperatorId;
+
         // <summary>
         // The Total Amount on this bill, in cents.
         // </summary>
-        this.TotalAmount = 0;
-        
+        this.TotalAmount = TotalAmount;
+
         // <summary>
         // The currently outsanding amount on this bill, in cents.
         // </summary>
-        this.OutstandingAmount = 0;
+        this.OutstandingAmount = OutstandingAmount;
 
         // <summary>
         // Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
         // It is just a piece of string that you save against your billId.
         // WHenever you're asked for BillDetails, make sure you return this piece of data if you have it.
         // </summary>
-        this.BillData = "";
+        this.BillData = BillData;
     }
 
     getBillPaymentHistory()
@@ -52,7 +63,7 @@ export class BillStatusResponse
         {
             return [];
         }
-        
+
         let billPaymentHistory = [];
         let savedBillData = JSON.parse(this.BillData);
 
@@ -70,13 +81,13 @@ export class BillStatusResponse
 
         return JSON.stringify(ph);
     }
-    
+
     ToMessage(messageId)
     {
         var data = {
             "success": this.Result==BillRetrievalResult.SUCCESS
         };
-        
+
         if (this.BillId) data.bill_id = this.BillId;
         if (this.TableId) data.table_id = this.TableId;
 
@@ -96,7 +107,7 @@ export class BillStatusResponse
     }
 }
 
-export const BillRetrievalResult = 
+export const BillRetrievalResult =
 {
     SUCCESS: 'SUCCESS',
     INVALID_TABLE_ID: 'INVALID_TABLE_ID',
@@ -104,10 +115,10 @@ export const BillRetrievalResult =
     INVALID_OPERATOR_ID: 'INVALID_OPERATOR_ID'
 };
 
-export const PaymentType = 
+export const PaymentType =
 {
     CARD: 'CARD',
-    CASH: 'CASH' 
+    CASH: 'CASH'
 };
 
 export class BillPayment
@@ -119,10 +130,10 @@ export class BillPayment
         this.TableId = this._incomingAdvice.Data["table_id"];
         this.OperatorId = this._incomingAdvice.Data["operator_id"];
         this.PaymentFlowStarted = null;
-        
+
         var pt = this._incomingAdvice.Data["payment_type"];
         this.PaymentType = pt;
-        
+
         // this is when we ply the sub object "payment_details" into a purchase response for convenience.
         var purchaseMsg = new Message(m.Id, "payment_details", m.Data["payment_details"], false);
         this.PurchaseResponse = new PurchaseResponse(purchaseMsg);
@@ -147,7 +158,7 @@ export class PaymentHistoryEntry
             payment_summary: this.PaymentSummary
         };
     }
-    
+
     GetTerminalRefId()
     {
         return this.PaymentSummary["terminal_ref_id"];
@@ -162,19 +173,19 @@ export class PayAtTableConfig
         this.SplitByAmountEnabled = false;
         this.EqualSplitEnabled = false;
         this.TableRetrievalEnabled = false;
-     
+
         this.TippingEnabled = false;
-    
+
         this.SummaryReportEnabled = false;
-    
+
         this.LabelPayButton = '';
         this.LabelOperatorId = '';
         this.LabelTableId = '';
-    
-        // 
+
+        //
         // <summary>
-        // Fill in with operator ids that the eftpos terminal will validate against. 
-        // Leave Empty to allow any operator_id through. 
+        // Fill in with operator ids that the eftpos terminal will validate against.
+        // Leave Empty to allow any operator_id through.
         // </summary>
        this.AllowedOperatorIds = [];
     }
@@ -197,7 +208,7 @@ export class PayAtTableConfig
 
         return new Message(messageId, Events.PayAtTableSetTableConfig, data, true);
     }
-    
+
     static FeatureDisableMessage(messageId) {
         var data = {
             "pay_at_table_enabled": false
@@ -211,13 +222,13 @@ export class PayAtTableConfig
 // </summary>
 export class GetOpenTablesResponse
 {
-    constructor() {
+    constructor(TableData = []) {
         /// <summary>
         /// Your POS is required to persist some state on behalf of the Eftpos so the Eftpos can recover state.
         /// It is just a piece of string that you save against your operatorId.
         /// Whenever you're asked for OpenTables, make sure you return this piece of data if you have it.
         /// </summary>
-        this.TableData = null;
+      this.TableData = TableData;
     }
 
     GetOpenTables()
@@ -227,7 +238,7 @@ export class GetOpenTablesResponse
             return [];
         }
 
-        return JSON.parse(this.TableData);
+        return this.TableData;
     }
 
     ToMessage(messageId)
@@ -245,10 +256,11 @@ export class GetOpenTablesResponse
 // </summary>
 export class OpenTablesEntry
 {
-    constructor() {
-        this.TableId = null;
-        this.Label = null;
-        this.BillOutstandingAmount = null;
+    constructor(data = {}) {
+        const { TableId = null, Label = null, BillOutstandingAmount = null } = data;
+        this.TableId = TableId;
+        this.Label = Label;
+        this.BillOutstandingAmount = BillOutstandingAmount;
     }
 
     toJSON() {

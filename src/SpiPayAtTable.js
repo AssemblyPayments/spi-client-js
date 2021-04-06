@@ -159,11 +159,11 @@ export class SpiPayAtTable
     _handleBillPaymentFlowEnded(m)
     {
       // return the promise so tests can wait on it.
-      return Promise.resolve(this.BillPaymentFlowEnded(m)).then(() => {
+      const billPaymentFlowEndedResponse = new BillPaymentFlowEndedResponse(m);
+      return Promise.resolve(this.BillPaymentFlowEnded(billPaymentFlowEndedResponse)).then(() => {
         // bill payment flow has ended, we need to respond with an ack
         if (this._spi.CurrentStatus === SpiStatus.PairedConnected)
         {
-            const billPaymentFlowEndedResponse = new BillPaymentFlowEndedResponse(m);
 
             this._spi._send(new BillPaymentFlowEndedAckRequest(billPaymentFlowEndedResponse.BillId).ToMessage());
         }
