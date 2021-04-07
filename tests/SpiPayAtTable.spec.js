@@ -51,22 +51,21 @@ describe('SpiPayAtTable', function() {
     it('should open a table and correctly return a response with the open table', () =>
     {
         // arrange
-        const openTablesEntries = [];
-        const openTablesEntry = Object.assign(new OpenTablesEntry(), {
+        const openTablesEntries = [
+          new OpenTablesEntry({
             TableId: '1',
             Label: '1',
             BillOutstandingAmount: 2000,
-        });
-        openTablesEntries.push(openTablesEntry);
+          }),
+        ];
 
-        // act
-        const getOpenTablesResponse = Object.assign(new GetOpenTablesResponse(), {
-            TableData: JSON.stringify(openTablesEntries),
-        });
-        const openTablesResponse = getOpenTablesResponse.GetOpenTables();
+      // act
+      const getOpenTablesResponse = new GetOpenTablesResponse(openTablesEntries);
 
-        // assert
-        expect(openTablesResponse.length).toBe(openTablesEntries.length);
+      const openTablesResponse = getOpenTablesResponse.GetOpenTables();
+
+      // assert
+      expect(openTablesResponse.length).toBe(openTablesEntries.length);
     });
 
     it('should return an empty array when the open table data is null', () =>
@@ -150,7 +149,7 @@ describe('SpiPayAtTable', function() {
             spiPayAtTable.BillPaymentFlowEnded = () => true;
 
             // act
-            return spiPayAtTable._handleBillPaymentFlowEnded({}).then(() => {;
+            return spiPayAtTable._handleBillPaymentFlowEnded({Data: {}}).then(() => {;
               // assert
               expect(spi._send).not.toHaveBeenCalled();
             });
