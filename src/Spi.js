@@ -1236,6 +1236,7 @@ class Spi {
         this._conn.Disconnect();
         this._secrets = null;
         this._spiMessageStamp.Secrets = null;
+        this._hasSetInfo = null;
         this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
