@@ -59,11 +59,11 @@ module.exports = function (config) {
         preprocessors: {
             'src/**/*.js': ['coverage'],
             './tests/fixtures/**/*.json': ['json_fixtures'],
-            'test-context.js': ['webpack']
+            'test-context.js': ['webpack', 'sourcemap'],
         },
 
         webpack: {
-            devtool: 'source-map',
+            devtool: 'inline-source-map',
             mode: 'development',
             module: {
                 rules: [

@@ -44,12 +44,12 @@ export class AnalyticsService {
   static async ReportTransaction(
     transactionReport,
     apiKey = "spi-sample-pos1",
-    acquirerCode,
+    tenantCode,
     isTestMode
   ) {
     const transactionServiceUri = isTestMode
-      ? `https://spi-analytics-api-sb.${acquirerCode}.mspenv.io/v1/report-transaction`
-      : `https://spi-analytics-api.${acquirerCode}.mspenv.io/v1/report-transaction`;
+      ? `https://spi-analytics-api-sb.${tenantCode}.mspenv.io/v1/report-transaction`
+      : `https://spi-analytics-api.${tenantCode}.mspenv.io/v1/report-transaction`;
 
     const message = transactionReport.ToMessage();
 

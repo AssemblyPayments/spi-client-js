@@ -13,7 +13,7 @@ describe("Spi,", () => {
   const eftposAddress = "10.20.30.40";
   const posId = "DummyPos";
   const posVendorId = "mx51";
-  const posVersion = "2.8.2";
+  const posVersion = "2.9.0";
   const serialNumber = "321-321-321";
   let fetchHelper;
 

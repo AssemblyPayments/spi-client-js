@@ -4,7 +4,7 @@ export const ConnectionState = {
     Connected: 'Connected'
 };
 
-export const SPI_PROTOCOL   = 'spi.2.8.0';
+export const SPI_PROTOCOL   = 'spi.2.9.0';
 
 export class ConnectionStateEventArgs
 {

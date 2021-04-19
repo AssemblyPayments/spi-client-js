@@ -26,7 +26,7 @@ import {TerminalConfigurationRequest, TerminalConfigurationResponse} from './Ter
 import {TransactionReportHelper} from "./TransactionReportHelper";
 import {ZipRefundRequest, ZipPurchaseRequest} from './ZipTransactions';
 
-const SPI_VERSION = '2.8.2';
+const SPI_VERSION = '2.9.0';
 
 class Spi {
 
@@ -57,7 +57,7 @@ class Spi {
 
         this.CurrentDeviceStatus = null;
         this._deviceApiKey  = null;
-        this._acquirerCode  = null;
+        this._tenantCode  = null;
         this._terminalModel = null;
         this._inTestMode    = false;
         this._autoAddressResolutionEnabled = this._isSecureConnection();
@@ -65,10 +65,11 @@ class Spi {
         // Our stamp for signing outgoing messages
         this._spiMessageStamp = new MessageStamp(this._posId, this._secrets);
 
+        this._hasSetInfo = null;
         this._posVendorId = null;
         this._posVersion = null;
-        this._hasSetInfo = null;
         this._libraryLanguage = "js";
+        this._spiceVersion = null;
 
         this._transactionReport = new TransactionReport();
 
@@ -181,11 +182,19 @@ class Spi {
     }
 
     /// <summary>
-    /// Set the acquirer code of your bank, please contact mx51's Integration Engineers for acquirer code.
+    /// Deprecated, please use SetTenantCode(tenantCode)
     /// </summary>
     SetAcquirerCode(acquirerCode)
     {
-        this._acquirerCode = acquirerCode;
+        this.SetTenantCode(acquirerCode);
+    }
+
+    /// <summary>
+    /// Set the tenant code of your provider, please use the GetAvailableTenants method for a list of available tenants.
+    /// </summary>
+    SetTenantCode(tenantCode)
+    {
+        this._tenantCode = tenantCode;
         return true;
     }
 
@@ -335,6 +344,16 @@ class Spi {
     {
         this._posVendorId = posVendorId;
         this._posVersion = posVersion;
+    }
+
+    ResendPosInfo()
+    {
+        this._callSetPosInfo();
+    }
+
+    SetSpiceInfo(spiceVersion)
+    {
+        this._spiceVersion = spiceVersion;
     }
 
     // <summary>
@@ -1087,7 +1106,7 @@ class Spi {
         let deviceAddressStatus;
         try
         {
-            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, this._isSecureConnection(), this._inTestMode);
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._tenantCode, this._isSecureConnection(), this._inTestMode);
             const addressResponseJson = await addressResponse.json();
             deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
                 {
@@ -1217,6 +1236,7 @@ class Spi {
         this._conn.Disconnect();
         this._secrets = null;
         this._spiMessageStamp.Secrets = null;
+        this._hasSetInfo = null;
         this._eventBus.dispatchEvent(new CustomEvent('SecretsChanged', { detail: this._secrets }));
     }
 
@@ -1994,7 +2014,7 @@ class Spi {
 
     _callSetPosInfo()
     {
-        const setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, this._libraryLanguage, SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
+        const setPosInfoRequest = new SetPosInfoRequest(this._posVersion, this._posVendorId, this._spiceVersion, this._libraryLanguage, SPI_VERSION, DeviceInfo.GetAppDeviceInfo());
         this._send(setPosInfoRequest.toMessage());
     }
 
@@ -2288,7 +2308,7 @@ class Spi {
 
         try
         {
-            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._acquirerCode, isSecureConnection, this._inTestMode);
+            const addressResponse = await service.RetrieveDeviceAddress(this._serialNumber, this._deviceApiKey, this._tenantCode, isSecureConnection, this._inTestMode);
             const addressResponseJson = await addressResponse.json();
             deviceAddressStatus = DeviceHelper.GenerateDeviceAddressStatus(
                 {
@@ -2363,7 +2383,7 @@ class Spi {
         transactionReport.SerialNumber = this._serialNumber;
 
         try {
-            await AnalyticsService.ReportTransaction(transactionReport, this._deviceApiKey, this._acquirerCode, this._inTestMode);
+            await AnalyticsService.ReportTransaction(transactionReport, this._deviceApiKey, this._tenantCode, this._inTestMode);
         } catch (error) {
             this._log.error(error);
             this._log.warn("Error reporting to analytics service.");

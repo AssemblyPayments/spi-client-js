@@ -93,7 +93,7 @@ describe("AnalyticsService", () => {
       // arrange
       const transactionReport = new TransactionReport();
       const apiKey = "spi-sample-pos";
-      const acquirerCode = "wbc";
+      const tenantCode = "wbc";
       const isTestMode = true;
       fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
 
@@ -101,7 +101,7 @@ describe("AnalyticsService", () => {
       await AnalyticsService.ReportTransaction(
         transactionReport,
         apiKey,
-        acquirerCode,
+        tenantCode,
         isTestMode
       );
 
@@ -116,7 +116,7 @@ describe("AnalyticsService", () => {
       // arrange
       const transactionReport = new TransactionReport();
       const apiKey = "spi-sample-pos";
-      const acquirerCode = "wbc";
+      const tenantCode = "wbc";
       const isTestMode = false;
       fetchHelper.resolve({ ok: true }); // Mock the response from ReportTx
 
@@ -124,7 +124,7 @@ describe("AnalyticsService", () => {
       await AnalyticsService.ReportTransaction(
         transactionReport,
         apiKey,
-        acquirerCode,
+        tenantCode,
         isTestMode
       );
 
@@ -139,7 +139,7 @@ describe("AnalyticsService", () => {
       // arrange
       const transactionReport = new TransactionReport();
       const apiKey = "spi-sample-pos";
-      const acquirerCode = "wbc";
+      const tenantCode = "wbc";
       const isTestMode = false;
       const errorResponse = {
         error: {
@@ -159,7 +159,7 @@ describe("AnalyticsService", () => {
         await AnalyticsService.ReportTransaction(
           transactionReport,
           apiKey,
-          acquirerCode,
+          tenantCode,
           isTestMode
         );
       } catch (error) {
