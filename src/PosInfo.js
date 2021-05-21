@@ -3,12 +3,13 @@ import {RequestIdHelper} from './RequestIdHelper';
 
 export class SetPosInfoRequest
 {
-    constructor(version, vendorId, libraryLanguage, libraryVersion, otherInfo)
+    constructor(version, vendorId, spiceVersion, libraryLanguage, libraryVersion, otherInfo)
     {
         this._version = version;
         this._vendorId = vendorId;
         this._libraryLanguage = libraryLanguage;
         this._libraryVersion = libraryVersion;
+        this._spiceVersion = spiceVersion;
         this._otherInfo = otherInfo;
     }
 
@@ -19,7 +20,8 @@ export class SetPosInfoRequest
             pos_vendor_id: this._vendorId,
             library_language: this._libraryLanguage,
             library_version: this._libraryVersion,
-            other_info: this._otherInfo
+            spice_version: this._spiceVersion,
+            other_info: Object.assign({}, this._otherInfo, { spice_version: this._spiceVersion })
         };
 
         return new Message(RequestIdHelper.Id("prav"), Events.SetPosInfoRequest, data, true);
