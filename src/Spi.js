@@ -338,7 +338,7 @@ class Spi {
         this._posVersion = posVersion;
     }
 
-    ResendPosInfo()
+    SetAdaptorPosInfo()
     {
         if (this.CurrentStatus == SpiStatus.Unpaired) return false;
         
@@ -346,9 +346,9 @@ class Spi {
         return true;
     }
 
-    SetSpiceInfo(spiceVersion)
+    SetAdaptorInfo(adaptorVersion)
     {
-        this._spiceVersion = spiceVersion;
+        this._spiceVersion = adaptorVersion;
     }
 
     // <summary>
