@@ -85,10 +85,11 @@ describe('SpiPayAtTable', function() {
         expect(getOpenTablesResponse.TableData).toBeNull();
     });
 
-    it('should handle bill status request', function() 
+    it('should handle bill status request', async () =>
     {
         var request = JSON.stringify(__fixtures__['BillStatusRequest']);
         var spi = new Spi('TABLEPOS1', 'localhost', null);
+        spi._send = () => true;
         spyOn(spi,'_send');
         var payAtTable = new SpiPayAtTable(spi);
         var message = Message.FromJson(request);
@@ -104,15 +105,15 @@ describe('SpiPayAtTable', function() {
             });
         };
         
-        payAtTable._handleGetBillDetailsRequest(message).then(() => {
-            expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
-        })
+        await payAtTable._handleGetBillDetailsRequest(message);
+        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
     });
 
-    it('should handle bill payment advice', function() 
+    it('should handle bill payment advice', async () =>
     {
         var request = JSON.stringify(__fixtures__['BillPaymentWithCard']);
         var spi = new Spi('TABLEPOS1', 'localhost', null);
+        spi._send = () => true;
         spyOn(spi,'_send');
         var payAtTable = new SpiPayAtTable(spi);
         var message = Message.FromJson(request);
@@ -137,9 +138,8 @@ describe('SpiPayAtTable', function() {
             });
         };
 
-        payAtTable._handleBillPaymentAdvice(message).then(() => {
-          expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
-        })
+        await payAtTable._handleBillPaymentAdvice(message);
+        expect(spi._send).toHaveBeenCalledWith(jasmine.objectContaining({ EventName: 'bill_details' }));
     });
 
     describe("_handleBillPaymentFlowEnded()", () => {

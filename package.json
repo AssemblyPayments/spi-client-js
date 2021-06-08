@@ -1,6 +1,6 @@
 {
   "name": "@mx51/spi-client-js",
-  "version": "2.8.2",
+  "version": "2.8.3",
   "description": "JavaScript Client Library for mx51's In-Store Integration.",
   "main": "dist/spi-client-js.js",
   "scripts": {
@@ -38,7 +38,7 @@
     "connect-api-mocker": "^1.9.0",
     "core-js": "^3.6.5",
     "jasmine": "^3.6.1",
-    "karma": "^5.1.1",
+    "karma": "^6.3.2",
     "karma-chrome-launcher": "^3.1.0",
     "karma-coverage": "^2.0.3",
     "karma-jasmine": "^3.3.1",
